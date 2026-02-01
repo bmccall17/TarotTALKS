@@ -207,53 +207,50 @@ export default async function Image({ params }: { params: Promise<{ id: string }
         </div>
 
         {/* Right Section: Title, Speaker at top (matching talk OG layout) */}
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'flex-start',
-            paddingLeft: 28,
-            paddingRight: 20,
-            paddingTop: 44,
-          }}
-        >
-          {spread.talk && (
-            <>
-              {/* Title */}
-              <div
-                style={{
-                  color: '#ffffff',
-                  fontSize: 28,
-                  fontWeight: 700,
-                  marginBottom: 8,
-                  lineHeight: 1.2,
-                }}
-              >
-                {truncatedTalkTitle}
-              </div>
+        {spread.talk && (
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-start',
+              paddingLeft: 28,
+              paddingRight: 20,
+              paddingTop: 44,
+            }}
+          >
+            {/* Title */}
+            <div
+              style={{
+                color: '#ffffff',
+                fontSize: 28,
+                fontWeight: 700,
+                marginBottom: 8,
+                lineHeight: 1.2,
+              }}
+            >
+              {truncatedTalkTitle}
+            </div>
 
-              {/* Speaker */}
-              <div
-                style={{
-                  color: '#a5b4fc',
-                  fontSize: 20,
-                }}
-              >
-                {spread.talk.speakerName}
-              </div>
-            </>
-          )}
-        </div>
+            {/* Speaker */}
+            <div
+              style={{
+                color: '#a5b4fc',
+                fontSize: 20,
+              }}
+            >
+              {spread.talk.speakerName}
+            </div>
+          </div>
+        )}
 
-        {/* Cards - overlays bottom-right corner of thumbnail (33% larger than before) */}
+        {/* Cards - overlays bottom-right corner of thumbnail */}
         <div
           style={{
             position: 'absolute',
-            left: 520,
-            top: 280,
+            left: 400,
+            top: 320,
             display: 'flex',
-            gap: -30, // Overlap cards
             filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.4))',
           }}
         >
@@ -268,7 +265,8 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                 borderRadius: 10,
                 objectFit: 'cover',
                 border: '2px solid rgba(255, 255, 255, 0.3)',
-                transform: `rotate(${(i - 1) * 5}deg)`, // Fan effect: -5, 0, 5 degrees
+                transform: `rotate(${(i - 1) * 5}deg)`,
+                marginLeft: i === 0 ? 0 : -40,
               }}
             />
           ))}
