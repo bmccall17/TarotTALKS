@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp, uuid, varchar, pgEnum, bigint, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, boolean, timestamp, uuid, varchar, pgEnum, bigint, index, jsonb } from 'drizzle-orm/pg-core';
 
 // Enums
 export const arcanaTypeEnum = pgEnum('arcana_type', ['major', 'minor']);
@@ -6,6 +6,13 @@ export const suitEnum = pgEnum('suit', ['wands', 'cups', 'swords', 'pentacles'])
 export const themeCategoryEnum = pgEnum('theme_category', ['emotion', 'life_phase', 'role', 'other']);
 export const platformEnum = pgEnum('platform', ['x', 'bluesky', 'threads', 'linkedin', 'instagram', 'other']);
 export const shareStatusEnum = pgEnum('share_status', ['draft', 'posted', 'verified', 'discovered', 'acknowledged']);
+
+// Spread reading enums (0009_spreads.sql)
+export const focusTypeEnum = pgEnum('focus_type', [
+  'relationships', 'work', 'courage', 'grief',
+  'creativity', 'money', 'identity', 'surprise_me', 'custom'
+]);
+export const privacyLevelEnum = pgEnum('privacy_level', ['full', 'cards_only', 'cards_and_talk']);
 
 // Cards table
 export const cards = pgTable('cards', {
@@ -26,6 +33,12 @@ export const cards = pgTable('cards', {
   journalingPrompts: text('journaling_prompts'), // JSON array as string
   astrologicalCorrespondence: text('astrological_correspondence'),
   numerologicalSignificance: text('numerological_significance'),
+  // Spread reading enrichment (0008_spread_enrichment.sql)
+  themesJson: text('themes_json'),
+  archetypesJson: text('archetypes_json'),
+  meaningAwareSelf: text('meaning_aware_self'),
+  meaningSupportingShadow: text('meaning_supporting_shadow'),
+  meaningEmergingPath: text('meaning_emerging_path'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -50,6 +63,9 @@ export const talks = pgTable('talks', {
   speakerBlueskyHandle: varchar('speaker_bluesky_handle', { length: 100 }),
   isDeleted: boolean('is_deleted').default(false).notNull(),
   deletedAt: timestamp('deleted_at'),
+  // Spread reading enrichment (0008_spread_enrichment.sql)
+  themesJson: text('themes_json'),
+  coreMessage: text('core_message'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -155,4 +171,41 @@ export const socialShares = pgTable('social_shares', {
   idxPlatform: index('idx_social_shares_platform').on(table.platform),
   idxStatus: index('idx_social_shares_status').on(table.status),
   idxAtUri: index('idx_social_shares_at_uri').on(table.atUri),
+}));
+
+// Spreads table (Read My Spread feature - 0009_spreads.sql)
+export const spreads = pgTable('spreads', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  shortId: varchar('short_id', { length: 12 }).notNull().unique(),
+
+  // Cards (ordered by position: 1=Aware Self, 2=Supporting Shadow, 3=Emerging Path)
+  card1Id: uuid('card_1_id').references(() => cards.id, { onDelete: 'set null' }),
+  card2Id: uuid('card_2_id').references(() => cards.id, { onDelete: 'set null' }),
+  card3Id: uuid('card_3_id').references(() => cards.id, { onDelete: 'set null' }),
+
+  // User input
+  focusType: focusTypeEnum('focus_type'),
+  focusText: text('focus_text'),
+
+  // Generated result
+  talkId: uuid('talk_id').references(() => talks.id, { onDelete: 'set null' }),
+  rationale: text('rationale').notNull(),
+  rationaleSource: varchar('rationale_source', { length: 20 }).default('template'),
+  aiModel: varchar('ai_model', { length: 50 }),
+  score: integer('score'),
+  matchReasons: jsonb('match_reasons'),
+
+  // Privacy
+  privacyLevel: privacyLevelEnum('privacy_level').default('full'),
+
+  // Timestamps
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  idxShortId: index('idx_spreads_short_id').on(table.shortId),
+  idxCreatedAt: index('idx_spreads_created_at').on(table.createdAt),
+  idxCard1: index('idx_spreads_card_1').on(table.card1Id),
+  idxCard2: index('idx_spreads_card_2').on(table.card2Id),
+  idxCard3: index('idx_spreads_card_3').on(table.card3Id),
+  idxTalk: index('idx_spreads_talk').on(table.talkId),
 }));

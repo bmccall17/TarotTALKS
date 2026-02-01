@@ -221,10 +221,46 @@ export function useAnalytics() {
     });
   }, []);
 
+  // Track reading started (when user opens focus modal)
+  const trackReadingStarted = useCallback((cardsRevealedCount: number) => {
+    track('reading_started', { cards_revealed_count: cardsRevealedCount });
+  }, []);
+
+  // Track focus selected
+  const trackFocusSelected = useCallback((focusType: string, hasCustomText: boolean) => {
+    track('focus_selected', { focus_type: focusType, has_custom_text: hasCustomText });
+  }, []);
+
+  // Track reading generated
+  const trackReadingGenerated = useCallback((spreadId: string, talkSlug: string, score: number, source: string) => {
+    track('reading_generated', {
+      spread_id: spreadId,
+      talk_slug: talkSlug,
+      score,
+      rationale_source: source,
+    });
+  }, []);
+
+  // Track talk clicked from reading
+  const trackTalkFromReading = useCallback((spreadId: string, talkSlug: string) => {
+    track('talk_from_reading', { spread_id: spreadId, talk_slug: talkSlug });
+  }, []);
+
+  // Track share initiated
+  const trackShareInitiated = useCallback((spreadId: string, platform: string, format: string) => {
+    track('share_initiated', { spread_id: spreadId, platform, format });
+  }, []);
+
   return {
     trackCardFlip,
     trackReadSpreadClick,
     trackTalkClick,
     trackCardDetailClick,
+    // New spread reading events
+    trackReadingStarted,
+    trackFocusSelected,
+    trackReadingGenerated,
+    trackTalkFromReading,
+    trackShareInitiated,
   };
 }

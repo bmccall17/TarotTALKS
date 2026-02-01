@@ -76,6 +76,8 @@ When beginning development, suggested order:
 6. Advanced features (spreads, journaling, user accounts)
 
 ## Manually added instructions
+⚠️ **FREE TIER CONSTRAINT:** App must remain FREE - use Gemini Free Tier for AI features. No paid APIs or subscriptions.
+
 ⚠️ **GIT RESTRICTION:** Claude must not run, simulate, or suggest any Git commands. All Git-related tasks (init, commit, push, pull, branch, merge, clone, etc.) are strictly handled by the human.
 
 ⚠️ **DOMAIN:** The correct domain is **tarottalks.app** (NOT .com, .net, .org, or .io). Always use `https://tarottalks.app` for all URLs referencing the live application.
