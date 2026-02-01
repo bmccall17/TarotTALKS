@@ -207,42 +207,40 @@ export default async function Image({ params }: { params: Promise<{ id: string }
         </div>
 
         {/* Right Section: Title, Speaker at top (matching talk OG layout) */}
-        {spread.talk && (
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-start',
+            paddingLeft: 28,
+            paddingRight: 20,
+            paddingTop: 44,
+          }}
+        >
+          {/* Title */}
           <div
             style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'flex-start',
-              paddingLeft: 28,
-              paddingRight: 20,
-              paddingTop: 44,
+              color: '#ffffff',
+              fontSize: 28,
+              fontWeight: 700,
+              marginBottom: 8,
+              lineHeight: 1.2,
             }}
           >
-            {/* Title */}
-            <div
-              style={{
-                color: '#ffffff',
-                fontSize: 28,
-                fontWeight: 700,
-                marginBottom: 8,
-                lineHeight: 1.2,
-              }}
-            >
-              {truncatedTalkTitle}
-            </div>
-
-            {/* Speaker */}
-            <div
-              style={{
-                color: '#a5b4fc',
-                fontSize: 20,
-              }}
-            >
-              {spread.talk.speakerName}
-            </div>
+            {truncatedTalkTitle || ''}
           </div>
-        )}
+
+          {/* Speaker */}
+          <div
+            style={{
+              color: '#a5b4fc',
+              fontSize: 20,
+            }}
+          >
+            {spread.talk?.speakerName || ''}
+          </div>
+        </div>
 
         {/* Cards - overlays bottom-right corner of thumbnail */}
         <div
