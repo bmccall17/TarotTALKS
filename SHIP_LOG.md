@@ -16,6 +16,7 @@ A chronological record of major releases and feature deployments for TarotTALKS.
 
 | Version | Title | Date |
 |---------|-------|------|
+| [v1.3.8](devnotes/releases/v1.3.8.md) | Smart Bluesky Post URL Handling 🦋 | Jan 31, 2026 |
 | [v1.3.7](devnotes/releases/v1.3.7.md) | Signal Deck Enhancements & OG Image Fix 📡🖼️ | Jan 31, 2026 |
 | [v1.3.6](devnotes/releases/v1.3.6.md) | Signal Deck MVP 📡 | Jan 30, 2026 |
 | [v1.3.5](devnotes/releases/v1.3.5.md) | Talk Social Share Images 🎬 | Jan 30, 2026 |
@@ -39,6 +40,7 @@ A chronological record of major releases and feature deployments for TarotTALKS.
 
 | Version | Title | Date |
 |---------|-------|------|
+| [v1.3.8](devnotes/releases/v1.3.8.md) | Smart Bluesky Post URL Handling 🦋 | Jan 31, 2026 |
 | [v1.3.7](devnotes/releases/v1.3.7.md) | Signal Deck Enhancements & OG Image Fix 📡🖼️ | Jan 31, 2026 |
 | [v1.3.6](devnotes/releases/v1.3.6.md) | Signal Deck MVP 📡 | Jan 30, 2026 |
 | [v1.3.5](devnotes/releases/v1.3.5.md) | Talk Social Share Images 🎬 | Jan 30, 2026 |
