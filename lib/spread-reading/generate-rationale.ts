@@ -95,11 +95,30 @@ export async function generateRationale(
 
   // Try Gemini AI
   try {
-    const cardParams = input.cards.map((card, index) => ({
-      name: card.name,
-      summary: card.summary,
-      position: POSITION_LABELS[index],
-    }));
+    const cardParams = input.cards.map((card, index) => {
+      let archetypes: string[] = [];
+      let themes: string[] = [];
+
+      try {
+        if (card.archetypesJson) archetypes = JSON.parse(card.archetypesJson);
+      } catch (e) {
+        // Ignore parse error
+      }
+
+      try {
+        if (card.themesJson) themes = JSON.parse(card.themesJson);
+      } catch (e) {
+        // Ignore parse error
+      }
+
+      return {
+        name: card.name,
+        summary: card.summary,
+        position: POSITION_LABELS[index],
+        archetypes,
+        themes,
+      };
+    });
 
     const result = await geminiGenerate({
       cards: cardParams,

@@ -65,9 +65,9 @@ export async function generateWithGemini(prompt: string): Promise<GeminiResponse
   try {
     incrementRateLimit();
 
-    // Use Gemini 1.5 Flash (free tier)
+    // Use Gemini Flash Latest (should resolve to 1.5 Flash or newer)
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: {
@@ -79,7 +79,7 @@ export async function generateWithGemini(prompt: string): Promise<GeminiResponse
           }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 256,
+            maxOutputTokens: 1024,
             topP: 0.8,
             topK: 40,
           },
@@ -142,6 +142,8 @@ export async function generateSpreadRationale(params: {
     name: string;
     summary: string;
     position: string;
+    archetypes?: string[];
+    themes?: string[];
   }>;
   talk: {
     title: string;
@@ -152,22 +154,159 @@ export async function generateSpreadRationale(params: {
 }): Promise<GeminiResponse> {
   const { cards, talk, focusText } = params;
 
-  const cardDescriptions = cards.map(c =>
-    `- ${c.position}: ${c.name} - ${c.summary}`
-  ).join('\n');
+  // Construct enriched card context
+  const cardContext = cards.map(c => {
+    const details = [
+      `Position: ${c.position}`,
+      `Card: ${c.name}`,
+      `Summary: ${c.summary}`,
+      c.archetypes && c.archetypes.length ? `Archetypes: ${c.archetypes.join(', ')}` : '',
+      c.themes && c.themes.length ? `Themes: ${c.themes.join(', ')}` : '',
+    ].filter(Boolean).join('\n');
+    return details;
+  }).join('\n\n');
 
-  const prompt = `You are a TarotTALKS spread reader. Given these cards and this TED talk, write a 2-3 sentence rationale explaining why this talk speaks to this spread.
+  const systemInstruction = `
+You are the TarotTALKS Spread Reader, a wise guide who synthesizes Tarot spreads and recommends TED or TED-like talks.
 
-Cards:
-${cardDescriptions}
+## YOUR ROLE
+You help users understand their 2-card or 3-card Tarot spreads by:
+1. Identifying the cards and their positions.
+2. Interpreting the narrative arc between the cards.
+3. Weaving the cards into a unified narrative; be REAL, HONEST, and DIRECT. Do not sugarcoat.
+4. Explaining WHY the specific recommended TED talk is the specific "medicine" for this spread.
 
-${focusText ? `User's focus: ${focusText}\n` : ''}
-Recommended talk: "${talk.title}" by ${talk.speakerName}
-${talk.description ? `Talk description: ${talk.description}` : ''}
+## THE THREE POSITIONS
+**Position 1: Aware Self** — What the user consciously knows.
+**Position 2: Supporting Shadow** — Hidden influences, what they may not see.
+**Position 3: Emerging Path** — The direction forward.
 
-Write a warm, insightful rationale using second person ("you"). Keep it under 100 words. Don't mention the card positions by name ("Aware Self", etc.) - just weave the themes together naturally. Focus on the emotional resonance between the cards and the talk.`;
+## YOUR READING STYLE
+- **Tone**: Warm but not sycophantic. Speak with quiet authority (like a trusted friend who knows Tarot).
+- **Format**: 2-3 succinct sentences.
+- **Focus**: Focus on the *synthesis* (the tension and resolution between cards).
+- **Constraints**: Do NOT mention the card positions by name ("Aware Self", etc.) or list card meanings. weave the themes naturally.
+
+## THE RECOMMENDED TALK
+You have been given a specific talk that matches this spread. Your job is to explain the connection.
+Talk: "${talk.title}" by ${talk.speakerName}
+Description: ${talk.description || 'N/A'}
+
+## OUTPUT
+Write a 2-3 sentence rationale explaining why this talk is the perfect insight for this specific card combination and what it offers the user. Use second person ("you").
+`;
+
+  const prompt = `
+${systemInstruction}
+
+## THE SPREAD
+${cardContext}
+
+${focusText ? `## USER FOCUS\n"${focusText}"\n` : ''}
+
+## YOUR RATIONALE
+`;
 
   return generateWithGemini(prompt);
+}
+
+/**
+ * Generate synthesis and search queries from a spread
+ * (Phase 2: The "Brain" Upgrade)
+ */
+export interface SynthesisResult {
+  synthesis: string;
+  searchQueries: string[];
+}
+
+export async function generateSynthesisAndQueries(params: {
+  cards: Array<{
+    name: string;
+    summary: string;
+    position: string;
+    archetypes?: string[];
+    themes?: string[];
+  }>;
+  focusText?: string;
+}): Promise<SynthesisResult | { error: string }> {
+  const { cards, focusText } = params;
+
+  // Construct enriched card context
+  const cardContext = cards.map(c => {
+    const details = [
+      `Position: ${c.position}`,
+      `Card: ${c.name}`,
+      `Summary: ${c.summary}`,
+      c.archetypes && c.archetypes.length ? `Archetypes: ${c.archetypes.join(', ')}` : '',
+      c.themes && c.themes.length ? `Themes: ${c.themes.join(', ')}` : '',
+    ].filter(Boolean).join('\n');
+    return details;
+  }).join('\n\n');
+
+  const systemInstruction = `
+You are the TarotTALKS Synthesis Engine. Your goal is to deeply analyze a Tarot spread and identify the core "struggle" or "tension" that needs resolution.
+
+## YOUR TASK
+1. Analyze the cards positions:
+   - "Aware Self": What is known/conscious.
+   - "Supporting Shadow": What is hidden/unconscious.
+   - "Emerging Path": The potential resolution.
+2. Identify the core tension between the Self and Shadow.
+3. Formulate a "Synthesis": A 1-2 sentence statement of the specific problem/growth edge.
+4. Generate 3 targeted YouTube search queries to find a TED talk that acts as "medicine" for this synthesis.
+
+## OUTPUT FORMAT
+Return strictly valid JSON in the following format:
+\`\`\`json
+{
+  "synthesis": "User is struggling with [Conflict] despite [Strength], and needs to embrace [Path].",
+  "searchQueries": [
+    "site:youtube.com/@TED [Theme 1] [Theme 2]",
+    "site:youtube.com/@TEDx [Theme 3] [Concept]",
+    "[Specific Struggle] TED talk"
+  ]
+}
+\`\`\`
+`;
+
+  const prompt = `
+${systemInstruction}
+
+## THE SPREAD
+${cardContext}
+
+${focusText ? `## USER FOCUS\n"${focusText}"\n` : ''}
+
+## OUTPUT
+`;
+
+  const result = await generateWithGemini(prompt);
+
+  if (!result.success) {
+    return { error: result.error || 'Failed to generate synthesis' };
+  }
+
+  if (!result.text) {
+    return { error: 'No text returned from Gemini' };
+  }
+
+  try {
+    // Extract JSON from markdown block
+    const match = result.text.match(/```json\n([\s\S]*?)\n```/) || result.text.match(/({[\s\S]*})/);
+    const jsonStr = match ? match[1] || match[0] : result.text;
+    const data = JSON.parse(jsonStr);
+
+    if (data.synthesis && Array.isArray(data.searchQueries)) {
+      return {
+        synthesis: data.synthesis,
+        searchQueries: data.searchQueries
+      };
+    }
+    return { error: 'Invalid JSON structure returned' };
+  } catch (e) {
+    console.error('Failed to parse synthesis JSON:', result.text);
+    return { error: 'Failed to parse synthesis JSON' };
+  }
 }
 
 /**
@@ -195,4 +334,102 @@ export function getRateLimitStatus(): {
     requestsRemaining: MAX_REQUESTS_PER_MINUTE - requestCount,
     resetsIn: RESET_INTERVAL_MS - elapsed,
   };
+}
+
+/**
+ * Select the best talk from a list of candidates using Gemini
+ * (Phase 3: The "Judge")
+ */
+export async function selectBestTalkWithAI(params: {
+  synthesis: string;
+  candidates: Array<{
+    id?: string;
+    title: string;
+    speakerName?: string;
+    channelTitle?: string;
+    description: string;
+    snippet?: string; // YouTube snippet
+    source: 'youtube' | 'local';
+    url?: string;
+  }>;
+  context?: string;
+}): Promise<{
+  bestTalkIndex: number; // Index in the candidates array
+  reasoning: string;
+  confidence: number; // 0-100
+} | { error: string }> {
+  const { synthesis, candidates, context } = params;
+
+  if (candidates.length === 0) {
+    return { error: 'No candidates provided' };
+  }
+
+  const candidatesText = candidates.map((c, i) => `
+CANDIDATE #${i}:
+Title: ${c.title}
+Speaker/Channel: ${c.speakerName || c.channelTitle || 'Unknown'}
+Source: ${c.source}
+Description: ${c.description}
+${c.snippet ? `Snippet: ${c.snippet}` : ''}
+`).join('\n-------------------\n');
+
+  const systemInstruction = `
+You are the TarotTALKS Curator. Your goal is to select the single best TED talk to serve as "medicine" for a specific Tarot reading synthesis.
+
+## THE SYNTHESIS
+"${synthesis}"
+
+## YOUR TASK
+1. Review the Candidate Talks below.
+2. Select the ONE talk that most directly addresses the core tension in the synthesis.
+3. Be picky. Look for emotional resonance and thematic fit, not just keyword matches.
+4. ${context || 'Use your wisdom to pick the most transformative talk.'}
+
+## OUTPUT FORMAT
+Return valid JSON:
+\`\`\`json
+{
+  "bestTalkIndex": 0,
+  "reasoning": "This talk directly resolves the tension between X and Y by offering Z...",
+  "confidence": 85
+}
+\`\`\`
+`;
+
+  const prompt = `
+${systemInstruction}
+
+## CANDIDATES
+${candidatesText}
+
+## OUTPUT
+`;
+
+  const result = await generateWithGemini(prompt);
+
+  if (!result.success) {
+    return { error: result.error || 'Failed to select talk' };
+  }
+
+  if (!result.text) {
+    return { error: 'No text returned from Gemini' };
+  }
+
+  try {
+    const match = result.text.match(/```json\n([\s\S]*?)\n```/) || result.text.match(/({[\s\S]*})/);
+    const jsonStr = match ? match[1] || match[0] : result.text;
+    const data = JSON.parse(jsonStr);
+
+    if (typeof data.bestTalkIndex === 'number' && data.reasoning) {
+      return {
+        bestTalkIndex: data.bestTalkIndex,
+        reasoning: data.reasoning,
+        confidence: data.confidence || 50
+      };
+    }
+    return { error: 'Invalid JSON structure returned' };
+  } catch (e) {
+    console.error('Failed to parse selection JSON:', result.text);
+    return { error: 'Failed to parse selection JSON' };
+  }
 }
