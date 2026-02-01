@@ -1,10 +1,9 @@
 /**
- * Staged API: Generate Spread Reading
+ * API: Generate Spread Reading
  *
- * POST /api/update/spread-reading
+ * POST /api/spreads/spread-reading
  *
  * Accepts card IDs and optional focus, returns a recommended talk with rationale.
- * This is the staged version at /update for testing before go-live.
  */
 
 import { NextResponse } from 'next/server';

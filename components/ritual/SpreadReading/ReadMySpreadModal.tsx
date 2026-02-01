@@ -62,7 +62,7 @@ export function ReadMySpreadModal({
     const cardIds = getCardIds();
 
     try {
-      const response = await fetch('/api/update/spread-reading', {
+      const response = await fetch('/api/spreads/spread-reading', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

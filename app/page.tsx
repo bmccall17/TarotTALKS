@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, ChevronDown } from 'lucide-react';
-import { CardCascade, Invocation, SparkleBackground } from '@/components/ritual';
+import { CardCascadeV2, Invocation, SparkleBackground } from '@/components/ritual';
 
 export default function HomePage() {
   const [showSearch, setShowSearch] = useState(false);
@@ -56,7 +56,7 @@ export default function HomePage() {
 
         {/* 3-Card Ritual */}
         <div className="max-w-4xl mx-auto">
-          <CardCascade onCardsLoaded={handleCardsLoaded} />
+          <CardCascadeV2 onCardsLoaded={handleCardsLoaded} />
         </div>
       </div>
 

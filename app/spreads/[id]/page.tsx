@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `https://tarottalks.app/spreads/${id}`,
       images: [
         {
-          url: `https://tarottalks.app/update/spreads/${id}/opengraph-image`,
+          url: `https://tarottalks.app/spreads/${id}/opengraph-image`,
           width: 1200,
           height: 630,
           alt: `TarotTALKS spread with ${spread.cards.map(c => c.name).join(', ')}`,

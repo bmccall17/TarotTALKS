@@ -177,7 +177,7 @@ export function SpreadPageContent({ spread }: SpreadPageContentProps) {
         {/* CTA */}
         <div className="text-center">
           <Link
-            href="/update"
+            href="/"
             className="inline-block px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-colors"
           >
             Get Your Own Reading

@@ -1,7 +1,7 @@
 /**
- * Staged API: Get Spread by Short ID
+ * API: Get Spread by Short ID
  *
- * GET /api/update/spreads/[id]
+ * GET /api/spreads/[id]
  *
  * Fetches a spread by its short_id for public spread pages.
  */
