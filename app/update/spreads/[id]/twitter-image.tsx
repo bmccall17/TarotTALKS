@@ -2,7 +2,6 @@ import { ImageResponse } from 'next/og';
 import { getSpreadByShortId } from '@/lib/db/queries/spreads';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { POSITION_LABELS } from '@/lib/spread-reading/types';
 
 export const runtime = 'nodejs';
 export const size = { width: 1200, height: 630 };
@@ -88,9 +87,16 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     ? `https://tarottalks.app${spread.talk.thumbnailUrl}`
     : null;
 
-  const truncatedTalkTitle = spread.talk?.title && spread.talk.title.length > 50
-    ? spread.talk.title.slice(0, 47) + '...'
+  // Truncate title if too long (70 chars like talks OG image)
+  const truncatedTalkTitle = spread.talk?.title && spread.talk.title.length > 70
+    ? spread.talk.title.slice(0, 67) + '...'
     : spread.talk?.title;
+
+  // Get rationale from spread
+  const rationale = spread.rationale || '';
+
+  // Format duration (seconds to minutes)
+  const durationMin = spread.talk?.durationSeconds ? Math.round(spread.talk.durationSeconds / 60) : null;
 
   // Generate sparkles
   const sparkles: Array<{ x: number; y: number; s: number; o: number }> = [];
@@ -99,13 +105,13 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     seed = (seed * 9301 + 49297) % 233280;
     return seed / 233280;
   };
-  const sparkleCount = 10 + Math.floor(random() * 4);
+  const sparkleCount = 12 + Math.floor(random() * 4);
   for (let i = 0; i < sparkleCount; i++) {
     sparkles.push({
       x: Math.floor(random() * 1150) + 25,
       y: Math.floor(random() * 580) + 25,
-      s: Math.floor(random() * 3) + 2,
-      o: 0.3 + random() * 0.4,
+      s: Math.floor(random() * 3) + 3,
+      o: 0.4 + random() * 0.5,
     });
   }
 
@@ -117,7 +123,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           height: '100%',
           display: 'flex',
           background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)',
-          padding: 40,
+          padding: 36,
           position: 'relative',
           fontFamily,
         }}
@@ -138,156 +144,155 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           />
         ))}
 
-        {/* Left Side: Cards */}
+        {/* Left Section: Brand + Large Thumbnail with Card Overlay */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
-            width: 480,
+            width: 720,
+            position: 'relative',
           }}
         >
           {/* Brand */}
-          <div style={{ display: 'flex', fontSize: 28, marginBottom: 24 }}>
+          <div style={{ display: 'flex', fontSize: 28, marginBottom: 16 }}>
             <span style={{ color: '#9ca3af' }}>Tarot</span>
             <span style={{ color: '#EB0028', fontWeight: 700 }}>TALKS</span>
           </div>
 
-          {/* Title */}
-          <div
-            style={{
-              color: '#ffffff',
-              fontSize: 24,
-              fontWeight: 700,
-              marginBottom: 24,
-            }}
-          >
-            Your Spread Reading
-          </div>
+          {/* Large Thumbnail */}
+          {spread.talk && talkThumbnailUrl ? (
+            <img
+              src={talkThumbnailUrl}
+              alt=""
+              width={700}
+              height={394}
+              style={{
+                borderRadius: 16,
+                objectFit: 'cover',
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 700,
+                height: 394,
+                borderRadius: 16,
+                background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#9ca3af',
+                fontSize: 32,
+              }}
+            >
+              TED Talk
+            </div>
+          )}
 
-          {/* Cards Row */}
-          <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-            {cardImages.map((card, i) => (
-              <div
-                key={i}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                }}
-              >
-                <img
-                  src={card.url}
-                  alt={card.name}
-                  width={120}
-                  height={200}
-                  style={{
-                    borderRadius: 8,
-                    objectFit: 'cover',
-                    border: '2px solid rgba(255, 255, 255, 0.2)',
-                  }}
-                />
-                <span
-                  style={{
-                    color: '#9ca3af',
-                    fontSize: 12,
-                    marginTop: 8,
-                  }}
-                >
-                  {POSITION_LABELS[i].split(' ')[0]}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Card Names */}
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 8,
-            }}
-          >
-            {cardImages.map((card, i) => (
-              <span
-                key={i}
-                style={{
-                  color: '#a5b4fc',
-                  fontSize: 14,
-                  background: 'rgba(99, 102, 241, 0.2)',
-                  padding: '4px 10px',
-                  borderRadius: 12,
-                }}
-              >
-                {card.name}
-              </span>
-            ))}
-          </div>
+          {/* Metadata row */}
+          {spread.talk && (
+            <div
+              style={{
+                display: 'flex',
+                marginTop: 12,
+                gap: 16,
+                color: '#a5b4fc',
+                fontSize: 16,
+              }}
+            >
+              {spread.talk.year && <span style={{ display: 'flex' }}>{spread.talk.year}</span>}
+              {durationMin && <span style={{ display: 'flex' }}>{durationMin} min</span>}
+            </div>
+          )}
         </div>
 
-        {/* Right Side: Talk */}
+        {/* Right Section: Title, Speaker at top */}
         <div
           style={{
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'center',
-            paddingLeft: 40,
+            justifyContent: 'flex-start',
+            paddingLeft: 28,
+            paddingRight: 20,
+            paddingTop: 44,
           }}
         >
           {spread.talk && (
             <>
-              {/* Talk Thumbnail */}
-              {talkThumbnailUrl ? (
-                <img
-                  src={talkThumbnailUrl}
-                  alt=""
-                  width={360}
-                  height={200}
-                  style={{
-                    borderRadius: 12,
-                    objectFit: 'cover',
-                    marginBottom: 16,
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: 360,
-                    height: 200,
-                    borderRadius: 12,
-                    background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#9ca3af',
-                    fontSize: 16,
-                    marginBottom: 16,
-                  }}
-                >
-                  TED Talk
-                </div>
-              )}
-
-              {/* Talk Title */}
+              {/* Title */}
               <div
                 style={{
                   color: '#ffffff',
-                  fontSize: 22,
+                  fontSize: 28,
                   fontWeight: 700,
                   marginBottom: 8,
-                  maxWidth: 360,
+                  lineHeight: 1.2,
                 }}
               >
                 {truncatedTalkTitle}
               </div>
 
               {/* Speaker */}
-              <div style={{ color: '#a5b4fc', fontSize: 16 }}>
+              <div
+                style={{
+                  color: '#a5b4fc',
+                  fontSize: 20,
+                }}
+              >
                 {spread.talk.speakerName}
               </div>
             </>
           )}
         </div>
+
+        {/* Cards - overlay bottom of thumbnail with slight offset */}
+        <div
+          style={{
+            position: 'absolute',
+            left: 36 + 350 - (cardImages.length * 45), // Center cards on thumbnail
+            top: 300,
+            display: 'flex',
+            gap: -20, // Overlap cards slightly
+            filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.4))',
+          }}
+        >
+          {cardImages.map((card, i) => (
+            <img
+              key={i}
+              src={card.url}
+              alt={card.name}
+              width={90}
+              height={150}
+              style={{
+                borderRadius: 8,
+                objectFit: 'cover',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                transform: `rotate(${(i - 1) * 5}deg)`, // Fan effect: -5, 0, 5 degrees
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Rationale - positioned below title/speaker on right side */}
+        {rationale && (
+          <div
+            style={{
+              position: 'absolute',
+              left: 790,
+              top: 180,
+              right: 36,
+              display: 'flex',
+              color: '#d1d5db',
+              fontSize: 15,
+              lineHeight: 1.4,
+              borderLeft: '3px solid #6366f1',
+              paddingLeft: 14,
+            }}
+          >
+            {rationale.length > 200 ? rationale.slice(0, 197) + '...' : rationale}
+          </div>
+        )}
 
         {/* Bottom URL */}
         <div

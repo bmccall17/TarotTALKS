@@ -180,6 +180,7 @@ export function ReadMySpreadModal({
           {step === 'share' && result?.spread?.shortId && (
             <ShareStep
               spreadShortId={result.spread.shortId}
+              rationale={result.rationale}
               onClose={onClose}
               onBack={handleBackToResult}
             />

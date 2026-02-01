@@ -68,6 +68,7 @@ export interface SpreadTalk {
   description: string | null;
   thumbnailUrl: string | null;
   durationSeconds: number | null;
+  year?: number | null;
   themesJson?: string | null;
   coreMessage?: string | null;
 }

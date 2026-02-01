@@ -5,21 +5,22 @@ import { Copy, Check, Link, MessageCircle, X } from 'lucide-react';
 
 interface ShareStepProps {
   spreadShortId: string;
+  rationale: string;
   onClose: () => void;
   onBack: () => void;
 }
 
 type ShareFormat = 'link' | 'text';
 
-export function ShareStep({ spreadShortId, onClose, onBack }: ShareStepProps) {
+export function ShareStep({ spreadShortId, rationale, onClose, onBack }: ShareStepProps) {
   const [copied, setCopied] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<ShareFormat>('link');
 
   // Use production URL for shares (not /update staging URL)
   const spreadUrl = `https://tarottalks.app/spreads/${spreadShortId}`;
 
-  // Text format for Discord/WhatsApp
-  const textSnippet = `🃏 Check out my TarotTALKS reading!\n\n${spreadUrl}\n\nGet your own reading at tarottalks.app`;
+  // Text format with rationale for Discord/WhatsApp
+  const textSnippet = `"${rationale}"\n\n${spreadUrl}`;
 
   const handleCopy = async () => {
     const content = selectedFormat === 'link' ? spreadUrl : textSnippet;

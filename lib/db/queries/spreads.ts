@@ -132,6 +132,7 @@ export async function getTalkById(talkId: string): Promise<SpreadTalk | null> {
       description: talks.description,
       thumbnailUrl: talks.thumbnailUrl,
       durationSeconds: talks.durationSeconds,
+      year: talks.year,
       themesJson: talks.themesJson,
       coreMessage: talks.coreMessage,
     })
