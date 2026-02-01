@@ -87,9 +87,9 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     ? `https://tarottalks.app${spread.talk.thumbnailUrl}`
     : null;
 
-  // Truncate title if too long (70 chars like talks OG image)
-  const truncatedTalkTitle = spread.talk?.title && spread.talk.title.length > 70
-    ? spread.talk.title.slice(0, 67) + '...'
+  // Truncate title if too long (55 chars to prevent 3-line titles)
+  const truncatedTalkTitle = spread.talk?.title && spread.talk.title.length > 55
+    ? spread.talk.title.slice(0, 52) + '...'
     : spread.talk?.title;
 
   // Get rationale from spread
@@ -206,7 +206,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           )}
         </div>
 
-        {/* Right Section: Title, Speaker at top */}
+        {/* Right Section: Title, Speaker, Rationale */}
         <div
           style={{
             flex: 1,
@@ -224,7 +224,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
               <div
                 style={{
                   color: '#ffffff',
-                  fontSize: 28,
+                  fontSize: 26,
                   fontWeight: 700,
                   marginBottom: 8,
                   lineHeight: 1.2,
@@ -238,20 +238,37 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                 style={{
                   color: '#a5b4fc',
                   fontSize: 20,
+                  marginBottom: 20,
                 }}
               >
                 {spread.talk.speakerName}
               </div>
+
+              {/* Rationale - in flex layout below speaker */}
+              {rationale && (
+                <div
+                  style={{
+                    display: 'flex',
+                    color: '#d1d5db',
+                    fontSize: 15,
+                    lineHeight: 1.4,
+                    borderLeft: '3px solid #6366f1',
+                    paddingLeft: 14,
+                  }}
+                >
+                  {rationale.length > 200 ? rationale.slice(0, 197) + '...' : rationale}
+                </div>
+              )}
             </>
           )}
         </div>
 
-        {/* Cards - overlay bottom of thumbnail with slight offset */}
+        {/* Cards - bottom-right of thumbnail */}
         <div
           style={{
             position: 'absolute',
-            left: 36 + 350 - (cardImages.length * 45), // Center cards on thumbnail
-            top: 300,
+            left: 706 - (cardImages.length * 70) - 30, // Right side of thumbnail
+            top: 304, // Bottom of thumbnail
             display: 'flex',
             gap: -20, // Overlap cards slightly
             filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.4))',
@@ -273,26 +290,6 @@ export default async function Image({ params }: { params: Promise<{ id: string }
             />
           ))}
         </div>
-
-        {/* Rationale - positioned below title/speaker on right side */}
-        {rationale && (
-          <div
-            style={{
-              position: 'absolute',
-              left: 790,
-              top: 180,
-              right: 36,
-              display: 'flex',
-              color: '#d1d5db',
-              fontSize: 15,
-              lineHeight: 1.4,
-              borderLeft: '3px solid #6366f1',
-              paddingLeft: 14,
-            }}
-          >
-            {rationale.length > 200 ? rationale.slice(0, 197) + '...' : rationale}
-          </div>
-        )}
 
         {/* Bottom URL */}
         <div
