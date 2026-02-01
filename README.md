@@ -44,9 +44,5 @@ these works informed the historical grounding and interpretive depth of the proj
 * Wintner, Bakara. **WTF Is Tarot? ...& How Do I Do It?** Illustrated by Autumn Whitehurst. Salem, MA: Page Street Publishing Co., 2017. eISBN 978-1-62414-451-6.
 
 ---
-## branding assets
-a standalone icon is available at `public/linktree-icon.svg` for use on external profile links (Linktree, social bios, etc.). the app also generates dynamic icons via `app/icon.tsx` (favicon) and `app/apple-icon.tsx` (180x180 PWA icon).
-
----
 ## notes
 there are no license restrictions on the application code. please feel free to fork, modify, or build upon the project. if you use the card images, be sure to follow the attribution guidelines from Dungeon Church.
