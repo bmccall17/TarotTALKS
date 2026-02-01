@@ -87,9 +87,9 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     ? `https://tarottalks.app${spread.talk.thumbnailUrl}`
     : null;
 
-  // Truncate title if too long (55 chars to prevent 3-line titles)
-  const truncatedTalkTitle = spread.talk?.title && spread.talk.title.length > 55
-    ? spread.talk.title.slice(0, 52) + '...'
+  // Truncate title if too long (70 chars like talks OG image)
+  const truncatedTalkTitle = spread.talk?.title && spread.talk.title.length > 70
+    ? spread.talk.title.slice(0, 67) + '...'
     : spread.talk?.title;
 
   // Get rationale from spread
@@ -206,7 +206,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           )}
         </div>
 
-        {/* Right Section: Title, Speaker, Rationale */}
+        {/* Right Section: Title, Speaker at top (matching talk OG layout) */}
         <div
           style={{
             flex: 1,
@@ -224,7 +224,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
               <div
                 style={{
                   color: '#ffffff',
-                  fontSize: 26,
+                  fontSize: 28,
                   fontWeight: 700,
                   marginBottom: 8,
                   lineHeight: 1.2,
@@ -238,39 +238,22 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                 style={{
                   color: '#a5b4fc',
                   fontSize: 20,
-                  marginBottom: 20,
                 }}
               >
                 {spread.talk.speakerName}
               </div>
-
-              {/* Rationale - in flex layout below speaker */}
-              {rationale && (
-                <div
-                  style={{
-                    display: 'flex',
-                    color: '#d1d5db',
-                    fontSize: 15,
-                    lineHeight: 1.4,
-                    borderLeft: '3px solid #6366f1',
-                    paddingLeft: 14,
-                  }}
-                >
-                  {rationale.length > 200 ? rationale.slice(0, 197) + '...' : rationale}
-                </div>
-              )}
             </>
           )}
         </div>
 
-        {/* Cards - bottom-right of thumbnail */}
+        {/* Cards - overlays bottom-right corner of thumbnail (33% larger than before) */}
         <div
           style={{
             position: 'absolute',
-            left: 706 - (cardImages.length * 70) - 30, // Right side of thumbnail
-            top: 304, // Bottom of thumbnail
+            left: 520,
+            top: 280,
             display: 'flex',
-            gap: -20, // Overlap cards slightly
+            gap: -30, // Overlap cards
             filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.4))',
           }}
         >
@@ -279,10 +262,10 @@ export default async function Image({ params }: { params: Promise<{ id: string }
               key={i}
               src={card.url}
               alt={card.name}
-              width={90}
-              height={150}
+              width={120}
+              height={200}
               style={{
-                borderRadius: 8,
+                borderRadius: 10,
                 objectFit: 'cover',
                 border: '2px solid rgba(255, 255, 255, 0.3)',
                 transform: `rotate(${(i - 1) * 5}deg)`, // Fan effect: -5, 0, 5 degrees
@@ -290,6 +273,26 @@ export default async function Image({ params }: { params: Promise<{ id: string }
             />
           ))}
         </div>
+
+        {/* Rationale - positioned below title/speaker area */}
+        {rationale && (
+          <div
+            style={{
+              position: 'absolute',
+              left: 790,
+              top: 280,
+              right: 36,
+              display: 'flex',
+              color: '#d1d5db',
+              fontSize: 15,
+              lineHeight: 1.4,
+              borderLeft: '3px solid #6366f1',
+              paddingLeft: 14,
+            }}
+          >
+            {rationale.length > 200 ? rationale.slice(0, 197) + '...' : rationale}
+          </div>
+        )}
 
         {/* Bottom URL */}
         <div
