@@ -4,6 +4,7 @@ this project is a web application that maps the **Rider–Waite–Smith Tarot** 
 
 ### Live App
 👉 [https://tarottalks.app/](https://tarottalks.app/)
+[![https://tarottalks.app](https://github.com/bmccall17/TarotTALKS/blob/main/public/applicationhero.png?raw=true)](https://tarottalks.app/)
 
 ---
 ## backstory
