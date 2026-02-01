@@ -64,6 +64,17 @@ export type PostMetrics = {
   replyCount: number;
 };
 
+/**
+ * Bluesky facets represent rich text metadata (links, mentions, etc.)
+ */
+export type BlueskyFacet = {
+  index: { byteStart: number; byteEnd: number };
+  features: Array<{
+    $type: string;
+    uri?: string;  // For links (app.bsky.richtext.facet#link)
+  }>;
+};
+
 export type MentionPost = {
   uri: string;
   postUrl: string;
@@ -75,6 +86,7 @@ export type MentionPost = {
   likeCount: number;
   repostCount: number;
   replyCount: number;
+  facets?: BlueskyFacet[];
 };
 
 /**
@@ -161,6 +173,7 @@ export type FullPostData = {
   likeCount: number;
   repostCount: number;
   replyCount: number;
+  facets?: BlueskyFacet[];
 };
 
 /**
@@ -186,16 +199,19 @@ export async function getFullPostData(atUri: string): Promise<FullPostData | nul
 
     console.log('[Bluesky] Got post from API, text length:', (post.record as { text?: string })?.text?.length);
 
+    const record = post.record as { text?: string; createdAt?: string; facets?: BlueskyFacet[] };
+
     return {
       uri: post.uri,
-      text: (post.record as { text?: string })?.text || '',
-      createdAt: (post.record as { createdAt?: string })?.createdAt || post.indexedAt,
+      text: record?.text || '',
+      createdAt: record?.createdAt || post.indexedAt,
       authorDid: post.author.did,
       authorHandle: post.author.handle,
       authorDisplayName: post.author.displayName || post.author.handle,
       likeCount: post.likeCount ?? 0,
       repostCount: post.repostCount ?? 0,
       replyCount: post.replyCount ?? 0,
+      facets: record?.facets,
     };
   } catch (error) {
     console.error('[Bluesky] Error fetching post:', error);
@@ -268,18 +284,22 @@ export async function searchMentions(limit: number = 100): Promise<MentionPost[]
 
     const posts = response.data.posts || [];
 
-    return posts.map((post) => ({
-      uri: post.uri,
-      postUrl: `https://bsky.app/profile/${post.author.handle}/post/${post.uri.split('/').pop()}`,
-      authorDid: post.author.did,
-      authorHandle: post.author.handle,
-      authorDisplayName: post.author.displayName || post.author.handle,
-      text: (post.record as { text?: string })?.text || '',
-      createdAt: (post.record as { createdAt?: string })?.createdAt || post.indexedAt,
-      likeCount: post.likeCount ?? 0,
-      repostCount: post.repostCount ?? 0,
-      replyCount: post.replyCount ?? 0,
-    }));
+    return posts.map((post) => {
+      const record = post.record as { text?: string; createdAt?: string; facets?: BlueskyFacet[] };
+      return {
+        uri: post.uri,
+        postUrl: `https://bsky.app/profile/${post.author.handle}/post/${post.uri.split('/').pop()}`,
+        authorDid: post.author.did,
+        authorHandle: post.author.handle,
+        authorDisplayName: post.author.displayName || post.author.handle,
+        text: record?.text || '',
+        createdAt: record?.createdAt || post.indexedAt,
+        likeCount: post.likeCount ?? 0,
+        repostCount: post.repostCount ?? 0,
+        replyCount: post.replyCount ?? 0,
+        facets: record?.facets,
+      };
+    });
   } catch (error) {
     console.error('Error searching Bluesky mentions:', error);
     return [];
@@ -301,4 +321,57 @@ export async function getMetricsFromUrl(postUrl: string): Promise<PostMetrics | 
  */
 export function isBlueskyUrl(url: string): boolean {
   return /bsky\.app\/profile\/[^\/]+\/post\/[a-z0-9]+/i.test(url);
+}
+
+/**
+ * Extract TarotTALKS URL from Bluesky facets (rich text links)
+ * Facets are how Bluesky stores hyperlinks - the URL is in the facet metadata,
+ * not necessarily visible in the plain text.
+ */
+export function extractTarotTalksUrlFromFacets(facets?: BlueskyFacet[]): string | null {
+  if (!facets || facets.length === 0) return null;
+
+  for (const facet of facets) {
+    for (const feature of facet.features) {
+      if (feature.$type === 'app.bsky.richtext.facet#link' && feature.uri) {
+        if (feature.uri.includes('tarottalks.app/')) {
+          // Normalize to https
+          const url = feature.uri.startsWith('http')
+            ? feature.uri
+            : `https://${feature.uri}`;
+          return url;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extract TarotTALKS URL from plain text
+ * Fallback for when URLs appear in text without facet metadata
+ */
+export function extractTarotTalksUrlFromText(text: string): string | null {
+  const match = text.match(/(?:https?:\/\/)?tarottalks\.app\/[^\s)>"\]]+/i);
+  if (!match) return null;
+
+  // Normalize to https URL
+  const url = match[0].startsWith('http')
+    ? match[0]
+    : `https://${match[0]}`;
+  return url;
+}
+
+/**
+ * Extract TarotTALKS URL from a Bluesky post
+ * Tries facets first (for rich text links), then falls back to text parsing
+ */
+export function extractTarotTalksUrl(text: string, facets?: BlueskyFacet[]): string | null {
+  // Try facets first - this is where Bluesky stores hyperlink URLs
+  const fromFacets = extractTarotTalksUrlFromFacets(facets);
+  if (fromFacets) return fromFacets;
+
+  // Fall back to text extraction
+  return extractTarotTalksUrlFromText(text);
 }

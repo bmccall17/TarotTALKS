@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getShareById, updateShare, resolveSharedUrl } from '@/lib/db/queries/admin-social-shares';
-import { getFullPostDataFromUrl } from '@/lib/services/bluesky';
+import { getFullPostDataFromUrl, extractTarotTalksUrl } from '@/lib/services/bluesky';
 
 /**
  * POST /api/admin/social-shares/[id]/rescan
@@ -57,15 +57,13 @@ export async function POST(
       metrics: { likes: postData.likeCount, reposts: postData.repostCount, replies: postData.replyCount }
     });
 
-    // Extract TarotTALKS URL from post text
-    const urlMatch = postData.text.match(/tarottalks\.app\/[^\s)>"\]]+/i);
-    console.log('[Rescan] URL match result:', urlMatch ? urlMatch[0] : 'NO MATCH');
-    let sharedUrl: string | undefined;
+    // Extract TarotTALKS URL from facets (rich text) or post text
+    const sharedUrl = extractTarotTalksUrl(postData.text, postData.facets) || undefined;
+    console.log('[Rescan] Extracted TarotTALKS URL:', sharedUrl || 'NO MATCH');
     let cardId: string | undefined;
     let talkId: string | undefined;
 
-    if (urlMatch) {
-      sharedUrl = `https://${urlMatch[0]}`;
+    if (sharedUrl) {
       console.log('[Rescan] Resolving TarotTALKS URL:', sharedUrl);
       const resolved = await resolveSharedUrl(sharedUrl);
       console.log('[Rescan] Resolved to:', resolved);

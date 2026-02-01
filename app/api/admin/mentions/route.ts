@@ -5,7 +5,7 @@ import {
   mentionExistsByAtUri,
   resolveSharedUrl,
 } from '@/lib/db/queries/admin-social-shares';
-import { searchMentions } from '@/lib/services/bluesky';
+import { searchMentions, extractTarotTalksUrl } from '@/lib/services/bluesky';
 
 /**
  * GET /api/admin/mentions
@@ -66,14 +66,12 @@ export async function POST(request: Request) {
         continue;
       }
 
-      // Try to extract TarotTALKS URL from the post text
-      const urlMatch = mention.text.match(/tarottalks\.app\/[^\s)>"\]]+/i);
-      let sharedUrl: string | undefined;
+      // Try to extract TarotTALKS URL from facets (rich text) or post text
+      const sharedUrl = extractTarotTalksUrl(mention.text, mention.facets) || undefined;
       let cardId: string | undefined;
       let talkId: string | undefined;
 
-      if (urlMatch) {
-        sharedUrl = `https://${urlMatch[0]}`;
+      if (sharedUrl) {
         const resolved = await resolveSharedUrl(sharedUrl);
         if (resolved.type === 'card') {
           cardId = resolved.cardId;
