@@ -13,6 +13,7 @@ import {
   ChevronRight,
   RefreshCw,
   AtSign,
+  Share2,
 } from 'lucide-react';
 import { IssueCard } from './IssueCard';
 import { Toast } from '../ui/Toast';
@@ -122,6 +123,13 @@ type ValidationIssues = {
     tedUrl?: string | null;
     youtubeUrl?: string | null;
   }>;
+  unpostedCards: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    imageUrl: string;
+    sequenceIndex: number;
+  }>;
 };
 
 type Props = {
@@ -140,7 +148,8 @@ type IssueType =
   | 'unmappedTalk'
   | 'missingLongRationale'
   | 'softDeleted'
-  | 'missingSocialHandles';
+  | 'missingSocialHandles'
+  | 'unpostedCard';
 
 export function ValidationDashboard({ initialIssues }: Props) {
   const [issues, setIssues] = useState<ValidationIssues>(initialIssues);
@@ -155,6 +164,7 @@ export function ValidationDashboard({ initialIssues }: Props) {
     mappingsMissingLongRationale: true,
     softDeletedTalks: false,
     missingSocialHandles: false,
+    unpostedCards: true,
   });
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -275,6 +285,11 @@ export function ValidationDashboard({ initialIssues }: Props) {
     missingSocialHandles: {
       title: 'Missing Social Handles (Tag Pack)',
       icon: <AtSign className="w-5 h-5" />,
+      severity: 'info',
+    },
+    unpostedCards: {
+      title: 'Cards Not Yet Shared',
+      icon: <Share2 className="w-5 h-5" />,
       severity: 'info',
     },
   };
@@ -470,6 +485,21 @@ export function ValidationDashboard({ initialIssues }: Props) {
                   />
                 );
               })}
+
+            {key === 'unpostedCards' &&
+              issues.unpostedCards.map((item) => {
+                const issueId = item.id;
+                return (
+                  <IssueCard
+                    key={item.id}
+                    type="unpostedCard"
+                    data={item}
+                    onFix={handleFix}
+                    isFixed={fixedIssues.has(issueId)}
+                    isFixing={fixingId === issueId}
+                  />
+                );
+              })}
           </div>
         )}
       </div>
@@ -559,7 +589,7 @@ export function ValidationDashboard({ initialIssues }: Props) {
           )}
 
           {/* Info Items */}
-          {(issues.softDeletedTalks.length > 0 || issues.missingSocialHandles.length > 0) && (
+          {(issues.softDeletedTalks.length > 0 || issues.missingSocialHandles.length > 0 || issues.unpostedCards.length > 0) && (
             <div>
               <h2 className="text-sm font-medium text-blue-400 mb-3 flex items-center gap-2">
                 <AtSign className="w-4 h-4" />
@@ -568,6 +598,7 @@ export function ValidationDashboard({ initialIssues }: Props) {
               <div className="space-y-4">
                 {renderSection('softDeletedTalks')}
                 {renderSection('missingSocialHandles')}
+                {renderSection('unpostedCards')}
               </div>
             </div>
           )}

@@ -6,6 +6,7 @@ import { ShareRow } from './ShareRow';
 import { ShareFilters } from './ShareFilters';
 import { NewShareForm } from './NewShareForm';
 import { TopSharesWidget } from './TopSharesWidget';
+import { NextCardWidget } from './NextCardWidget';
 import { MentionsInbox } from './MentionsInbox';
 import { Toast } from '../ui/Toast';
 import { type Platform } from '@/lib/utils/social-handles';
@@ -80,6 +81,7 @@ export function SharesList() {
   // Form modal state
   const [showForm, setShowForm] = useState(false);
   const [editingShare, setEditingShare] = useState<Share | null>(null);
+  const [preselectedCard, setPreselectedCard] = useState<{ id: string; slug: string; name: string } | null>(null);
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -137,6 +139,13 @@ export function SharesList() {
 
   const handleNewShare = () => {
     setEditingShare(null);
+    setPreselectedCard(null);
+    setShowForm(true);
+  };
+
+  const handleCreateShareForCard = (card: { id: string; slug: string; name: string }) => {
+    setEditingShare(null);
+    setPreselectedCard(card);
     setShowForm(true);
   };
 
@@ -155,6 +164,7 @@ export function SharesList() {
   const handleFormClose = () => {
     setShowForm(false);
     setEditingShare(null);
+    setPreselectedCard(null);
   };
 
   const handleShareDeleted = () => {
@@ -188,8 +198,9 @@ export function SharesList() {
         </button>
       </div>
 
-      {/* Stats Bar + Top Shares */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Stats Bar + Widgets */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Stats Cards */}
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
             <div className="text-2xl font-bold text-gray-100">{stats.today}</div>
@@ -204,7 +215,10 @@ export function SharesList() {
             <div className="text-xs text-gray-400">Total</div>
           </div>
         </div>
+        {/* Top Shares Widget */}
         <TopSharesWidget />
+        {/* Next Card to Post Widget */}
+        <NextCardWidget onCreateShare={handleCreateShareForCard} />
       </div>
 
       {/* Mentions Inbox */}
@@ -277,6 +291,7 @@ export function SharesList() {
       {showForm && (
         <NewShareForm
           share={editingShare}
+          preselectedCard={preselectedCard}
           onSave={handleFormSave}
           onClose={handleFormClose}
         />

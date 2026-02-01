@@ -2,8 +2,9 @@ import { db } from '@/lib/db';
 import { cards, talks, cardTalkMappings, themes, cardThemes, talkThemes } from '@/lib/db/schema';
 import { count, eq, and, sql } from 'drizzle-orm';
 import { getTalksStats } from '@/lib/db/queries/admin-talks';
+import { getShareStats, getUnpostedCardsStats } from '@/lib/db/queries/admin-social-shares';
 import Link from 'next/link';
-import { Video, Link as LinkIcon, AlertTriangle, LayoutGrid, Sparkles, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import { Video, Link as LinkIcon, AlertTriangle, LayoutGrid, Sparkles, CheckCircle, AlertCircle, XCircle, Radio, Share2 } from 'lucide-react';
 
 // Force dynamic rendering - admin page should not be statically generated
 export const dynamic = 'force-dynamic';
@@ -24,7 +25,11 @@ export default async function AdminDashboard() {
     // Second batch: talk stats (runs 4 queries internally but sequentially)
     const talksStats = await getTalksStats();
 
-    // Third batch: complex subqueries
+    // Third batch: share stats
+    const shareStats = await getShareStats();
+    const unpostedStats = await getUnpostedCardsStats();
+
+    // Fourth batch: complex subqueries
     const cardsWithoutPrimaryCount = await db.select({ count: count() }).from(cards).where(
       sql`NOT EXISTS (
         SELECT 1 FROM card_talk_mappings
@@ -55,6 +60,12 @@ export default async function AdminDashboard() {
     deletedTalks: talksStats.deleted,
     talksWithYoutube: talksStats.withYoutubeId,
     talksWithoutThumbnail: talksStats.withoutThumbnail,
+    // Share stats
+    totalShares: shareStats.total,
+    sharesToday: shareStats.today,
+    sharesThisWeek: shareStats.thisWeek,
+    sharedCards: unpostedStats.sharedCards,
+    unpostedCards: unpostedStats.unpostedOverall,
   };
 
   // Use values from getTalksStats() to avoid duplicate queries
@@ -111,7 +122,7 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Primary Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-5">
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 bg-indigo-500/20 rounded-lg">
@@ -156,6 +167,19 @@ export default async function AdminDashboard() {
             </div>
             <p className="text-3xl font-bold text-gray-100">{stats.themes}</p>
             <p className="text-xs text-gray-500 mt-1">{stats.cardThemeLinks + stats.talkThemeLinks} links</p>
+          </div>
+
+          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-blue-500/20 rounded-lg">
+                <Share2 className="w-5 h-5 text-blue-400" />
+              </div>
+              <span className="text-gray-400 text-sm font-medium">Shares</span>
+            </div>
+            <p className="text-3xl font-bold text-gray-100">{stats.totalShares}</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {stats.sharesToday > 0 ? `${stats.sharesToday} today` : 'Social posts tracked'}
+            </p>
           </div>
         </div>
 
@@ -206,6 +230,20 @@ export default async function AdminDashboard() {
                 </div>
                 <span className="text-gray-500 group-hover:text-gray-300 transition-colors">→</span>
               </Link>
+
+              <Link
+                href="/admin/signal-deck"
+                className="flex items-center justify-between p-4 bg-gray-700/30 hover:bg-gray-700/50 rounded-lg transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <Radio className="w-5 h-5 text-indigo-400" />
+                  <div>
+                    <p className="text-gray-200 font-medium">Signal Deck</p>
+                    <p className="text-xs text-gray-500">Track social media shares and engagement</p>
+                  </div>
+                </div>
+                <span className="text-gray-500 group-hover:text-gray-300 transition-colors">→</span>
+              </Link>
             </div>
           </div>
 
@@ -251,6 +289,13 @@ export default async function AdminDashboard() {
                   {validation.softDeleted}
                 </span>
               </div>
+
+              <div className="flex items-center justify-between p-3 bg-gray-700/20 rounded-lg">
+                <span className="text-gray-400 text-sm">Cards not yet shared</span>
+                <span className={`font-semibold ${stats.unpostedCards > 0 ? 'text-blue-400' : 'text-green-400'}`}>
+                  {stats.unpostedCards}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -258,7 +303,7 @@ export default async function AdminDashboard() {
         {/* Coverage Stats */}
         <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
           <h2 className="text-lg font-semibold text-gray-100 mb-4">Content Coverage</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-gray-400 text-sm">Primary Mappings</span>
@@ -328,6 +373,24 @@ export default async function AdminDashboard() {
               </div>
               <p className="text-xs text-gray-500 mt-1">
                 {stats.cardThemeLinks} cards, {stats.talkThemeLinks} talks
+              </p>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-gray-400 text-sm">Cards Shared</span>
+                <span className="text-gray-300 text-sm font-medium">
+                  {stats.sharedCards}/{stats.cards}
+                </span>
+              </div>
+              <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-blue-500 rounded-full transition-all"
+                  style={{ width: `${(stats.sharedCards / stats.cards) * 100}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {Math.round((stats.sharedCards / stats.cards) * 100)}% of cards
               </p>
             </div>
           </div>

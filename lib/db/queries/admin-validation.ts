@@ -1,5 +1,5 @@
 import { db } from '../index';
-import { talks, cards, cardTalkMappings } from '../schema';
+import { talks, cards, cardTalkMappings, socialShares } from '../schema';
 import { eq, and, sql, isNull, or, lt, count } from 'drizzle-orm';
 import { isSupabaseStorageUrl } from '@/lib/supabase';
 
@@ -119,6 +119,13 @@ export interface ValidationIssues {
     tedUrl: string | null;
     youtubeUrl: string | null;
   }>;
+  unpostedCards: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    imageUrl: string;
+    sequenceIndex: number;
+  }>;
 }
 
 /**
@@ -137,6 +144,7 @@ export async function getValidationIssues(): Promise<ValidationIssues> {
   const softDeletedTalks = await getSoftDeletedTalks();
   const youtubeOnlyTalks = await getYoutubeOnlyTalks();
   const missingSocialHandles = await getMissingSocialHandles();
+  const unpostedCards = await getUnpostedCardsForValidation();
 
   return {
     duplicateYoutubeIds,
@@ -150,6 +158,7 @@ export async function getValidationIssues(): Promise<ValidationIssues> {
     softDeletedTalks,
     youtubeOnlyTalks,
     missingSocialHandles,
+    unpostedCards,
   };
 }
 
@@ -479,6 +488,28 @@ async function getMissingSocialHandles() {
 }
 
 /**
+ * Get cards that have never been shared on social media
+ */
+async function getUnpostedCardsForValidation() {
+  return await db
+    .select({
+      id: cards.id,
+      name: cards.name,
+      slug: cards.slug,
+      imageUrl: cards.imageUrl,
+      sequenceIndex: cards.sequenceIndex,
+    })
+    .from(cards)
+    .where(
+      sql`NOT EXISTS (
+        SELECT 1 FROM ${socialShares}
+        WHERE ${socialShares.cardId} = ${cards.id}
+      )`
+    )
+    .orderBy(cards.sequenceIndex);
+}
+
+/**
  * Get validation summary counts
  */
 export async function getValidationSummary() {
@@ -495,7 +526,7 @@ export async function getValidationSummary() {
       issues.cardsWithoutPrimaryMapping.length +
       issues.talksNotMappedToAnyCard.length +
       issues.mappingsMissingLongRationale.length,
-    info: issues.softDeletedTalks.length + issues.missingSocialHandles.length,
+    info: issues.softDeletedTalks.length + issues.missingSocialHandles.length + issues.unpostedCards.length,
     total:
       issues.duplicateYoutubeIds.length +
       issues.missingBothUrls.length +
@@ -506,7 +537,8 @@ export async function getValidationSummary() {
       issues.talksNotMappedToAnyCard.length +
       issues.mappingsMissingLongRationale.length +
       issues.softDeletedTalks.length +
-      issues.missingSocialHandles.length,
+      issues.missingSocialHandles.length +
+      issues.unpostedCards.length,
     details: {
       duplicateYoutubeIds: issues.duplicateYoutubeIds.length,
       missingBothUrls: issues.missingBothUrls.length,
@@ -518,6 +550,7 @@ export async function getValidationSummary() {
       mappingsMissingLongRationale: issues.mappingsMissingLongRationale.length,
       softDeletedTalks: issues.softDeletedTalks.length,
       missingSocialHandles: issues.missingSocialHandles.length,
+      unpostedCards: issues.unpostedCards.length,
     },
   };
 }

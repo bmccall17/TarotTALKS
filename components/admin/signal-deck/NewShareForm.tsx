@@ -29,8 +29,15 @@ type Share = {
   metricsSource?: 'auto' | 'manual' | null;
 };
 
+type PreselectedCard = {
+  id: string;
+  slug: string;
+  name: string;
+};
+
 type Props = {
   share?: Share | null;
+  preselectedCard?: PreselectedCard | null;
   onSave: () => void;
   onClose: () => void;
 };
@@ -68,7 +75,7 @@ const platformColorsSelected: Record<string, string> = {
   other: 'bg-gray-600 border-white text-white ring-2 ring-gray-300',
 };
 
-export function NewShareForm({ share, onSave, onClose }: Props) {
+export function NewShareForm({ share, preselectedCard, onSave, onClose }: Props) {
   const isEditing = !!share?.id;
 
   const [formData, setFormData] = useState<{
@@ -126,6 +133,19 @@ export function NewShareForm({ share, onSave, onClose }: Props) {
   }, [formData.postUrl, share?.postUrl]);
 
   const platformMismatch = detectedPlatform && detectedPlatform !== formData.platform;
+
+  // Handle preselected card - set sharedUrl and resolved content
+  useEffect(() => {
+    if (!preselectedCard) return;
+
+    const cardUrl = `https://tarottalks.app/cards/${preselectedCard.slug}`;
+    setFormData((prev) => ({
+      ...prev,
+      sharedUrl: cardUrl,
+      cardId: preselectedCard.id,
+    }));
+    setResolvedContent({ type: 'card', name: preselectedCard.name });
+  }, [preselectedCard]);
 
   // Auto-detect TarotTALKS URL from post URL
   useEffect(() => {

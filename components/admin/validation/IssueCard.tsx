@@ -13,7 +13,8 @@ type IssueType =
   | 'unmappedTalk'
   | 'missingLongRationale'
   | 'softDeleted'
-  | 'missingSocialHandles';
+  | 'missingSocialHandles'
+  | 'unpostedCard';
 
 type DuplicateYoutubeData = {
   youtubeVideoId: string;
@@ -56,9 +57,17 @@ type MappingData = {
   rationaleShort: string | null;
 };
 
+type UnpostedCardData = {
+  id: string;
+  name: string;
+  slug: string;
+  imageUrl: string;
+  sequenceIndex: number;
+};
+
 type Props = {
   type: IssueType;
-  data: DuplicateYoutubeData | TalkData | CardData | MappingData;
+  data: DuplicateYoutubeData | TalkData | CardData | MappingData | UnpostedCardData;
   onFix?: (type: IssueType, data: any) => void;
   isFixed?: boolean;
   isFixing?: boolean;
@@ -337,6 +346,44 @@ export function IssueCard({ type, data, onFix, isFixed, isFixing }: Props) {
           >
             <Edit2 className="w-3 h-3" />
             Add Long Rationale
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Unposted cards
+  if (type === 'unpostedCard') {
+    const item = data as UnpostedCardData;
+    return (
+      <div className={`flex items-center justify-between bg-gray-900/50 border rounded-lg p-4 transition-all ${isFixed ? 'border-green-500/50 bg-green-500/5' : 'border-gray-700'}`}>
+        <div className="flex items-center gap-4">
+          <img
+            src={item.imageUrl}
+            alt={item.name}
+            className="w-10 h-14 object-cover rounded"
+          />
+          <div>
+            <p className="text-sm font-medium text-gray-100">{item.name}</p>
+            <p className="text-xs text-gray-500">Not yet shared on any platform</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {isFixed && <Check className="w-4 h-4 text-green-400" />}
+          <Link
+            href={`/admin/signal-deck`}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/30 rounded transition-colors"
+          >
+            <Edit2 className="w-3 h-3" />
+            Create Share
+          </Link>
+          <Link
+            href={`/cards/${item.slug}`}
+            target="_blank"
+            className="flex items-center gap-1 px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors"
+          >
+            <ExternalLink className="w-3 h-3" />
+            View
           </Link>
         </div>
       </div>

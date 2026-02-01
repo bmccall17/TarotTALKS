@@ -454,3 +454,105 @@ export async function convertMentionToShare(id: string): Promise<Share | null> {
 
   return result || null;
 }
+
+// ==========================================
+// Unposted Cards Tracking
+// ==========================================
+
+export type UnpostedCard = {
+  id: string;
+  name: string;
+  slug: string;
+  imageUrl: string;
+  sequenceIndex: number;
+};
+
+export type Platform = 'x' | 'bluesky' | 'threads' | 'linkedin' | 'instagram' | 'other';
+
+/**
+ * Get cards that have never been shared on social media
+ * Optionally filter by platform to find cards not shared on a specific platform
+ */
+export async function getUnpostedCards(
+  platform?: Platform,
+  limit?: number
+): Promise<UnpostedCard[]> {
+  // Build the NOT EXISTS subquery based on whether platform filter is applied
+  const platformCondition = platform
+    ? sql`${socialShares.cardId} = ${cards.id} AND ${socialShares.platform} = ${platform}`
+    : sql`${socialShares.cardId} = ${cards.id}`;
+
+  const query = db
+    .select({
+      id: cards.id,
+      name: cards.name,
+      slug: cards.slug,
+      imageUrl: cards.imageUrl,
+      sequenceIndex: cards.sequenceIndex,
+    })
+    .from(cards)
+    .where(
+      sql`NOT EXISTS (
+        SELECT 1 FROM ${socialShares}
+        WHERE ${platformCondition}
+      )`
+    )
+    .orderBy(cards.sequenceIndex);
+
+  if (limit) {
+    return query.limit(limit);
+  }
+
+  return query;
+}
+
+/**
+ * Get statistics about unposted cards for the dashboard
+ */
+export async function getUnpostedCardsStats(): Promise<{
+  totalCards: number;
+  unpostedOverall: number;
+  unpostedByPlatform: Record<Platform, number>;
+  sharedCards: number;
+}> {
+  // Get total card count
+  const [totalResult] = await db.select({ count: count() }).from(cards);
+  const totalCards = totalResult?.count || 0;
+
+  // Get cards with no shares at all
+  const [unpostedResult] = await db
+    .select({ count: count() })
+    .from(cards)
+    .where(
+      sql`NOT EXISTS (
+        SELECT 1 FROM ${socialShares}
+        WHERE ${socialShares.cardId} = ${cards.id}
+      )`
+    );
+  const unpostedOverall = unpostedResult?.count || 0;
+
+  // Get unposted count per platform
+  const platforms: Platform[] = ['x', 'bluesky', 'threads', 'linkedin', 'instagram', 'other'];
+  const unpostedByPlatform: Record<Platform, number> = {} as Record<Platform, number>;
+
+  for (const platform of platforms) {
+    const [result] = await db
+      .select({ count: count() })
+      .from(cards)
+      .where(
+        sql`NOT EXISTS (
+          SELECT 1 FROM ${socialShares}
+          WHERE ${socialShares.cardId} = ${cards.id}
+          AND ${socialShares.platform} = ${platform}
+        )`
+      );
+    unpostedByPlatform[platform] = result?.count || 0;
+  }
+
+  return {
+    totalCards,
+    unpostedOverall,
+    unpostedByPlatform,
+    sharedCards: totalCards - unpostedOverall,
+  };
+}
