@@ -4,6 +4,7 @@ this project is a web application that maps the **Rider–Waite–Smith Tarot** 
 
 ### Live App
 👉 [https://tarottalks.app/](https://tarottalks.app/)
+[![https://tarottalks.app](https://github.com/bmccall17/TarotTALKS/blob/main/public/applicationhero.png?raw=true)](https://tarottalks.app/)
 
 ---
 ## backstory
@@ -41,10 +42,6 @@ these works informed the historical grounding and interpretive depth of the proj
 * Tea, Michelle. **Modern Tarot: Connecting with Your Higher Self Through the Wisdom of the Cards.** Illustrated by Amanda Verwey. San Francisco: HarperElixir, 2017. ISBN 978-0-06-268240-6.
 * Wen, Benebell. **Holistic Tarot: An Integrative Approach to Using Tarot for Personal Growth.** Berkeley, California: North Atlantic Books, 2015. ISBN 978-1-58394-835-4.
 * Wintner, Bakara. **WTF Is Tarot? ...& How Do I Do It?** Illustrated by Autumn Whitehurst. Salem, MA: Page Street Publishing Co., 2017. eISBN 978-1-62414-451-6.
-
----
-## branding assets
-a standalone icon is available at `public/linktree-icon.svg` for use on external profile links (Linktree, social bios, etc.). the app also generates dynamic icons via `app/icon.tsx` (favicon) and `app/apple-icon.tsx` (180x180 PWA icon).
 
 ---
 ## notes
