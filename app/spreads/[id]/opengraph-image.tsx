@@ -42,11 +42,11 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   const fontFamily = fonts ? 'OpenDyslexic' : 'system-ui, sans-serif';
   const fontOptions = fonts
     ? {
-        fonts: [
-          { name: 'OpenDyslexic', data: fonts.regular, weight: 400 as const },
-          { name: 'OpenDyslexic', data: fonts.bold, weight: 700 as const },
-        ],
-      }
+      fonts: [
+        { name: 'OpenDyslexic', data: fonts.regular, weight: 400 as const },
+        { name: 'OpenDyslexic', data: fonts.bold, weight: 700 as const },
+      ],
+    }
     : {};
 
   if (!spread) {
@@ -84,8 +84,8 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   const talkThumbnailUrl = spread.talk?.thumbnailUrl?.startsWith('http')
     ? spread.talk.thumbnailUrl
     : spread.talk?.thumbnailUrl
-    ? `https://tarottalks.app${spread.talk.thumbnailUrl}`
-    : null;
+      ? `https://tarottalks.app${spread.talk.thumbnailUrl}`
+      : null;
 
   // Truncate title if too long (70 chars like talks OG image)
   const truncatedTalkTitle = spread.talk?.title && spread.talk.title.length > 70
@@ -250,10 +250,10 @@ export default async function Image({ params }: { params: Promise<{ id: string }
         <div
           style={{
             position: 'absolute',
-            left: 520,
+            left: 480,
             top: 280,
             display: 'flex',
-            gap: -30, // Overlap cards
+            // gap is not fully supported with negative values in all OG generators, using margin instead
             filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.4))',
           }}
         >
@@ -269,6 +269,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                 objectFit: 'cover',
                 border: '2px solid rgba(255, 255, 255, 0.3)',
                 transform: `rotate(${(i - 1) * 5}deg)`, // Fan effect: -5, 0, 5 degrees
+                marginLeft: i === 0 ? 0 : -40,
               }}
             />
           ))}
