@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { FocusStep } from './FocusStep';
 import { LoadingState } from './LoadingState';
@@ -46,6 +46,46 @@ export function ReadMySpreadModal({
   const [step, setStep] = useState<Step>('focus');
   const [result, setResult] = useState<ReadingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Lock body scroll when modal opens to prevent background interaction
+  useEffect(() => {
+    const scrollY = window.scrollY;
+
+    // Debug logging
+    console.log('[Modal Debug] Modal opened', {
+      scrollY,
+      viewportHeight: window.innerHeight,
+      documentHeight: document.documentElement.scrollHeight,
+    });
+
+    // Log high z-index elements that might compete
+    document.querySelectorAll('*').forEach(el => {
+      const style = window.getComputedStyle(el);
+      const zIndex = parseInt(style.zIndex);
+      if (zIndex > 50 && !isNaN(zIndex)) {
+        console.log('[Modal Debug] High z-index element:', {
+          element: el.tagName,
+          className: el.className?.slice?.(0, 100),
+          zIndex,
+        });
+      }
+    });
+
+    // Lock scroll
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      // Restore scroll position when modal closes
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
 
   // Get card IDs in position order (sorted by reveal index)
   const getCardIds = useCallback(() => {
@@ -122,8 +162,24 @@ export function ReadMySpreadModal({
     }
   };
 
+  // Handle backdrop click - close modal when clicking outside content
+  const handleBackdropClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    console.log('[Modal Debug] Backdrop click', {
+      target: (e.target as HTMLElement).tagName,
+      targetClass: (e.target as HTMLElement).className?.slice?.(0, 50),
+      isBackdrop: e.target === e.currentTarget,
+    });
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-[60]">
+    <div
+      className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[60]"
+      onClick={handleBackdropClick}
+      style={{ isolation: 'isolate' }}
+    >
       <div className="bg-gray-900 rounded-xl border border-gray-700 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700 sticky top-0 bg-gray-900 z-10">
