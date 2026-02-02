@@ -1,9 +1,13 @@
 
 import { type SpreadTalk } from '@/lib/spread-reading/types';
 
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 const TED_CHANNEL_ID = 'UCAuUUnT6oDeKwE6v1NGQxug';
 const TEDX_CHANNEL_ID = 'UCsT0YIqwnpJCM-mx7-gSA4Q';
+
+// Read API key at runtime, not module load time
+function getYouTubeApiKey(): string | undefined {
+  return process.env.YOUTUBE_API_KEY;
+}
 
 export interface YouTubeResult {
     id: string;
@@ -44,7 +48,8 @@ function parseQuery(query: string): { term: string; channelId?: string } {
  * Search YouTube for a specific query
  */
 async function searchOne(query: string, maxResults: number = 2): Promise<YouTubeResult[]> {
-    if (!YOUTUBE_API_KEY) {
+    const apiKey = getYouTubeApiKey();
+    if (!apiKey) {
         console.warn('YOUTUBE_API_KEY not configured');
         return [];
     }
@@ -57,7 +62,7 @@ async function searchOne(query: string, maxResults: number = 2): Promise<YouTube
     url.searchParams.append('maxResults', maxResults.toString());
     url.searchParams.append('q', term);
     url.searchParams.append('type', 'video');
-    url.searchParams.append('key', YOUTUBE_API_KEY);
+    url.searchParams.append('key', apiKey);
 
     if (channelId) {
         url.searchParams.append('channelId', channelId);
@@ -99,7 +104,7 @@ async function searchOne(query: string, maxResults: number = 2): Promise<YouTube
  * Run multiple search queries in parallel and deduplicate results
  */
 export async function searchYouTube(queries: string[]): Promise<YouTubeResult[]> {
-    if (!YOUTUBE_API_KEY) {
+    if (!getYouTubeApiKey()) {
         console.log('Skipping YouTube search: No API Key');
         return [];
     }
