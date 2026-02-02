@@ -29,7 +29,7 @@ const LOST_CARDS = [
   {
     name: 'Death',
     slug: 'death',
-    image: 'https://hldbacbxyosqpbsataqt.supabase.co/storage/v1/object/public/card-images/the-death.jpg',
+    image: 'https://hldbacbxyosqpbsataqt.supabase.co/storage/v1/object/public/card-images/death.jpg',
     message: "This page has passed on. Don't mourn it too long—transformation awaits elsewhere.",
     buttonText: "Begin again"
   },
@@ -61,26 +61,29 @@ export default function NotFound() {
         </h1>
       </div>
 
-      {/* Card Image - reversed */}
-      <div className="relative w-48 md:w-56 aspect-[5/7] rounded-xl overflow-hidden transform rotate-180 shadow-2xl mb-6">
+      {/* Card Image - clickable, reversed, matching landing page sizing */}
+      <Link
+        href={`/cards/${card.slug}`}
+        className="relative w-[200px] h-[340px] md:w-[220px] md:h-[370px] rounded-xl overflow-hidden transform rotate-180 shadow-xl hover:shadow-2xl hover:shadow-indigo-500/40 transition-shadow mb-6 block"
+      >
         <Image
           src={card.image}
           alt={`${card.name} (Reversed)`}
           fill
           className="object-cover"
-          sizes="(max-width: 768px) 192px, 224px"
+          sizes="(max-width: 768px) 200px, 220px"
           priority
         />
-      </div>
+      </Link>
 
       {/* Card Name */}
       <h2 className="text-xl md:text-2xl font-semibold text-gray-100 mb-3">
         {card.name} <span className="text-gray-400 font-normal">(Reversed)</span>
       </h2>
 
-      {/* Card Message */}
+      {/* Card Message - no quotes */}
       <p className="text-gray-400 text-center max-w-md mb-8 leading-relaxed">
-        &ldquo;{card.message}&rdquo;
+        {card.message}
       </p>
 
       {/* 404 Display */}
