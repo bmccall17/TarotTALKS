@@ -29,38 +29,48 @@ interface RationaleResult {
  */
 function generateTemplateRationale(input: RationaleInput): string {
   const { cards, talk, matchReasons } = input;
-
-  // Opening: Link first card to talk
   const firstCard = cards[0];
-  const templates = [
-    `As ${firstCard.name} appears in your spread, "${talk.title}" offers a powerful perspective.`,
-    `Your spread begins with ${firstCard.name}, and ${talk.speakerName}'s talk "${talk.title}" speaks directly to its themes.`,
-    `${firstCard.name} sets the tone for your reading, and "${talk.title}" by ${talk.speakerName} deepens this message.`,
-    `With ${firstCard.name} guiding you, ${talk.speakerName} offers wisdom in "${talk.title}".`,
-  ];
-  const opening = templates[Math.floor(Math.random() * templates.length)];
+  const hasMultiCard = matchReasons.some(r => r.type === 'multi_card');
+  const isPrimary = matchReasons.some(r => r.type === 'primary');
+  const hasThemeMatch = matchReasons.some(r => r.type === 'theme');
 
-  // Middle: Describe the connection
-  let middle = '';
-  if (matchReasons.some(r => r.type === 'multi_card')) {
-    const cardCount = matchReasons.find(r => r.type === 'multi_card')?.points === 10 ? 'all three' : 'multiple';
-    middle = `This talk weaves together ${cardCount} cards in your spread. `;
-  } else if (matchReasons.some(r => r.type === 'primary')) {
-    middle = `This is a deeply aligned talk for your cards. `;
-  } else if (matchReasons.some(r => r.type === 'theme')) {
-    middle = `The themes resonate with the cards you've drawn. `;
+  // Full rationale templates - each is a complete, warm message
+  // These avoid the formulaic "With X guiding you, Y offers wisdom in Z" pattern
+  const fullTemplates: string[] = [];
+
+  if (hasMultiCard) {
+    const cardCount = matchReasons.find(r => r.type === 'multi_card')?.points === 10 ? 'all three of your cards' : 'the cards in your spread';
+    fullTemplates.push(
+      `${talk.speakerName}'s "${talk.title}" speaks to ${cardCount} in a way that feels almost uncanny. There's a thread here worth following.`,
+      `Your cards drew "${talk.title}" into your reading. ${talk.speakerName} explores territory that touches each card you've pulled—see what lands.`,
+      `"${talk.title}" emerged from your spread as a talk that bridges ${cardCount}. ${talk.speakerName} might have something you need to hear.`,
+    );
   }
 
-  // Closing: Encouragement
-  const closings = [
-    `Let ${talk.speakerName}'s words illuminate your path.`,
-    `This talk may reveal what your cards are trying to show you.`,
-    `Take what resonates and leave the rest.`,
-    `Sometimes the right talk finds you at the right time.`,
-  ];
-  const closing = closings[Math.floor(Math.random() * closings.length)];
+  if (isPrimary) {
+    fullTemplates.push(
+      `${firstCard.name} in your spread points directly to "${talk.title}" by ${talk.speakerName}. This pairing runs deep.`,
+      `"${talk.title}" is a natural companion to ${firstCard.name}. ${talk.speakerName}'s perspective may illuminate what this card is asking of you.`,
+      `When ${firstCard.name} appears, "${talk.title}" often follows. There's wisdom here that's meant for you.`,
+    );
+  }
 
-  return `${opening} ${middle}${closing}`;
+  if (hasThemeMatch) {
+    fullTemplates.push(
+      `The themes in your spread echo through "${talk.title}." ${talk.speakerName} walks similar ground—give it a watch.`,
+      `Your cards share a conversation with "${talk.title}" by ${talk.speakerName}. Something in this talk may speak to where you are.`,
+    );
+  }
+
+  // Generic fallbacks that still feel warm
+  fullTemplates.push(
+    `${firstCard.name} opens your spread, and "${talk.title}" by ${talk.speakerName} carries that energy forward. See what resonates.`,
+    `Your reading drew "${talk.title}" to the surface. ${talk.speakerName} explores questions your cards are raising—take what serves you.`,
+    `"${talk.title}" rose from your spread for a reason. ${talk.speakerName}'s words might hold exactly what you need right now.`,
+    `The cards suggest "${talk.title}" by ${talk.speakerName}. Sometimes the right talk finds you at the right moment.`,
+  );
+
+  return fullTemplates[Math.floor(Math.random() * fullTemplates.length)];
 }
 
 /**
@@ -79,11 +89,22 @@ function shouldUseAI(input: RationaleInput): boolean {
 
 /**
  * Generate rationale with AI enhancement if appropriate
+ * @param forceAI - Force AI generation even if not needed
+ * @param skipAI - Force template generation, never use AI (for testing)
  */
 export async function generateRationale(
   input: RationaleInput,
-  forceAI: boolean = false
+  forceAI: boolean = false,
+  skipAI: boolean = false
 ): Promise<RationaleResult> {
+  // If skipAI is set, always use template (test mode)
+  if (skipAI) {
+    return {
+      rationale: generateTemplateRationale(input),
+      source: 'template',
+    };
+  }
+
   const useAI = forceAI || shouldUseAI(input);
 
   if (!useAI) {

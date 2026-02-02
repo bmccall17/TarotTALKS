@@ -103,7 +103,7 @@ export function ResultDisplay({
       {/* Rationale */}
       <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
         <p className="text-sm text-gray-300 leading-relaxed italic">
-          "{rationale}"
+          {rationale}
         </p>
       </div>
 

@@ -33,12 +33,13 @@ interface RequestBody {
   focusType?: FocusType;
   focusText?: string;
   save?: boolean; // Whether to persist the spread
+  skipAI?: boolean; // Skip Gemini/YouTube for testing (uses fallback flow)
 }
 
 export async function POST(request: Request) {
   try {
     const body: RequestBody = await request.json();
-    const { cardIds, focusType, focusText, save = true } = body;
+    const { cardIds, focusType, focusText, save = true, skipAI = false } = body;
 
     // Validate card IDs
     if (!cardIds || !Array.isArray(cardIds) || cardIds.length < 2 || cardIds.length > 3) {
@@ -92,8 +93,13 @@ export async function POST(request: Request) {
     let selectedTalk = null;
     let finalRationale = "";
 
-    // Attempt the new flow
-    try {
+    // Skip AI if requested (test mode)
+    if (skipAI) {
+      console.log('[ReadMySpread] ⚠️ skipAI=true, bypassing Intelligence Evolution flow');
+    }
+
+    // Attempt the new flow (unless skipAI is set)
+    if (!skipAI) try {
       console.log('[ReadMySpread] Starting Intelligence Evolution flow...');
 
       const synthesisResult = await generateSynthesisAndQueries({
@@ -218,13 +224,17 @@ export async function POST(request: Request) {
       const recommendation = getTopRecommendation(scoredTalks);
       selectedTalk = recommendation.primary.talk;
 
-      const rationaleResult = await generateRationale({
-        cards,
-        talk: selectedTalk,
-        matchReasons: recommendation.primary.matchReasons,
-        focusType,
-        focusText,
-      });
+      const rationaleResult = await generateRationale(
+        {
+          cards,
+          talk: selectedTalk,
+          matchReasons: recommendation.primary.matchReasons,
+          focusType,
+          focusText,
+        },
+        false, // forceAI
+        skipAI // skipAI - use template only in test mode
+      );
       finalRationale = rationaleResult.rationale;
     }
 
@@ -295,6 +305,7 @@ export async function POST(request: Request) {
       synthesis: synthesis, // Return synthesis for UI debug if needed
       _debug: {
         newFlowUsed: isNewFlowSuccessful,
+        skipAI,
         hasGeminiKey: !!process.env.GOOGLE_GEMINI_API_KEY,
         hasYouTubeKey: !!process.env.YOUTUBE_API_KEY,
         searchQueriesGenerated: searchQueries.length,

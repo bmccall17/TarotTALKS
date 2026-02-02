@@ -88,6 +88,14 @@ export function ReadMySpreadModal({
 
     const cardIds = getCardIds();
 
+    // Check for test mode (skip AI to avoid wasting API credits during testing)
+    const isTestMode = typeof window !== 'undefined' &&
+      localStorage.getItem('tarot_analytics_test_mode') === 'true';
+
+    if (isTestMode) {
+      console.log('[ReadMySpread Test Mode] Skipping Gemini/YouTube API calls');
+    }
+
     try {
       const response = await fetch('/api/spreads/spread-reading', {
         method: 'POST',
@@ -99,6 +107,7 @@ export function ReadMySpreadModal({
           focusType: focusType !== 'surprise_me' ? focusType : undefined,
           focusText,
           save: true,
+          skipAI: isTestMode, // Skip Gemini/YouTube in test mode
         }),
       });
 
