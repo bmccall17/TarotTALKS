@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { FocusStep } from './FocusStep';
 import { LoadingState } from './LoadingState';
@@ -46,30 +47,16 @@ export function ReadMySpreadModal({
   const [step, setStep] = useState<Step>('focus');
   const [result, setResult] = useState<ReadingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Set mounted state for portal
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Lock body scroll when modal opens to prevent background interaction
   useEffect(() => {
     const scrollY = window.scrollY;
-
-    // Debug logging
-    console.log('[Modal Debug] Modal opened', {
-      scrollY,
-      viewportHeight: window.innerHeight,
-      documentHeight: document.documentElement.scrollHeight,
-    });
-
-    // Log high z-index elements that might compete
-    document.querySelectorAll('*').forEach(el => {
-      const style = window.getComputedStyle(el);
-      const zIndex = parseInt(style.zIndex);
-      if (zIndex > 50 && !isNaN(zIndex)) {
-        console.log('[Modal Debug] High z-index element:', {
-          element: el.tagName,
-          className: el.className?.slice?.(0, 100),
-          zIndex,
-        });
-      }
-    });
 
     // Lock scroll
     document.body.style.position = 'fixed';
@@ -164,21 +151,18 @@ export function ReadMySpreadModal({
 
   // Handle backdrop click - close modal when clicking outside content
   const handleBackdropClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    console.log('[Modal Debug] Backdrop click', {
-      target: (e.target as HTMLElement).tagName,
-      targetClass: (e.target as HTMLElement).className?.slice?.(0, 50),
-      isBackdrop: e.target === e.currentTarget,
-    });
     if (e.target === e.currentTarget) {
       onClose();
     }
   }, [onClose]);
 
-  return (
+  // Don't render until mounted (needed for portal)
+  if (!mounted) return null;
+
+  const modalContent = (
     <div
-      className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[60]"
+      className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[9999]"
       onClick={handleBackdropClick}
-      style={{ isolation: 'isolate' }}
     >
       <div className="bg-gray-900 rounded-xl border border-gray-700 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
@@ -245,4 +229,7 @@ export function ReadMySpreadModal({
       </div>
     </div>
   );
+
+  // Use portal to render modal at document.body level, escaping parent stacking contexts
+  return createPortal(modalContent, document.body);
 }

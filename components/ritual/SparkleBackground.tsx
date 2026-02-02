@@ -85,14 +85,6 @@ export function SparkleBackground() {
     if (distance > 30) {
       lastMousePos.current = { x: e.clientX, y: e.clientY };
 
-      // Debug logging for scroll position issues
-      console.log('[Sparkle Debug] Mouse move', {
-        clientX: e.clientX,
-        clientY: e.clientY,
-        pageY: e.pageY,
-        scrollY: window.scrollY,
-      });
-
       // Spawn 1-2 sparkles near cursor
       // Use pageX/pageY to account for scroll position since sparkles are in an absolute container
       const newSparkles: MouseSparkle[] = Array.from(
