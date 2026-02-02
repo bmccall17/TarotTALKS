@@ -214,6 +214,7 @@ export function ReadMySpreadModal({
             <ResultDisplay
               talk={result.talk}
               rationale={result.rationale}
+              rationaleSource={result.rationaleSource}
               cards={result.cards}
               score={result.score}
               matchReasons={result.matchReasons}
