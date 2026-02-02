@@ -27,7 +27,7 @@ The "Read My Spread" feature is a TED talk recommendation system that analyzes T
 
 | Aspect | Current Implementation |
 |--------|----------------------|
-| **AI Model** | Google Gemini 1.5 Flash (Free Tier) |
+| **AI Model** | Google Gemini 2.0 Flash (Free Tier) |
 | **Cards Supported** | 2-3 cards per spread |
 | **Scoring Range** | 0-50 points |
 | **Rationale Sources** | Template (default) or AI-generated |
@@ -197,7 +197,7 @@ User chooses what they want guidance on:
   talk: SpreadTalk;
   rationale: string;
   rationaleSource: 'template' | 'ai';
-  aiModel?: string;           // 'gemini-1.5-flash' if AI used
+  aiModel?: string;           // 'gemini-2.0-flash' if AI used
   score: number;              // 0-50
   matchReasons: MatchReason[];
   alternativeTalks?: SpreadTalk[];  // If multiple_options
@@ -238,7 +238,7 @@ User chooses what they want guidance on:
 
 | Setting | Value |
 |---------|-------|
-| **Model** | `gemini-1.5-flash` |
+| **Model** | `gemini-2.0-flash` |
 | **API** | Google Generative Language API v1beta |
 | **Temperature** | 0.7 (moderate creativity) |
 | **Max Output Tokens** | 256 (~100-150 words) |
@@ -490,7 +490,7 @@ CREATE INDEX idx_spreads_talk ON spreads(talk_id);
 │  │  ~100 words         │     │  Template text      │                 │
 │  │  source: 'ai'       │     │  source: 'template' │                 │
 │  │  model: 'gemini-    │     │                     │                 │
-│  │         1.5-flash'  │     │                     │                 │
+│  │         2.0-flash'  │     │                     │                 │
 │  └─────────────────────┘     └─────────────────────┘                 │
 └──────────────────────────────┬───────────────────────────────────────┘
                                │
@@ -509,7 +509,7 @@ CREATE INDEX idx_spreads_talk ON spreads(talk_id);
 │    talk: { id, slug, title, speaker, thumbnail, duration },           │
 │    rationale: "...",                                                  │
 │    rationaleSource: 'template' | 'ai',                                │
-│    aiModel: 'gemini-1.5-flash' (if AI),                               │
+│    aiModel: 'gemini-2.0-flash' (if AI),                               │
 │    score: 0-50,                                                       │
 │    matchReasons: [...],                                               │
 │    cards: [...],                                                      │
@@ -530,7 +530,7 @@ CREATE INDEX idx_spreads_talk ON spreads(talk_id);
 | Framework | Next.js 14+ (App Router) |
 | Database | PostgreSQL |
 | ORM | Drizzle ORM |
-| AI | Google Gemini 1.5 Flash |
+| AI | Google Gemini 2.0 Flash |
 | Styling | Tailwind CSS |
 
 ### 9.2 Configuration
