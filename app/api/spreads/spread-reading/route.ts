@@ -146,7 +146,7 @@ export async function POST(request: Request) {
         geminiAvailable = false;
       }
 
-      // 2. RETRIEVAL (YouTube Search) - only if we have synthesis
+      // 2. RETRIEVAL (YouTube Search) - try even if Gemini failed (with fallback queries)
       let ytCandidates: Array<{
         id: string;
         title: string;
@@ -158,9 +158,24 @@ export async function POST(request: Request) {
         thumbnail: string;
       }> = [];
 
-      if (geminiAvailable && searchQueries.length > 0) {
+      // Use Gemini-generated queries if available, otherwise generate fallback queries
+      let queriesToUse = searchQueries;
+      if (!geminiAvailable || searchQueries.length === 0) {
+        // Generate fallback queries from card data
+        const cardsWithThemes = cards.map(card => {
+          let themes: string[] = [];
+          try {
+            if (card.themesJson) themes = JSON.parse(card.themesJson);
+          } catch (e) { /* ignore */ }
+          return { name: card.name, themes };
+        });
+        queriesToUse = generateFallbackQueries(cardsWithThemes);
+        console.log('[ReadMySpread] Using fallback queries (Gemini unavailable):', queriesToUse);
+      }
+
+      if (queriesToUse.length > 0) {
         try {
-          const youtubeResults = await searchYouTube(searchQueries, apiCallContext);
+          const youtubeResults = await searchYouTube(queriesToUse, apiCallContext);
           console.log('[ReadMySpread] YouTube results:', youtubeResults.length);
 
           if (youtubeResults.length > 0) {
@@ -185,8 +200,9 @@ export async function POST(request: Request) {
         }
       }
 
-      // 3. SELECTION (The Judge) - only if Gemini worked
+      // 3. SELECTION - AI selection if Gemini available, otherwise fallback selection
       if (geminiAvailable) {
+        // Full AI selection with synthesis
         try {
           // Combine candidates: YouTube (if available) + Local
           const allCandidates = [...ytCandidates, ...localCandidates];
@@ -248,6 +264,37 @@ export async function POST(request: Request) {
           console.error("[ReadMySpread] ⚠️ AI selection exception:", e);
           geminiAvailable = false;
         }
+      }
+
+      // Fallback: Gemini failed but YouTube has results - pick from YouTube
+      if (!isNewFlowSuccessful && ytCandidates.length > 0) {
+        console.log('[ReadMySpread] Using YouTube fallback (Gemini unavailable, YouTube has results)');
+
+        // Prioritize TED/TEDx channels, then take the first result
+        const tedResult = ytCandidates.find(yt =>
+          yt.speakerName === 'TED' || yt.speakerName === 'TEDx Talks'
+        ) || ytCandidates[0];
+
+        selectedTalk = {
+          id: `yt_${tedResult.id}`,
+          slug: `yt-${tedResult.id}`,
+          title: tedResult.title,
+          speakerName: tedResult.speakerName || 'TED Speaker',
+          description: tedResult.description,
+          thumbnailUrl: tedResult.thumbnail,
+          durationSeconds: null,
+          year: null,
+          themesJson: null,
+          coreMessage: null
+        };
+
+        // Generate a simple rationale based on the cards
+        const cardNames = cards.map(c => c.name).join(', ');
+        finalRationale = `Based on your spread (${cardNames}), this talk explores themes that resonate with your cards' wisdom. Watch with an open heart and see what insights emerge.`;
+
+        isNewFlowSuccessful = true;
+        youtubeUsed = true;
+        console.log('[ReadMySpread] ✅ YouTube fallback SUCCESS! Selected:', selectedTalk?.title?.slice(0, 50));
       }
     }
 
@@ -370,6 +417,39 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Extract speaker name from YouTube talk data
+ * TED videos often format: "Title | Speaker" or "Speaker: Title"
+ */
+/**
+ * Generate fallback YouTube search queries when Gemini is unavailable
+ * Uses card names and themes to create simple but targeted searches
+ */
+function generateFallbackQueries(cards: Array<{ name: string; themes?: string[] }>): string[] {
+  const queries: string[] = [];
+
+  // Query 1: All card names together
+  const cardNames = cards.map(c => c.name).join(' ');
+  queries.push(`${cardNames} TED talk`);
+
+  // Query 2: Extract key themes from cards (if available)
+  const allThemes: string[] = [];
+  for (const card of cards) {
+    if (card.themes && card.themes.length > 0) {
+      allThemes.push(...card.themes.slice(0, 2)); // Take top 2 themes per card
+    }
+  }
+  if (allThemes.length > 0) {
+    const uniqueThemes = [...new Set(allThemes)].slice(0, 3);
+    queries.push(`${uniqueThemes.join(' ')} TED talk`);
+  }
+
+  // Query 3: First card name (usually most significant) on TED channel
+  queries.push(`site:youtube.com/@TED ${cards[0].name}`);
+
+  return queries;
 }
 
 /**
