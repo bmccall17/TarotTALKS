@@ -149,23 +149,32 @@ export async function generateWithGemini(
         const errorText = await response.text();
         console.error('Gemini API error:', response.status, errorText);
 
+        // Detect if it's a quota issue (daily limit) vs rate limit (per-minute)
+        const isQuotaExceeded = errorText.toLowerCase().includes('quota') ||
+                                errorText.toLowerCase().includes('resource has been exhausted');
+
         // Check for rate limit response from Google - retry if we have attempts left
-        if (response.status === 429 && attempt < maxRetries) {
+        // Don't retry quota exceeded - it won't help until midnight PT
+        if (response.status === 429 && attempt < maxRetries && !isQuotaExceeded) {
           lastError = 'Rate limit exceeded';
           continue; // Retry with backoff
         }
 
         if (response.status === 429) {
-          // Log rate limit after all retries exhausted
+          // Log as quota_exceeded or rate_limit based on error message
+          const errorType = isQuotaExceeded ? 'quota_exceeded' : 'rate_limit';
           logApiCall({
             apiName: 'gemini',
             success: false,
-            errorType: 'rate_limit',
+            errorType,
             sessionId: context?.sessionId,
             source: context?.source,
-            properties: { status: 429, attempts: attempt + 1 },
+            properties: { status: 429, attempts: attempt + 1, isQuotaExceeded },
           });
-          return { error: 'Rate limit exceeded after retries', success: false, rateLimited: true };
+          const errorMsg = isQuotaExceeded
+            ? 'Daily quota exceeded - resets at midnight PT'
+            : 'Rate limit exceeded after retries';
+          return { error: errorMsg, success: false, rateLimited: true };
         }
 
         // Log other API errors

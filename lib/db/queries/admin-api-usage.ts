@@ -130,15 +130,13 @@ export async function getApiHealthStatus(
   const lastErrorType = lastError?.errorType ?? null;
 
   // Estimate reset time based on API type and error type
+  // Both Gemini and YouTube free tiers reset at midnight Pacific Time
   let estimatedResetTime: string | null = null;
   if (lastError && lastErrorType) {
-    if (apiName === 'gemini' && lastErrorType === 'rate_limit') {
-      // Gemini rate limit typically resets in 1 minute
-      const resetTime = new Date(lastError.createdAt);
-      resetTime.setMinutes(resetTime.getMinutes() + 1);
-      estimatedResetTime = resetTime.toISOString();
-    } else if (apiName === 'youtube' && (lastErrorType === 'quota_exceeded' || lastErrorType === 'rate_limit')) {
-      // YouTube quota resets at midnight Pacific Time
+    if (lastErrorType === 'rate_limit' || lastErrorType === 'quota_exceeded') {
+      // Free tier quotas reset at midnight Pacific Time (PT)
+      // PT is UTC-8 (standard) or UTC-7 (daylight saving)
+      // Using UTC-8 as a conservative estimate
       const now = new Date();
       const midnight = new Date(now);
       midnight.setUTCHours(8, 0, 0, 0); // Midnight Pacific = 8 AM UTC
