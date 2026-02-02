@@ -1,89 +1,94 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Search, Plus, Filter } from 'lucide-react';
-import { TalkRow } from './TalkRow';
+import { ThemeRow } from './ThemeRow';
+import { ThemeForm } from './ThemeForm';
 import { Toast } from '../ui/Toast';
 
-type Mapping = {
-  talkId: string;
-  isPrimary: boolean;
-  cardImageUrl: string;
-  cardName: string;
-  cardSlug: string;
-  cardId: string;
-};
-
-type Talk = {
+type Theme = {
   id: string;
   slug: string;
-  title: string;
-  speakerName: string;
-  tedUrl: string | null;
-  youtubeUrl: string | null;
-  thumbnailUrl: string | null;
-  year: number | null;
-  language: string | null;
-  isDeleted: boolean;
-  mappings: Mapping[];
+  name: string;
+  shortDescription: string;
+  longDescription: string | null;
+  category: 'emotion' | 'life_phase' | 'role' | 'other' | null;
+  cardsCount: number;
+  talksCount: number;
 };
 
-export function TalksList() {
-  const router = useRouter();
-  const [talks, setTalks] = useState<Talk[]>([]);
+const categoryOptions = [
+  { value: '', label: 'All Categories' },
+  { value: 'emotion', label: 'Emotion' },
+  { value: 'life_phase', label: 'Life Phase' },
+  { value: 'role', label: 'Role' },
+  { value: 'other', label: 'Other' },
+];
+
+export function ThemesList() {
+  const [themes, setThemes] = useState<Theme[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [includeDeleted, setIncludeDeleted] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editingTheme, setEditingTheme] = useState<Theme | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  const fetchTalks = async () => {
+  const fetchThemes = async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (includeDeleted) params.set('includeDeleted', 'true');
+      if (categoryFilter) params.set('category', categoryFilter);
       if (searchQuery) params.set('search', searchQuery);
 
-      const response = await fetch(`/api/admin/talks?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch talks');
+      const response = await fetch(`/api/admin/themes?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch themes');
 
       const data = await response.json();
-      setTalks(data.talks);
+      setThemes(data.themes);
     } catch (error) {
-      console.error('Error fetching talks:', error);
-      showToast('Failed to load talks', 'error');
+      console.error('Error fetching themes:', error);
+      showToast('Failed to load themes', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    const timeoutId = setTimeout(fetchTalks, 300);
+    const timeoutId = setTimeout(fetchThemes, 300);
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, includeDeleted]);
+  }, [searchQuery, categoryFilter]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
   };
 
-  const handleTalkDeleted = () => {
-    showToast('Talk deleted successfully', 'success');
-    fetchTalks();
+  const handleCreateClick = () => {
+    setEditingTheme(null);
+    setShowForm(true);
   };
 
-  const handleTalkRestored = () => {
-    showToast('Talk restored successfully', 'success');
-    fetchTalks();
+  const handleEditClick = (theme: Theme) => {
+    setEditingTheme(theme);
+    setShowForm(true);
   };
 
-  const handleTalkHardDeleted = () => {
-    showToast('Talk permanently deleted', 'success');
-    fetchTalks();
+  const handleFormSave = () => {
+    setShowForm(false);
+    setEditingTheme(null);
+    showToast(editingTheme ? 'Theme updated successfully' : 'Theme created successfully', 'success');
+    fetchThemes();
   };
 
-  const activeTalks = talks.filter(t => !t.isDeleted);
-  const deletedTalks = talks.filter(t => t.isDeleted);
-  const displayTalks = includeDeleted ? talks : activeTalks;
+  const handleFormCancel = () => {
+    setShowForm(false);
+    setEditingTheme(null);
+  };
+
+  const handleThemeDeleted = () => {
+    showToast('Theme deleted successfully', 'success');
+    fetchThemes();
+  };
 
   return (
     <div className="space-y-6">
@@ -94,7 +99,7 @@ export function TalksList() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input
               type="text"
-              placeholder="Search talks by title or speaker..."
+              placeholder="Search themes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -103,26 +108,27 @@ export function TalksList() {
         </div>
 
         <div className="flex gap-3">
-          <button
-            onClick={() => setIncludeDeleted(!includeDeleted)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-              includeDeleted
-                ? 'bg-indigo-600 border-indigo-500 text-white'
-                : 'bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700'
-            }`}
-          >
-            <Filter className="w-4 h-4" />
-            <span className="text-sm">
-              {includeDeleted ? 'Show Active' : 'Show Deleted'}
-            </span>
-          </button>
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="pl-10 pr-8 py-2 bg-gray-800 border border-gray-600 rounded-lg text-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none cursor-pointer"
+            >
+              {categoryOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <button
-            onClick={() => router.push('/admin/talks/new')}
+            onClick={handleCreateClick}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
           >
             <Plus className="w-4 h-4" />
-            <span className="text-sm">New Talk</span>
+            <span className="text-sm">New Theme</span>
           </button>
         </div>
       </div>
@@ -130,22 +136,19 @@ export function TalksList() {
       {/* Stats */}
       <div className="flex gap-4 text-sm">
         <div className="text-gray-400">
-          <span className="font-medium text-gray-300">{activeTalks.length}</span> active talks
+          <span className="font-medium text-gray-300">{themes.length}</span> themes
         </div>
-        {deletedTalks.length > 0 && (
-          <div className="text-gray-400">
-            <span className="font-medium text-yellow-400">{deletedTalks.length}</span> deleted
-          </div>
-        )}
       </div>
 
-      {/* Talks Table */}
+      {/* Themes Table */}
       <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-400">Loading talks...</div>
-        ) : displayTalks.length === 0 ? (
+          <div className="p-8 text-center text-gray-400">Loading themes...</div>
+        ) : themes.length === 0 ? (
           <div className="p-8 text-center text-gray-400">
-            {searchQuery ? 'No talks found matching your search.' : 'No talks yet. Create your first one!'}
+            {searchQuery || categoryFilter
+              ? 'No themes found matching your filters.'
+              : 'No themes yet. Create your first one!'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -153,22 +156,19 @@ export function TalksList() {
               <thead className="bg-gray-900/50 border-b border-gray-700">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Talk
+                    Theme
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Speaker
+                    Category
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Year
+                    Description
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Lang
+                    Cards
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Mappings
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Status
+                    Talks
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Actions
@@ -176,13 +176,12 @@ export function TalksList() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700">
-                {displayTalks.map((talk) => (
-                  <TalkRow
-                    key={talk.id}
-                    talk={talk}
-                    onDeleted={handleTalkDeleted}
-                    onRestored={handleTalkRestored}
-                    onHardDeleted={handleTalkHardDeleted}
+                {themes.map((theme) => (
+                  <ThemeRow
+                    key={theme.id}
+                    theme={theme}
+                    onEdit={handleEditClick}
+                    onDeleted={handleThemeDeleted}
                   />
                 ))}
               </tbody>
@@ -190,6 +189,15 @@ export function TalksList() {
           </div>
         )}
       </div>
+
+      {/* Create/Edit Form Modal */}
+      {showForm && (
+        <ThemeForm
+          theme={editingTheme}
+          onSave={handleFormSave}
+          onCancel={handleFormCancel}
+        />
+      )}
 
       {/* Toast Notification */}
       {toast && (

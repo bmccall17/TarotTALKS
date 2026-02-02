@@ -24,6 +24,7 @@ type Talk = {
   youtubeUrl: string | null;
   thumbnailUrl: string | null;
   year: number | null;
+  language: string | null;
   isDeleted: boolean;
   mappings: Mapping[];
   speakerTwitterHandle?: string | null;
@@ -170,6 +171,15 @@ export function TalkRow({ talk, onDeleted, onRestored, onHardDeleted }: Props) {
           <p className="text-gray-400 text-sm">
             {talk.year || '—'}
           </p>
+        </td>
+        <td className="px-6 py-4">
+          {talk.language ? (
+            <span className="text-xs text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded">
+              {talk.language}
+            </span>
+          ) : (
+            <span className="text-gray-600">—</span>
+          )}
         </td>
         <td className="px-6 py-4">
           <div className="flex items-center gap-1">

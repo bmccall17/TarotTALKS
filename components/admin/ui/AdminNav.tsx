@@ -2,8 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Video, Link as LinkIcon, AlertTriangle, ArrowLeft, Sparkles, BarChart3, Share2, Radio } from 'lucide-react';
-// import { Palette } from 'lucide-react'; // TODO: Uncomment when Theme management is implemented
+import { Home, Video, Link as LinkIcon, AlertTriangle, ArrowLeft, Sparkles, BarChart3, Share2, Radio, Palette } from 'lucide-react';
 
 export function AdminNav() {
   const pathname = usePathname();
@@ -55,12 +54,10 @@ export function AdminNav() {
               <LinkIcon className="w-4 h-4" />
               <span>Mappings</span>
             </Link>
-            {/* TODO: Theme management not yet implemented
             <Link href="/admin/themes" className={navLinkClass('/admin/themes')}>
               <Palette className="w-4 h-4" />
               <span>Themes</span>
             </Link>
-            */}
           </div>
         </div>
 

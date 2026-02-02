@@ -137,6 +137,7 @@ export async function searchTalksForAdmin(query: string, includeDeleted: boolean
       youtubeUrl: talks.youtubeUrl,
       thumbnailUrl: talks.thumbnailUrl,
       year: talks.year,
+      language: talks.language,
       isDeleted: talks.isDeleted,
       speakerTwitterHandle: talks.speakerTwitterHandle,
       speakerBlueskyHandle: talks.speakerBlueskyHandle,
