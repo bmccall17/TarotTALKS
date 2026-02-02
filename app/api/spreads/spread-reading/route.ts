@@ -94,14 +94,19 @@ export async function POST(request: Request) {
 
     // Attempt the new flow
     try {
+      console.log('[ReadMySpread] Starting Intelligence Evolution flow...');
+
       const synthesisResult = await generateSynthesisAndQueries({
         cards: geminiCards,
         focusText: focusText
       });
 
+      console.log('[ReadMySpread] Synthesis result:', JSON.stringify(synthesisResult).slice(0, 200));
+
       if ('synthesis' in synthesisResult) {
         synthesis = synthesisResult.synthesis;
         searchQueries = synthesisResult.searchQueries;
+        console.log('[ReadMySpread] Search queries:', searchQueries);
 
         // 2. RETRIEVAL (The Search)
         // Run YouTube Search and Local Scoring in Parallel
@@ -109,6 +114,8 @@ export async function POST(request: Request) {
           searchYouTube(searchQueries),
           Promise.resolve(scoreTalksForSpread(cards, allTalks, mappings, focusType, focusText))
         ]);
+
+        console.log('[ReadMySpread] YouTube results:', youtubeResults.length, 'Local scored:', scoredLocalTalks.length);
 
         // Prepare Candidates
         // Top 3 Local
@@ -134,11 +141,14 @@ export async function POST(request: Request) {
 
         // 3. SELECTION (The Judge)
         const allCandidates = [...ytCandidates, ...localCandidates];
+        console.log('[ReadMySpread] Total candidates for AI selection:', allCandidates.length);
 
         const selection = await selectBestTalkWithAI({
           synthesis,
           candidates: allCandidates
         });
+
+        console.log('[ReadMySpread] Selection result:', JSON.stringify(selection).slice(0, 300));
 
         if (!('error' in selection)) {
           const winner = allCandidates[selection.bestTalkIndex];
@@ -181,10 +191,15 @@ export async function POST(request: Request) {
 
           finalRationale = selection.reasoning;
           isNewFlowSuccessful = true;
+          console.log('[ReadMySpread] ✅ New flow SUCCESS! Selected:', selectedTalk?.title?.slice(0, 50));
+        } else {
+          console.log('[ReadMySpread] ❌ Selection failed:', selection.error);
         }
+      } else {
+        console.log('[ReadMySpread] ❌ Synthesis failed:', (synthesisResult as { error: string }).error);
       }
     } catch (e) {
-      console.error("Intelligence Evolution Flow Failed:", e);
+      console.error("[ReadMySpread] ❌ Intelligence Evolution Flow Exception:", e);
       // Fallback proceeds below
     }
 
@@ -192,6 +207,7 @@ export async function POST(request: Request) {
     // FALLBACK: OLD FLOW
     // ---------------------------------------------------------
     if (!isNewFlowSuccessful) {
+      console.log('[ReadMySpread] ⚠️ Using FALLBACK (old scoring flow)');
       const scoredTalks = scoreTalksForSpread(
         cards,
         allTalks,
@@ -276,7 +292,13 @@ export async function POST(request: Request) {
       matchReasons: [],
       cards,
       spread: savedSpread,
-      synthesis: synthesis // Return synthesis for UI debug if needed
+      synthesis: synthesis, // Return synthesis for UI debug if needed
+      _debug: {
+        newFlowUsed: isNewFlowSuccessful,
+        hasGeminiKey: !!process.env.GOOGLE_GEMINI_API_KEY,
+        hasYouTubeKey: !!process.env.YOUTUBE_API_KEY,
+        searchQueriesGenerated: searchQueries.length,
+      }
     }, {
       status: 201,
       headers: {
