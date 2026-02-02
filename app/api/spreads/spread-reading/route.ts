@@ -83,130 +83,166 @@ export async function POST(request: Request) {
     });
 
     // ---------------------------------------------------------
-    // INTELLIGENCE EVOLUTION: NEW FLOW
+    // INTELLIGENCE EVOLUTION: NEW FLOW (with independent fallbacks)
     // ---------------------------------------------------------
 
-    // 1. SYNTHESIS (The Brain)
+    // Track API states independently
     let synthesis = "";
     let searchQueries: string[] = [];
     let isNewFlowSuccessful = false;
     let selectedTalk = null;
     let finalRationale = "";
 
+    // Independent API status tracking
+    let geminiAvailable = true;
+    let youtubeAvailable = true;
+    let youtubeUsed = false;
+
     // Skip AI if requested (test mode)
     if (skipAI) {
       console.log('[ReadMySpread] ⚠️ skipAI=true, bypassing Intelligence Evolution flow');
+      geminiAvailable = false;
+      youtubeAvailable = false;
     }
 
+    // Pre-compute local scoring (always needed as fallback or candidate pool)
+    const scoredLocalTalks = scoreTalksForSpread(cards, allTalks, mappings, focusType, focusText);
+    const localCandidates = scoredLocalTalks.slice(0, 3).map(st => ({
+      id: st.talk.id,
+      title: st.talk.title,
+      speakerName: st.talk.speakerName,
+      description: st.talk.description || '',
+      source: 'local' as const,
+    }));
+
     // Attempt the new flow (unless skipAI is set)
-    if (!skipAI) try {
+    if (!skipAI) {
       console.log('[ReadMySpread] Starting Intelligence Evolution flow...');
 
-      const synthesisResult = await generateSynthesisAndQueries({
-        cards: geminiCards,
-        focusText: focusText
-      });
-
-      console.log('[ReadMySpread] Synthesis result:', JSON.stringify(synthesisResult).slice(0, 200));
-
-      if ('synthesis' in synthesisResult) {
-        synthesis = synthesisResult.synthesis;
-        searchQueries = synthesisResult.searchQueries;
-        console.log('[ReadMySpread] Search queries:', searchQueries);
-
-        // 2. RETRIEVAL (The Search)
-        // Run YouTube Search and Local Scoring in Parallel
-        const [youtubeResults, scoredLocalTalks] = await Promise.all([
-          searchYouTube(searchQueries),
-          Promise.resolve(scoreTalksForSpread(cards, allTalks, mappings, focusType, focusText))
-        ]);
-
-        console.log('[ReadMySpread] YouTube results:', youtubeResults.length, 'Local scored:', scoredLocalTalks.length);
-
-        // Prepare Candidates
-        // Top 3 Local
-        const localCandidates = scoredLocalTalks.slice(0, 3).map(st => ({
-          id: st.talk.id,
-          title: st.talk.title,
-          speakerName: st.talk.speakerName,
-          description: st.talk.description || '',
-          source: 'local' as const,
-        }));
-
-        // YouTube
-        const ytCandidates = youtubeResults.map(yt => ({
-          id: yt.id, // YouTube Video ID
-          title: yt.title,
-          speakerName: yt.channelTitle, // Use channel as speaker proxy
-          description: yt.description,
-          source: 'youtube' as const,
-          snippet: yt.description,
-          url: yt.url,
-          thumbnail: yt.thumbnail
-        }));
-
-        // 3. SELECTION (The Judge)
-        const allCandidates = [...ytCandidates, ...localCandidates];
-        console.log('[ReadMySpread] Total candidates for AI selection:', allCandidates.length);
-
-        const selection = await selectBestTalkWithAI({
-          synthesis,
-          candidates: allCandidates
+      // 1. SYNTHESIS (The Brain) - Gemini
+      try {
+        const synthesisResult = await generateSynthesisAndQueries({
+          cards: geminiCards,
+          focusText: focusText
         });
 
-        console.log('[ReadMySpread] Selection result:', JSON.stringify(selection).slice(0, 300));
+        console.log('[ReadMySpread] Synthesis result:', JSON.stringify(synthesisResult).slice(0, 200));
 
-        if (!('error' in selection)) {
-          const winner = allCandidates[selection.bestTalkIndex];
+        if ('synthesis' in synthesisResult) {
+          synthesis = synthesisResult.synthesis;
+          searchQueries = synthesisResult.searchQueries;
+          console.log('[ReadMySpread] Search queries:', searchQueries);
+        } else {
+          console.log('[ReadMySpread] ⚠️ Gemini synthesis failed:', synthesisResult.error);
+          geminiAvailable = false;
+        }
+      } catch (e) {
+        console.error("[ReadMySpread] ⚠️ Gemini synthesis exception:", e);
+        geminiAvailable = false;
+      }
 
-          if (winner.source === 'local') {
-            // It's a local talk, find the full object
-            // We cast to LocalCandidate-like shape to access logic if needed, but we have 'allTalks'
-            const fullTalk = allTalks.find(t => t.id === winner.id);
-            if (fullTalk) {
-              selectedTalk = fullTalk;
+      // 2. RETRIEVAL (YouTube Search) - only if we have synthesis
+      let ytCandidates: Array<{
+        id: string;
+        title: string;
+        speakerName: string;
+        description: string;
+        source: 'youtube';
+        snippet: string;
+        url: string;
+        thumbnail: string;
+      }> = [];
+
+      if (geminiAvailable && searchQueries.length > 0) {
+        try {
+          const youtubeResults = await searchYouTube(searchQueries);
+          console.log('[ReadMySpread] YouTube results:', youtubeResults.length);
+
+          if (youtubeResults.length > 0) {
+            youtubeUsed = true;
+            ytCandidates = youtubeResults.map(yt => ({
+              id: yt.id,
+              title: yt.title,
+              speakerName: yt.channelTitle,
+              description: yt.description,
+              source: 'youtube' as const,
+              snippet: yt.description,
+              url: yt.url,
+              thumbnail: yt.thumbnail
+            }));
+          } else {
+            console.log('[ReadMySpread] ⚠️ YouTube returned no results (API may be limited)');
+            youtubeAvailable = false;
+          }
+        } catch (e) {
+          console.error("[ReadMySpread] ⚠️ YouTube search exception:", e);
+          youtubeAvailable = false;
+        }
+      }
+
+      // 3. SELECTION (The Judge) - only if Gemini worked
+      if (geminiAvailable) {
+        try {
+          // Combine candidates: YouTube (if available) + Local
+          const allCandidates = [...ytCandidates, ...localCandidates];
+          console.log('[ReadMySpread] Candidates for AI selection:', allCandidates.length,
+            `(${ytCandidates.length} YouTube, ${localCandidates.length} local)`);
+
+          const selection = await selectBestTalkWithAI({
+            synthesis,
+            candidates: allCandidates
+          });
+
+          console.log('[ReadMySpread] Selection result:', JSON.stringify(selection).slice(0, 300));
+
+          if (!('error' in selection)) {
+            const winner = allCandidates[selection.bestTalkIndex];
+
+            if (winner.source === 'local') {
+              const fullTalk = allTalks.find(t => t.id === winner.id);
+              if (fullTalk) {
+                selectedTalk = fullTalk;
+              } else {
+                selectedTalk = {
+                  id: winner.id,
+                  slug: 'unknown',
+                  title: winner.title,
+                  speakerName: winner.speakerName || 'Unknown',
+                  description: winner.description,
+                  thumbnailUrl: null,
+                  durationSeconds: null,
+                };
+              }
             } else {
-              // Fallback if not found (unlikely)
+              // It's a YouTube talk
+              const ytWinner = winner as typeof ytCandidates[0];
               selectedTalk = {
-                id: winner.id,
-                slug: 'unknown',
-                title: winner.title,
-                speakerName: winner.speakerName || 'Unknown',
-                description: winner.description,
-                thumbnailUrl: null,
+                id: `yt_${ytWinner.id}`,
+                slug: `yt-${ytWinner.id}`,
+                title: ytWinner.title,
+                speakerName: ytWinner.speakerName || 'TED Speaker',
+                description: ytWinner.description,
+                thumbnailUrl: ytWinner.thumbnail,
                 durationSeconds: null,
+                year: null,
+                themesJson: null,
+                coreMessage: null
               };
             }
-          } else {
-            // It's a YouTube talk
-            // winner is compatible with YouTubeCandidate
-            const ytWinner = winner as typeof ytCandidates[0];
-            selectedTalk = {
-              id: `yt_${ytWinner.id}`,
-              slug: `yt-${ytWinner.id}`,
-              title: ytWinner.title,
-              speakerName: ytWinner.speakerName || 'TED Speaker',
-              description: ytWinner.description,
-              thumbnailUrl: ytWinner.thumbnail,
-              durationSeconds: null,
-              year: null,
-              themesJson: null,
-              coreMessage: null
-            };
-          }
 
-          finalRationale = selection.reasoning;
-          isNewFlowSuccessful = true;
-          console.log('[ReadMySpread] ✅ New flow SUCCESS! Selected:', selectedTalk?.title?.slice(0, 50));
-        } else {
-          console.log('[ReadMySpread] ❌ Selection failed:', selection.error);
+            finalRationale = selection.reasoning;
+            isNewFlowSuccessful = true;
+            console.log('[ReadMySpread] ✅ New flow SUCCESS! Selected:', selectedTalk?.title?.slice(0, 50),
+              youtubeUsed ? '(with YouTube)' : '(local only)');
+          } else {
+            console.log('[ReadMySpread] ⚠️ AI selection failed:', selection.error);
+            geminiAvailable = false;
+          }
+        } catch (e) {
+          console.error("[ReadMySpread] ⚠️ AI selection exception:", e);
+          geminiAvailable = false;
         }
-      } else {
-        console.log('[ReadMySpread] ❌ Synthesis failed:', (synthesisResult as { error: string }).error);
       }
-    } catch (e) {
-      console.error("[ReadMySpread] ❌ Intelligence Evolution Flow Exception:", e);
-      // Fallback proceeds below
     }
 
     // ---------------------------------------------------------
@@ -297,6 +333,7 @@ export async function POST(request: Request) {
       talk: selectedTalk,
       rationale: finalRationale,
       rationaleSource: isNewFlowSuccessful ? 'ai' : 'template',
+      youtubeUsed, // Whether YouTube candidates were included
       aiModel: 'gemini-1.5-flash',
       score: 100,
       matchReasons: [],
@@ -306,6 +343,9 @@ export async function POST(request: Request) {
       _debug: {
         newFlowUsed: isNewFlowSuccessful,
         skipAI,
+        geminiAvailable,
+        youtubeAvailable,
+        youtubeUsed,
         hasGeminiKey: !!process.env.GOOGLE_GEMINI_API_KEY,
         hasYouTubeKey: !!process.env.YOUTUBE_API_KEY,
         searchQueriesGenerated: searchQueries.length,

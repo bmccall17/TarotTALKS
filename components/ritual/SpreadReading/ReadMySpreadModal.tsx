@@ -29,6 +29,7 @@ interface ReadingResult {
   talk: SpreadTalk;
   rationale: string;
   rationaleSource: 'template' | 'ai';
+  youtubeUsed?: boolean; // Whether YouTube candidates were included
   score: number;
   matchReasons: MatchReason[];
   cards: SpreadCard[];
