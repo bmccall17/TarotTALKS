@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { behaviorEvents } from '@/lib/db/schema';
-import { sql, count, countDistinct, max, and, gte, eq } from 'drizzle-orm';
+import { sql, count, countDistinct, max, and, gte, eq, not, like } from 'drizzle-orm';
 
 // Default time range: 7 days
 const DEFAULT_DAYS = 7;
@@ -9,6 +9,11 @@ function getDateCutoff(days: number = DEFAULT_DAYS): Date {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
   return cutoff;
+}
+
+// Filter condition to exclude test events (where properties contains "is_test":true)
+function excludeTestEvents() {
+  return not(like(behaviorEvents.properties, '%"is_test":true%'));
 }
 
 export type SessionStats = {
@@ -20,27 +25,29 @@ export type SessionStats = {
 export async function getSessionStats(days: number = DEFAULT_DAYS): Promise<SessionStats> {
   const cutoff = getDateCutoff(days);
 
-  // Total sessions (distinct session_start events)
+  // Total sessions (distinct session_start events, excluding test events)
   const totalResult = await db
     .select({ count: countDistinct(behaviorEvents.sessionId) })
     .from(behaviorEvents)
     .where(
       and(
         eq(behaviorEvents.eventName, 'session_start'),
-        gte(behaviorEvents.createdAt, cutoff)
+        gte(behaviorEvents.createdAt, cutoff),
+        excludeTestEvents()
       )
     );
 
   const totalSessions = totalResult[0]?.count ?? 0;
 
-  // Sessions with at least one card flip (engaged)
+  // Sessions with at least one card flip (engaged, excluding test events)
   const engagedResult = await db
     .select({ count: countDistinct(behaviorEvents.sessionId) })
     .from(behaviorEvents)
     .where(
       and(
         eq(behaviorEvents.eventName, 'card_flip'),
-        gte(behaviorEvents.createdAt, cutoff)
+        gte(behaviorEvents.createdAt, cutoff),
+        excludeTestEvents()
       )
     );
 
@@ -67,7 +74,7 @@ export type FlipDistribution = {
 export async function getFlipDistribution(days: number = DEFAULT_DAYS): Promise<FlipDistribution[]> {
   const cutoff = getDateCutoff(days);
 
-  // Get all sessions that started on the home page in the time range
+  // Get all sessions that started on the home page in the time range (excluding test events)
   // We only count home page sessions because only they have the card flip ritual
   const allSessionsResult = await db
     .select({
@@ -78,7 +85,8 @@ export async function getFlipDistribution(days: number = DEFAULT_DAYS): Promise<
     .where(
       and(
         eq(behaviorEvents.eventName, 'session_start'),
-        gte(behaviorEvents.createdAt, cutoff)
+        gte(behaviorEvents.createdAt, cutoff),
+        excludeTestEvents()
       )
     )
     .groupBy(behaviorEvents.sessionId, behaviorEvents.properties);
@@ -106,7 +114,7 @@ export async function getFlipDistribution(days: number = DEFAULT_DAYS): Promise<
     ];
   }
 
-  // Get max flips per session
+  // Get max flips per session (excluding test events)
   const flipCountsResult = await db
     .select({
       sessionId: behaviorEvents.sessionId,
@@ -116,7 +124,8 @@ export async function getFlipDistribution(days: number = DEFAULT_DAYS): Promise<
     .where(
       and(
         eq(behaviorEvents.eventName, 'card_flip'),
-        gte(behaviorEvents.createdAt, cutoff)
+        gte(behaviorEvents.createdAt, cutoff),
+        excludeTestEvents()
       )
     )
     .groupBy(behaviorEvents.sessionId);
@@ -153,19 +162,20 @@ export type FunnelStep = {
 export async function getFunnelData(days: number = DEFAULT_DAYS): Promise<FunnelStep[]> {
   const cutoff = getDateCutoff(days);
 
-  // Landed (session_start)
+  // Landed (session_start, excluding test events)
   const landedResult = await db
     .select({ count: countDistinct(behaviorEvents.sessionId) })
     .from(behaviorEvents)
     .where(
       and(
         eq(behaviorEvents.eventName, 'session_start'),
-        gte(behaviorEvents.createdAt, cutoff)
+        gte(behaviorEvents.createdAt, cutoff),
+        excludeTestEvents()
       )
     );
   const landed = landedResult[0]?.count ?? 0;
 
-  // Get flip counts per session
+  // Get flip counts per session (excluding test events)
   const flipCountsResult = await db
     .select({
       sessionId: behaviorEvents.sessionId,
@@ -175,7 +185,8 @@ export async function getFunnelData(days: number = DEFAULT_DAYS): Promise<Funnel
     .where(
       and(
         eq(behaviorEvents.eventName, 'card_flip'),
-        gte(behaviorEvents.createdAt, cutoff)
+        gte(behaviorEvents.createdAt, cutoff),
+        excludeTestEvents()
       )
     )
     .groupBy(behaviorEvents.sessionId);
@@ -191,14 +202,15 @@ export async function getFunnelData(days: number = DEFAULT_DAYS): Promise<Funnel
     if (row.flipCount >= 3) thirdFlip++;
   }
 
-  // Conversion (read_spread_click OR talk_click)
+  // Conversion (read_spread_click OR talk_click, excluding test events)
   const conversionResult = await db
     .select({ count: countDistinct(behaviorEvents.sessionId) })
     .from(behaviorEvents)
     .where(
       and(
         sql`${behaviorEvents.eventName} IN ('read_spread_click', 'talk_click', 'card_detail_click')`,
-        gte(behaviorEvents.createdAt, cutoff)
+        gte(behaviorEvents.createdAt, cutoff),
+        excludeTestEvents()
       )
     );
   const converted = conversionResult[0]?.count ?? 0;
@@ -230,26 +242,28 @@ export type ReadSpreadCTR = {
 export async function getReadSpreadCTR(days: number = DEFAULT_DAYS): Promise<ReadSpreadCTR> {
   const cutoff = getDateCutoff(days);
 
-  // Eligible = sessions with spread_ready event
+  // Eligible = sessions with spread_ready event (excluding test events)
   const eligibleResult = await db
     .select({ count: countDistinct(behaviorEvents.sessionId) })
     .from(behaviorEvents)
     .where(
       and(
         eq(behaviorEvents.eventName, 'spread_ready'),
-        gte(behaviorEvents.createdAt, cutoff)
+        gte(behaviorEvents.createdAt, cutoff),
+        excludeTestEvents()
       )
     );
   const eligible = eligibleResult[0]?.count ?? 0;
 
-  // Clicked = sessions with read_spread_click event
+  // Clicked = sessions with read_spread_click event (excluding test events)
   const clickedResult = await db
     .select({ count: countDistinct(behaviorEvents.sessionId) })
     .from(behaviorEvents)
     .where(
       and(
         eq(behaviorEvents.eventName, 'read_spread_click'),
-        gte(behaviorEvents.createdAt, cutoff)
+        gte(behaviorEvents.createdAt, cutoff),
+        excludeTestEvents()
       )
     );
   const clicked = clickedResult[0]?.count ?? 0;
@@ -269,7 +283,7 @@ export type TimeToFirstFlip = {
 export async function getTimeToFirstFlip(days: number = DEFAULT_DAYS): Promise<TimeToFirstFlip> {
   const cutoff = getDateCutoff(days);
 
-  // Get first flip elapsed_ms for each session
+  // Get first flip elapsed_ms for each session (excluding test events)
   const result = await db
     .select({
       sessionId: behaviorEvents.sessionId,
@@ -279,7 +293,8 @@ export async function getTimeToFirstFlip(days: number = DEFAULT_DAYS): Promise<T
     .where(
       and(
         eq(behaviorEvents.eventName, 'card_flip'),
-        gte(behaviorEvents.createdAt, cutoff)
+        gte(behaviorEvents.createdAt, cutoff),
+        excludeTestEvents()
       )
     )
     .orderBy(behaviorEvents.timestamp);
@@ -329,7 +344,7 @@ export type DeviceBreakdown = {
 export async function getDeviceBreakdown(days: number = DEFAULT_DAYS): Promise<DeviceBreakdown> {
   const cutoff = getDateCutoff(days);
 
-  // Get session_start events with device_class
+  // Get session_start events with device_class (excluding test events)
   const result = await db
     .select({
       sessionId: behaviorEvents.sessionId,
@@ -339,7 +354,8 @@ export async function getDeviceBreakdown(days: number = DEFAULT_DAYS): Promise<D
     .where(
       and(
         eq(behaviorEvents.eventName, 'session_start'),
-        gte(behaviorEvents.createdAt, cutoff)
+        gte(behaviorEvents.createdAt, cutoff),
+        excludeTestEvents()
       )
     );
 

@@ -11,6 +11,12 @@ const ALLOWED_EVENTS = new Set([
   'read_spread_click',
   'talk_click',
   'card_detail_click',
+  // Spread reading flow events
+  'reading_started',
+  'focus_selected',
+  'reading_generated',
+  'talk_from_reading',
+  'share_initiated',
 ]);
 
 type EventPayload = {

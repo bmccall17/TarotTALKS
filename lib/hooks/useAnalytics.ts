@@ -5,10 +5,30 @@ import { useCallback, useEffect, useRef } from 'react';
 // Session storage key
 const SESSION_KEY = 'tarot_session_id';
 const SESSION_START_KEY = 'tarot_session_start';
+const TEST_MODE_KEY = 'tarot_analytics_test_mode';
 
 // Event queue and flush config
 const FLUSH_INTERVAL_MS = 5000;
 const FLUSH_THRESHOLD = 5;
+
+// Check if test mode is enabled (via localStorage or URL param ?analytics_test=1)
+function isTestMode(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  // Check URL param first (enables test mode for session)
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('analytics_test') === '1') {
+    localStorage.setItem(TEST_MODE_KEY, 'true');
+    return true;
+  }
+  if (urlParams.get('analytics_test') === '0') {
+    localStorage.removeItem(TEST_MODE_KEY);
+    return false;
+  }
+
+  // Check localStorage
+  return localStorage.getItem(TEST_MODE_KEY) === 'true';
+}
 
 type EventPayload = {
   name: string;
@@ -117,14 +137,22 @@ function track(
     firedOnceEvents.add(name);
   }
 
+  const testMode = isTestMode();
+
   const event: EventPayload = {
     name,
     timestamp: Date.now(),
     properties: {
       ...properties,
       elapsed_ms: getElapsedMs(),
+      ...(testMode ? { is_test: true } : {}),
     },
   };
+
+  // Log test events to console for debugging
+  if (testMode) {
+    console.log('[Analytics Test Mode]', name, event.properties);
+  }
 
   eventQueue.push(event);
 
