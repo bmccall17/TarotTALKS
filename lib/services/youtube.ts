@@ -1,5 +1,12 @@
 
 import { type SpreadTalk } from '@/lib/spread-reading/types';
+import { logApiCall } from '@/lib/db/queries/api-usage';
+
+// Context for API call logging (optional)
+export interface ApiCallContext {
+  sessionId?: string;
+  source?: string;
+}
 
 const TED_CHANNEL_ID = 'UCAuUUnT6oDeKwE6v1NGQxug';
 const TEDX_CHANNEL_ID = 'UCsT0YIqwnpJCM-mx7-gSA4Q';
@@ -46,12 +53,16 @@ function parseQuery(query: string): { term: string; channelId?: string } {
 
 /**
  * Search YouTube for a specific query
+ * Returns results and status info for logging
  */
-async function searchOne(query: string, maxResults: number = 2): Promise<YouTubeResult[]> {
+async function searchOne(
+    query: string,
+    maxResults: number = 2
+): Promise<{ results: YouTubeResult[]; status: number; error?: string }> {
     const apiKey = getYouTubeApiKey();
     if (!apiKey) {
         console.warn('YOUTUBE_API_KEY not configured');
-        return [];
+        return { results: [], status: 0, error: 'not_configured' };
     }
 
     const { term, channelId } = parseQuery(query);
@@ -66,9 +77,6 @@ async function searchOne(query: string, maxResults: number = 2): Promise<YouTube
 
     if (channelId) {
         url.searchParams.append('channelId', channelId);
-    } else {
-        // If no channel specific, maybe search for "TED" in the query?
-        // or just rely on the query term containing "TED"
     }
 
     try {
@@ -76,14 +84,14 @@ async function searchOne(query: string, maxResults: number = 2): Promise<YouTube
 
         if (!response.ok) {
             console.error(`YouTube API Error: ${response.status} ${response.statusText}`);
-            return [];
+            return { results: [], status: response.status, error: response.statusText };
         }
 
         const data = await response.json();
 
-        if (!data.items) return [];
+        if (!data.items) return { results: [], status: 200 };
 
-        return data.items.map((item: any) => ({
+        const results = data.items.map((item: any) => ({
             id: item.id.videoId,
             title: item.snippet.title,
             description: item.snippet.description,
@@ -94,27 +102,59 @@ async function searchOne(query: string, maxResults: number = 2): Promise<YouTube
             source: 'youtube'
         }));
 
+        return { results, status: 200 };
+
     } catch (error) {
         console.error('YouTube search failed:', error);
-        return [];
+        return { results: [], status: 0, error: error instanceof Error ? error.message : 'network_error' };
     }
 }
 
 /**
  * Run multiple search queries in parallel and deduplicate results
  */
-export async function searchYouTube(queries: string[]): Promise<YouTubeResult[]> {
+export async function searchYouTube(
+    queries: string[],
+    context?: ApiCallContext
+): Promise<YouTubeResult[]> {
     if (!getYouTubeApiKey()) {
         console.log('Skipping YouTube search: No API Key');
         return [];
     }
 
     // Run searches in parallel
-    const resultsPromises = queries.map(q => searchOne(q, 2));
-    const resultsArrays = await Promise.all(resultsPromises);
+    const searchPromises = queries.map(q => searchOne(q, 2));
+    const searchResults = await Promise.all(searchPromises);
 
-    // Flatten
-    const allResults = resultsArrays.flat();
+    // Track overall status for logging
+    let hasError = false;
+    let errorType: 'rate_limit' | 'quota_exceeded' | 'network' | 'api_error' | undefined;
+    let errorStatus: number | undefined;
+
+    // Flatten and collect results
+    const allResults: YouTubeResult[] = [];
+
+    for (const { results, status, error } of searchResults) {
+        if (status === 403) {
+            // YouTube 403 typically means quota exceeded
+            hasError = true;
+            errorType = 'quota_exceeded';
+            errorStatus = status;
+        } else if (status === 429) {
+            hasError = true;
+            errorType = 'rate_limit';
+            errorStatus = status;
+        } else if (status === 0 || error) {
+            hasError = true;
+            errorType = 'network';
+        } else if (status !== 200) {
+            hasError = true;
+            errorType = 'api_error';
+            errorStatus = status;
+        }
+
+        allResults.push(...results);
+    }
 
     // Dedup by Video ID
     const seen = new Set<string>();
@@ -125,6 +165,47 @@ export async function searchYouTube(queries: string[]): Promise<YouTubeResult[]>
             seen.add(r.id);
             uniqueResults.push(r);
         }
+    }
+
+    // Log the API call (once per searchYouTube call, not per query)
+    if (hasError && uniqueResults.length === 0) {
+        // Complete failure
+        logApiCall({
+            apiName: 'youtube',
+            success: false,
+            errorType,
+            sessionId: context?.sessionId,
+            source: context?.source,
+            properties: {
+                queriesCount: queries.length,
+                status: errorStatus,
+            },
+        });
+    } else if (hasError) {
+        // Partial success (some queries failed, some succeeded)
+        logApiCall({
+            apiName: 'youtube',
+            success: true, // Count as success since we got results
+            sessionId: context?.sessionId,
+            source: context?.source,
+            properties: {
+                queriesCount: queries.length,
+                resultsCount: uniqueResults.length,
+                partialError: errorType,
+            },
+        });
+    } else {
+        // Full success
+        logApiCall({
+            apiName: 'youtube',
+            success: true,
+            sessionId: context?.sessionId,
+            source: context?.source,
+            properties: {
+                queriesCount: queries.length,
+                resultsCount: uniqueResults.length,
+            },
+        });
     }
 
     return uniqueResults;

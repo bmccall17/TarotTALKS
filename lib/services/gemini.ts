@@ -5,6 +5,14 @@
  * Free tier limits: 15 RPM, 1M TPM
  */
 
+import { logApiCall } from '@/lib/db/queries/api-usage';
+
+// Context for API call logging (optional)
+export interface ApiCallContext {
+  sessionId?: string;
+  source?: string;
+}
+
 // Rate limiting state (in-memory, resets on server restart)
 let requestCount = 0;
 let lastResetTime = Date.now();
@@ -54,9 +62,14 @@ function sleep(ms: number): Promise<void> {
  *
  * @param prompt - The prompt to send to Gemini
  * @param maxRetries - Maximum number of retries on rate limit (default: 3)
+ * @param context - Optional context for API call logging (sessionId, source)
  * @returns Generated text or error
  */
-export async function generateWithGemini(prompt: string, maxRetries: number = 3): Promise<GeminiResponse> {
+export async function generateWithGemini(
+  prompt: string,
+  maxRetries: number = 3,
+  context?: ApiCallContext
+): Promise<GeminiResponse> {
   const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -67,6 +80,15 @@ export async function generateWithGemini(prompt: string, maxRetries: number = 3)
   // Check internal rate limit
   if (!checkRateLimit()) {
     console.warn('Gemini internal rate limit reached');
+    // Log rate limit hit
+    logApiCall({
+      apiName: 'gemini',
+      success: false,
+      errorType: 'rate_limit',
+      sessionId: context?.sessionId,
+      source: context?.source,
+      properties: { reason: 'internal_rate_limit' },
+    });
     return { error: 'Rate limit reached', success: false, rateLimited: true };
   }
 
@@ -134,9 +156,27 @@ export async function generateWithGemini(prompt: string, maxRetries: number = 3)
         }
 
         if (response.status === 429) {
+          // Log rate limit after all retries exhausted
+          logApiCall({
+            apiName: 'gemini',
+            success: false,
+            errorType: 'rate_limit',
+            sessionId: context?.sessionId,
+            source: context?.source,
+            properties: { status: 429, attempts: attempt + 1 },
+          });
           return { error: 'Rate limit exceeded after retries', success: false, rateLimited: true };
         }
 
+        // Log other API errors
+        logApiCall({
+          apiName: 'gemini',
+          success: false,
+          errorType: 'api_error',
+          sessionId: context?.sessionId,
+          source: context?.source,
+          properties: { status: response.status },
+        });
         return { error: `API error: ${response.status}`, success: false };
       }
 
@@ -147,6 +187,15 @@ export async function generateWithGemini(prompt: string, maxRetries: number = 3)
 
       if (!text) {
         console.error('No text in Gemini response:', data);
+        // Log as API error (unexpected response format)
+        logApiCall({
+          apiName: 'gemini',
+          success: false,
+          errorType: 'api_error',
+          sessionId: context?.sessionId,
+          source: context?.source,
+          properties: { reason: 'no_content' },
+        });
         return { error: 'No content generated', success: false };
       }
 
@@ -154,15 +203,42 @@ export async function generateWithGemini(prompt: string, maxRetries: number = 3)
         console.log(`[Gemini] Success after ${attempt + 1} attempts`);
       }
 
+      // Log success
+      logApiCall({
+        apiName: 'gemini',
+        success: true,
+        sessionId: context?.sessionId,
+        source: context?.source,
+        properties: { attempts: attempt + 1 },
+      });
+
       return { text: text.trim(), success: true };
     } catch (error) {
       console.error('Gemini API fetch error:', error);
       lastError = 'Network error';
 
-      // Don't retry on network errors
+      // Log network error and don't retry
+      logApiCall({
+        apiName: 'gemini',
+        success: false,
+        errorType: 'network',
+        sessionId: context?.sessionId,
+        source: context?.source,
+        properties: { error: error instanceof Error ? error.message : 'unknown' },
+      });
       return { error: 'Network error', success: false };
     }
   }
+
+  // Log final failure after all retries
+  logApiCall({
+    apiName: 'gemini',
+    success: false,
+    errorType: 'rate_limit',
+    sessionId: context?.sessionId,
+    source: context?.source,
+    properties: { reason: 'max_retries_exceeded' },
+  });
 
   return { error: lastError, success: false, rateLimited: true };
 }
@@ -184,8 +260,9 @@ export async function generateSpreadRationale(params: {
     description: string | null;
   };
   focusText?: string;
+  context?: ApiCallContext;
 }): Promise<GeminiResponse> {
-  const { cards, talk, focusText } = params;
+  const { cards, talk, focusText, context } = params;
 
   // Construct enriched card context
   const cardContext = cards.map(c => {
@@ -240,7 +317,7 @@ ${focusText ? `## USER FOCUS\n"${focusText}"\n` : ''}
 ## YOUR RATIONALE
 `;
 
-  return generateWithGemini(prompt);
+  return generateWithGemini(prompt, 3, context);
 }
 
 /**
@@ -261,8 +338,9 @@ export async function generateSynthesisAndQueries(params: {
     themes?: string[];
   }>;
   focusText?: string;
+  context?: ApiCallContext;
 }): Promise<SynthesisResult | { error: string }> {
-  const { cards, focusText } = params;
+  const { cards, focusText, context } = params;
 
   // Construct enriched card context
   const cardContext = cards.map(c => {
@@ -313,7 +391,7 @@ ${focusText ? `## USER FOCUS\n"${focusText}"\n` : ''}
 ## OUTPUT
 `;
 
-  const result = await generateWithGemini(prompt);
+  const result = await generateWithGemini(prompt, 3, context);
 
   if (!result.success) {
     return { error: result.error || 'Failed to generate synthesis' };
@@ -385,13 +463,14 @@ export async function selectBestTalkWithAI(params: {
     source: 'youtube' | 'local';
     url?: string;
   }>;
-  context?: string;
+  context?: string; // This is the "guidance" context for the AI
+  apiCallContext?: ApiCallContext; // This is for logging
 }): Promise<{
   bestTalkIndex: number; // Index in the candidates array
   reasoning: string;
   confidence: number; // 0-100
 } | { error: string }> {
-  const { synthesis, candidates, context } = params;
+  const { synthesis, candidates, context, apiCallContext } = params;
 
   if (candidates.length === 0) {
     return { error: 'No candidates provided' };
@@ -439,7 +518,7 @@ ${candidatesText}
 ## OUTPUT
 `;
 
-  const result = await generateWithGemini(prompt);
+  const result = await generateWithGemini(prompt, 3, apiCallContext);
 
   if (!result.success) {
     return { error: result.error || 'Failed to select talk' };

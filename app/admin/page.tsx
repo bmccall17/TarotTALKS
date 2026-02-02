@@ -5,6 +5,7 @@ import { getTalksStats } from '@/lib/db/queries/admin-talks';
 import { getShareStats, getUnpostedCardsStats } from '@/lib/db/queries/admin-social-shares';
 import Link from 'next/link';
 import { Video, Link as LinkIcon, AlertTriangle, LayoutGrid, Sparkles, CheckCircle, AlertCircle, XCircle, Radio, Share2 } from 'lucide-react';
+import { ApiHealthSection } from '@/components/admin/dashboard/ApiHealthSection';
 
 // Force dynamic rendering - admin page should not be statically generated
 export const dynamic = 'force-dynamic';
@@ -181,6 +182,11 @@ export default async function AdminDashboard() {
               {stats.sharesToday > 0 ? `${stats.sharesToday} today` : 'Social posts tracked'}
             </p>
           </div>
+        </div>
+
+        {/* API Health Section */}
+        <div className="mb-8">
+          <ApiHealthSection />
         </div>
 
         {/* Quick Actions + Validation Summary */}

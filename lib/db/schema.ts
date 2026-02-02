@@ -173,6 +173,23 @@ export const socialShares = pgTable('social_shares', {
   idxAtUri: index('idx_social_shares_at_uri').on(table.atUri),
 }));
 
+// API Usage Events table (API health monitoring)
+export const apiUsageEvents = pgTable('api_usage_events', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  apiName: varchar('api_name', { length: 20 }).notNull(), // 'gemini' | 'youtube'
+  success: boolean('success').notNull(),
+  errorType: varchar('error_type', { length: 30 }), // 'rate_limit', 'quota_exceeded', 'network', 'api_error'
+  sessionId: varchar('session_id', { length: 12 }), // Links to user session for attribution
+  source: varchar('source', { length: 30 }).notNull(), // 'spread_reading', etc.
+  properties: text('properties').default('{}'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  idxApiName: index('idx_api_usage_api_name').on(table.apiName),
+  idxCreated: index('idx_api_usage_created').on(table.createdAt),
+  idxSuccess: index('idx_api_usage_success').on(table.success),
+  idxSession: index('idx_api_usage_session').on(table.sessionId),
+}));
+
 // Spreads table (Read My Spread feature - 0009_spreads.sql)
 export const spreads = pgTable('spreads', {
   id: uuid('id').defaultRandom().primaryKey(),

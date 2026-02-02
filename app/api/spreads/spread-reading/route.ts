@@ -34,12 +34,16 @@ interface RequestBody {
   focusText?: string;
   save?: boolean; // Whether to persist the spread
   skipAI?: boolean; // Skip Gemini/YouTube for testing (uses fallback flow)
+  sessionId?: string; // Session ID for API usage attribution
 }
 
 export async function POST(request: Request) {
   try {
     const body: RequestBody = await request.json();
-    const { cardIds, focusType, focusText, save = true, skipAI = false } = body;
+    const { cardIds, focusType, focusText, save = true, skipAI = false, sessionId } = body;
+
+    // Build context for API call logging
+    const apiCallContext = { sessionId, source: 'spread_reading' };
 
     // Validate card IDs
     if (!cardIds || !Array.isArray(cardIds) || cardIds.length < 2 || cardIds.length > 3) {
@@ -123,7 +127,8 @@ export async function POST(request: Request) {
       try {
         const synthesisResult = await generateSynthesisAndQueries({
           cards: geminiCards,
-          focusText: focusText
+          focusText: focusText,
+          context: apiCallContext
         });
 
         console.log('[ReadMySpread] Synthesis result:', JSON.stringify(synthesisResult).slice(0, 200));
@@ -155,7 +160,7 @@ export async function POST(request: Request) {
 
       if (geminiAvailable && searchQueries.length > 0) {
         try {
-          const youtubeResults = await searchYouTube(searchQueries);
+          const youtubeResults = await searchYouTube(searchQueries, apiCallContext);
           console.log('[ReadMySpread] YouTube results:', youtubeResults.length);
 
           if (youtubeResults.length > 0) {
@@ -190,7 +195,8 @@ export async function POST(request: Request) {
 
           const selection = await selectBestTalkWithAI({
             synthesis,
-            candidates: allCandidates
+            candidates: allCandidates,
+            apiCallContext
           });
 
           console.log('[ReadMySpread] Selection result:', JSON.stringify(selection).slice(0, 300));

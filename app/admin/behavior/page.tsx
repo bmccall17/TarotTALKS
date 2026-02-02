@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Users, BarChart3, Target, Clock, Smartphone, Monitor } from 'lucide-react';
+import { AlertTriangle, Users, BarChart3, Target, Clock, Smartphone, Monitor, Activity } from 'lucide-react';
+import { ApiStatusPair, type ApiHealthData } from '@/components/admin/ui/ApiStatusIndicator';
 
 type FlipDistribution = {
   flipCount: number;
@@ -41,6 +42,17 @@ type BehaviorStats = {
   };
 };
 
+type ApiUsageStats = {
+  gemini: ApiHealthData;
+  youtube: ApiHealthData;
+  attribution: {
+    geminiCalls: number;
+    youtubeCalls: number;
+    geminiSuccessful: number;
+    youtubeSuccessful: number;
+  };
+};
+
 const TIME_RANGES = [
   { label: 'Last 7 days', value: 7 },
   { label: 'Last 14 days', value: 14 },
@@ -49,6 +61,7 @@ const TIME_RANGES = [
 
 export default function BehaviorPage() {
   const [stats, setStats] = useState<BehaviorStats | null>(null);
+  const [apiStats, setApiStats] = useState<ApiUsageStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(7);
@@ -59,10 +72,22 @@ export default function BehaviorPage() {
       setError(null);
 
       try {
-        const response = await fetch(`/api/admin/behavior?days=${days}`);
-        if (!response.ok) throw new Error('Failed to fetch stats');
-        const data = await response.json();
-        setStats(data);
+        // Fetch both behavior and API stats in parallel
+        const [behaviorRes, apiRes] = await Promise.all([
+          fetch(`/api/admin/behavior?days=${days}`),
+          fetch(`/api/admin/api-usage?days=${days}`),
+        ]);
+
+        if (!behaviorRes.ok) throw new Error('Failed to fetch behavior stats');
+
+        const behaviorData = await behaviorRes.json();
+        setStats(behaviorData);
+
+        // API stats are optional - don't fail if unavailable
+        if (apiRes.ok) {
+          const apiData = await apiRes.json();
+          setApiStats(apiData);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
@@ -136,6 +161,17 @@ export default function BehaviorPage() {
           <p className="text-yellow-400 text-sm">
             Low sample size ({stats.sessionStats.totalSessions} sessions) - metrics may not be reliable
           </p>
+        </div>
+      )}
+
+      {/* API Health Status */}
+      {apiStats && (
+        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
+          <h2 className="text-lg font-semibold text-gray-100 mb-4 flex items-center gap-2">
+            <Activity className="w-5 h-5 text-indigo-400" />
+            API Health Status
+          </h2>
+          <ApiStatusPair gemini={apiStats.gemini} youtube={apiStats.youtube} />
         </div>
       )}
 
@@ -241,6 +277,21 @@ export default function BehaviorPage() {
               <span className="text-gray-400">Clicked</span>
               <span className="text-gray-200 font-medium">{stats.readSpreadCTR.clicked}</span>
             </div>
+
+            {/* API Attribution */}
+            {apiStats && (apiStats.attribution.geminiCalls > 0 || apiStats.attribution.youtubeCalls > 0) && (
+              <div className="pl-4 space-y-1 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">→ Gemini calls</span>
+                  <span className="text-gray-400">{apiStats.attribution.geminiCalls}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">→ YouTube calls</span>
+                  <span className="text-gray-400">{apiStats.attribution.youtubeCalls}</span>
+                </div>
+              </div>
+            )}
+
             <div className="border-t border-gray-700 pt-4 flex justify-between items-center">
               <span className="text-gray-300 font-medium">CTR</span>
               <span className="text-2xl font-bold text-indigo-400">
