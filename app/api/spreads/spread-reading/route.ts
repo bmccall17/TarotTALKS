@@ -322,7 +322,7 @@ export async function POST(request: Request) {
         focusText,
         rationale: finalRationale,
         rationaleSource: isNewFlowSuccessful ? 'ai' : 'template',
-        aiModel: 'gemini-1.5-flash',
+        aiModel: 'gemini-2.0-flash',
         score: 100,
         matchReasons: [],
       });
@@ -334,7 +334,7 @@ export async function POST(request: Request) {
       rationale: finalRationale,
       rationaleSource: isNewFlowSuccessful ? 'ai' : 'template',
       youtubeUsed, // Whether YouTube candidates were included
-      aiModel: 'gemini-1.5-flash',
+      aiModel: 'gemini-2.0-flash',
       score: 100,
       matchReasons: [],
       cards,

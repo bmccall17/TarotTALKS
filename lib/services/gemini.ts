@@ -83,9 +83,9 @@ export async function generateWithGemini(prompt: string, maxRetries: number = 3)
 
       incrementRateLimit();
 
-      // Use Gemini 1.5 Flash (free tier: 15 RPM, 1500 RPD - much higher limits)
+      // Use Gemini 2.0 Flash (free tier model)
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: {
