@@ -257,3 +257,74 @@ export async function getAllApiUsageStats(days: number = DEFAULT_DAYS): Promise<
     attribution,
   };
 }
+
+// Types for detailed API call logs
+export type ApiCallLogEntry = {
+  id: string;
+  success: boolean;
+  errorType: string | null;
+  source: string | null;
+  createdAt: string;
+  properties: {
+    // YouTube search properties
+    queries?: string[];
+    queriesCount?: number;
+    resultsCount?: number;
+    results?: Array<{ id: string; title: string; channel: string }>;
+    defaultToTed?: boolean;
+    partialError?: string;
+    status?: number;
+    // Selection properties (from spread_selection source)
+    selectedTalkId?: string;
+    selectedTalkTitle?: string;
+    spreadId?: string;
+    spreadUrl?: string;
+    fallbackMode?: boolean;
+    youtubeUsed?: boolean;
+    cardNames?: string[];
+    // Gemini properties
+    prompt?: string;
+    model?: string;
+    tokensUsed?: number;
+  };
+};
+
+/**
+ * Get detailed API call logs for admin inspection
+ * Returns recent calls with full query/result details
+ */
+export async function getApiCallLogs(
+  apiName: 'gemini' | 'youtube',
+  days: number = DEFAULT_DAYS,
+  limit: number = 20
+): Promise<ApiCallLogEntry[]> {
+  const cutoff = getDateCutoff(days);
+
+  const results = await db
+    .select({
+      id: apiUsageEvents.id,
+      success: apiUsageEvents.success,
+      errorType: apiUsageEvents.errorType,
+      source: apiUsageEvents.source,
+      createdAt: apiUsageEvents.createdAt,
+      properties: apiUsageEvents.properties,
+    })
+    .from(apiUsageEvents)
+    .where(
+      and(
+        eq(apiUsageEvents.apiName, apiName),
+        gte(apiUsageEvents.createdAt, cutoff)
+      )
+    )
+    .orderBy(desc(apiUsageEvents.createdAt))
+    .limit(limit);
+
+  return results.map(row => ({
+    id: row.id,
+    success: row.success,
+    errorType: row.errorType,
+    source: row.source,
+    createdAt: row.createdAt.toISOString(),
+    properties: row.properties ? JSON.parse(row.properties) : {},
+  }));
+}

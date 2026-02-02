@@ -26,7 +26,8 @@ import {
   generateSynthesisAndQueries,
   selectBestTalkWithAI
 } from '@/lib/services/gemini';
-import { searchYouTube, type YouTubeResult } from '@/lib/services/youtube';
+import { searchYouTube, type YouTubeResult, type SearchYouTubeOptions } from '@/lib/services/youtube';
+import { logApiCall } from '@/lib/db/queries/api-usage';
 
 interface RequestBody {
   cardIds: string[];
@@ -175,7 +176,12 @@ export async function POST(request: Request) {
 
       if (queriesToUse.length > 0) {
         try {
-          const youtubeResults = await searchYouTube(queriesToUse, apiCallContext);
+          // Use defaultToTed when in fallback mode (no Gemini queries)
+          // This ensures we get TED/TEDx content even if queries don't specify channel
+          const searchOptions: SearchYouTubeOptions = {
+            defaultToTed: !geminiAvailable || searchQueries.length === 0
+          };
+          const youtubeResults = await searchYouTube(queriesToUse, apiCallContext, searchOptions);
           console.log('[ReadMySpread] YouTube results:', youtubeResults.length);
 
           if (youtubeResults.length > 0) {
@@ -379,6 +385,24 @@ export async function POST(request: Request) {
         score: 100,
         matchReasons: [],
       });
+
+      // Log detailed selection info for admin visibility
+      // This creates a 'youtube_selection' log entry with spread context
+      logApiCall({
+        apiName: 'youtube',
+        success: true,
+        sessionId,
+        source: 'spread_selection',
+        properties: {
+          selectedTalkId: selectedTalk.id,
+          selectedTalkTitle: selectedTalk.title?.slice(0, 100),
+          spreadId: savedSpread.id,
+          spreadUrl: `https://tarottalks.app/spreads/${savedSpread.id}`,
+          fallbackMode: !geminiAvailable,
+          youtubeUsed,
+          cardNames: cards.map(c => c.name),
+        },
+      });
     }
 
     return NextResponse.json({
@@ -425,16 +449,17 @@ export async function POST(request: Request) {
  */
 /**
  * Generate fallback YouTube search queries when Gemini is unavailable
- * Uses card names and themes to create simple but targeted searches
+ * Uses card names and themes to create TED-targeted searches
+ * All queries use @TED format to ensure channel filtering
  */
 function generateFallbackQueries(cards: Array<{ name: string; themes?: string[] }>): string[] {
   const queries: string[] = [];
 
-  // Query 1: All card names together
-  const cardNames = cards.map(c => c.name).join(' ');
-  queries.push(`${cardNames} TED talk`);
+  // Query 1: First card name (usually most significant) on TED channel
+  // e.g., "@TED Ten of Swords transformation"
+  queries.push(`@TED ${cards[0].name}`);
 
-  // Query 2: Extract key themes from cards (if available)
+  // Query 2: Extract key themes from cards and target TED
   const allThemes: string[] = [];
   for (const card of cards) {
     if (card.themes && card.themes.length > 0) {
@@ -443,11 +468,13 @@ function generateFallbackQueries(cards: Array<{ name: string; themes?: string[] 
   }
   if (allThemes.length > 0) {
     const uniqueThemes = [...new Set(allThemes)].slice(0, 3);
-    queries.push(`${uniqueThemes.join(' ')} TED talk`);
+    queries.push(`@TED ${uniqueThemes.join(' ')}`);
   }
 
-  // Query 3: First card name (usually most significant) on TED channel
-  queries.push(`site:youtube.com/@TED ${cards[0].name}`);
+  // Query 3: TEDx channel with card concepts
+  // TEDx often has more diverse/personal stories
+  const cardConcepts = cards.slice(0, 2).map(c => c.name).join(' ');
+  queries.push(`@TEDx ${cardConcepts}`);
 
   return queries;
 }
