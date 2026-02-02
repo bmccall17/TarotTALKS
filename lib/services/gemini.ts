@@ -43,12 +43,20 @@ function incrementRateLimit(): void {
 }
 
 /**
- * Generate content using Gemini API
+ * Sleep helper for retry delays
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Generate content using Gemini API with retry logic for rate limiting
  *
  * @param prompt - The prompt to send to Gemini
+ * @param maxRetries - Maximum number of retries on rate limit (default: 3)
  * @returns Generated text or error
  */
-export async function generateWithGemini(prompt: string): Promise<GeminiResponse> {
+export async function generateWithGemini(prompt: string, maxRetries: number = 3): Promise<GeminiResponse> {
   const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -56,82 +64,107 @@ export async function generateWithGemini(prompt: string): Promise<GeminiResponse
     return { error: 'Gemini API not configured', success: false };
   }
 
-  // Check rate limit
+  // Check internal rate limit
   if (!checkRateLimit()) {
-    console.warn('Gemini rate limit reached');
+    console.warn('Gemini internal rate limit reached');
     return { error: 'Rate limit reached', success: false, rateLimited: true };
   }
 
-  try {
-    incrementRateLimit();
+  let lastError: string = 'Unknown error';
 
-    // Use Gemini Flash Latest (should resolve to 1.5 Flash or newer)
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: prompt }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 1024,
-            topP: 0.8,
-            topK: 40,
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 0) {
+        // Exponential backoff: 2s, 4s, 8s
+        const delayMs = Math.pow(2, attempt) * 1000;
+        console.log(`[Gemini] Rate limited, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+        await sleep(delayMs);
+      }
+
+      incrementRateLimit();
+
+      // Use Gemini 2.0 Flash (free tier)
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          safetySettings: [
-            {
-              category: 'HARM_CATEGORY_HARASSMENT',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: prompt }]
+            }],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 1024,
+              topP: 0.8,
+              topK: 40,
             },
-            {
-              category: 'HARM_CATEGORY_HATE_SPEECH',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-            },
-            {
-              category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-            },
-            {
-              category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-            }
-          ]
-        }),
+            safetySettings: [
+              {
+                category: 'HARM_CATEGORY_HARASSMENT',
+                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+              },
+              {
+                category: 'HARM_CATEGORY_HATE_SPEECH',
+                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+              },
+              {
+                category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+              },
+              {
+                category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                threshold: 'BLOCK_MEDIUM_AND_ABOVE'
+              }
+            ]
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Gemini API error:', response.status, errorText);
+
+        // Check for rate limit response from Google - retry if we have attempts left
+        if (response.status === 429 && attempt < maxRetries) {
+          lastError = 'Rate limit exceeded';
+          continue; // Retry with backoff
+        }
+
+        if (response.status === 429) {
+          return { error: 'Rate limit exceeded after retries', success: false, rateLimited: true };
+        }
+
+        return { error: `API error: ${response.status}`, success: false };
       }
-    );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Gemini API error:', response.status, errorText);
+      const data = await response.json();
 
-      // Check for rate limit response from Google
-      if (response.status === 429) {
-        return { error: 'Rate limit exceeded', success: false, rateLimited: true };
+      // Extract text from response
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!text) {
+        console.error('No text in Gemini response:', data);
+        return { error: 'No content generated', success: false };
       }
 
-      return { error: `API error: ${response.status}`, success: false };
+      if (attempt > 0) {
+        console.log(`[Gemini] Success after ${attempt + 1} attempts`);
+      }
+
+      return { text: text.trim(), success: true };
+    } catch (error) {
+      console.error('Gemini API fetch error:', error);
+      lastError = 'Network error';
+
+      // Don't retry on network errors
+      return { error: 'Network error', success: false };
     }
-
-    const data = await response.json();
-
-    // Extract text from response
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!text) {
-      console.error('No text in Gemini response:', data);
-      return { error: 'No content generated', success: false };
-    }
-
-    return { text: text.trim(), success: true };
-  } catch (error) {
-    console.error('Gemini API fetch error:', error);
-    return { error: 'Network error', success: false };
   }
+
+  return { error: lastError, success: false, rateLimited: true };
 }
 
 /**
