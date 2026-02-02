@@ -297,6 +297,19 @@ export async function hardDeleteTalk(id: string) {
 }
 
 /**
+ * Get a talk by its YouTube video ID (for deduplication)
+ */
+export async function getTalkByYouTubeId(youtubeVideoId: string) {
+  const result = await db
+    .select()
+    .from(talks)
+    .where(eq(talks.youtubeVideoId, youtubeVideoId))
+    .limit(1);
+
+  return result[0] || null;
+}
+
+/**
  * Get statistics for the admin dashboard
  * Runs queries sequentially to avoid connection pool exhaustion on Vercel Postgres
  */

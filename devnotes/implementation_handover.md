@@ -42,20 +42,29 @@ We have successfully implemented the core "Synthesis -> Retrieval -> Selection" 
 ### ⚠️ Next Steps (For Claude)
 
 1.  **Bibliography Ingestion (Partially Planned)**
-    *   We have 10 PDF books in `/docs` (or referenced path).
+    *   We have 10 PDF books in `/mnt/e/Dropbox/xfer/_full\ books\ pdfs/tarot/`.
     *   **Plan:** We need to ingest these into a Supabase `bibliography_chunks` table.
-    *   **Context:** See `devnotes/intelligenceevolution_readmyspread.md` (Step 5) and the `implementation_plan.md` (if saved).
+    *   **Context:** See `devnotes/intelligenceevolution_readmyspread.md` (Step 5) and the `devnotes/session_log_refining_ai_behavior.md`.
     *   **Task:** Write the script to chunk PDFs and upload them. Then update `gemini.ts` to fetch relevant chunks before Synthesis.
 
 2.  **Testing & UI**
     *   The API returns a `synthesis` field now. You might want to display this "Core Tension" to the user in the UI?
     *   Loading States: The new flow takes longer (Generation + Search + Selection). Ensure `LoadingState.tsx` is robust.
 
-3.  **Save Logic**
-    *   Currently, if a *YouTube* talk is selected (not in local DB), we do NOT save the spread to the DB to avoid Foreign Key errors (Talk ID mismatch).
-    *   **Decision Needed:** Should we insert new YouTube talks into the `talks` table on the fly? Or allow Spreads to have `null` talk_id but a `youtube_url`?
+3.  **Architectural Decision: New YouTube Talks (Auto-Ingest)**
+    *   **Decision:** We will **"Auto-Ingest via YouTube"**.
+    *   **Logic:** When the AI selects a YouTube video that is *not* in our local `talks` database:
+        1.  Parse the metadata from the YouTube API result (Title, Channel/Speaker, Description, Thumbnail, Video ID).
+        2.  **Insert a new record** into the `talks` table immediately.
+        3.  Use this new `talk_id` to save the `spread`.
+    *   **Benefits:** Builds the library organically, saves future API costs, and enables rich UI previews.
 
-4.  **Billing/Quota**
-    *   We are using YouTube Data API. Monitor quotas (100 search queries = 10,000 units?). Might need caching.
+4.  **Architectural Decision: Quota Management**
+    *   **Decision:** **"Graceful Degradation"**.
+    *   **Logic:** If the YouTube Data API hits a quota limit (403/429):
+        1.  Log the error.
+        2.  **Fallback:** Proceed silently using *only* the local database candidates.
+        3.  The user still gets a reading from the existing library.
+    *   **Task:** Ensure `searchYouTube` returns an empty array (instead of throwing) on quota errors so the fallback kicks in.
 
 Good luck! the "Brain" is now active. 🧠

@@ -13,6 +13,7 @@ import {
   getMappingsForCards,
   createSpread,
 } from '@/lib/db/queries/spreads';
+import { createTalk, getTalkByYouTubeId } from '@/lib/db/queries/admin-talks';
 import {
   scoreTalksForSpread,
   getTopRecommendation,
@@ -221,38 +222,48 @@ export async function POST(request: Request) {
     // Save spread if requested
     let savedSpread: { id: string; shortId: string } | null = null;
     if (save) {
-      // NOTE: We only save if it's a "local" talk or we need logic to save "new" talks
-      // For now, if ID starts with yt_, we might fail foreign key constraint if we try to link it
-      // The schema likely expects a valid talk_id UUID.
-      // If selectedTalk is NOT in DB, we should technically insert it or handle it.
-      // For this step, if it's external, we might skip saving the *relation* or just save the spread without a talk? 
-      // Checking createSpread signature: 'talkId' is required and likely UUID.
+      let talkIdForSpread = selectedTalk.id;
 
-      // FIX: If it's a YouTube talk (not in DB), we fallback to NOT linking it strictly or we need to insert it.
-      // "If it's a new YouTube talk, you might want to save it to your 'talks' table on the fly!" (Plan Step 4.5)
+      // If it's a YouTube talk (not in DB), check if it exists or insert it
+      if (selectedTalk.id.startsWith('yt_')) {
+        const youtubeVideoId = selectedTalk.id.replace('yt_', '');
 
-      // For this iteration, if it's a YouTube talk, we WON'T save the spread to DB to avoid crashing on FK,
-      // OR we just return it to the user.
-      // But the user expects a spread ID maybe?
+        // Check if this YouTube talk already exists in our DB
+        const existingTalk = await getTalkByYouTubeId(youtubeVideoId);
 
-      // Let's assume for now we only save if it's a local talk (UUID), 
-      // or we accept that 'createSpread' might fail if we pass a fake ID.
-      // Let's try to save ONLY if it's a UUID (local).
-      const isLocal = !selectedTalk.id.startsWith('yt_');
+        if (existingTalk) {
+          // Use existing record
+          talkIdForSpread = existingTalk.id;
+          selectedTalk = { ...selectedTalk, id: existingTalk.id, slug: existingTalk.slug };
+        } else {
+          // Insert new talk
+          const speakerName = extractSpeakerFromYouTube(selectedTalk);
 
-      if (isLocal) {
-        savedSpread = await createSpread({
-          cardIds,
-          talkId: selectedTalk.id,
-          focusType,
-          focusText,
-          rationale: finalRationale,
-          rationaleSource: isNewFlowSuccessful ? 'ai' : 'template',
-          aiModel: 'gemini-1.5-flash',
-          score: 100, // Synthetic score for AI selection
-          matchReasons: [], // No standard reasons for AI selection
-        });
+          const newTalk = await createTalk({
+            title: selectedTalk.title,
+            speakerName: speakerName,
+            youtubeVideoId: youtubeVideoId,
+            youtubeUrl: `https://www.youtube.com/watch?v=${youtubeVideoId}`,
+            description: selectedTalk.description,
+            thumbnailUrl: selectedTalk.thumbnailUrl,
+          });
+
+          talkIdForSpread = newTalk.id;
+          selectedTalk = { ...selectedTalk, id: newTalk.id, slug: newTalk.slug };
+        }
       }
+
+      savedSpread = await createSpread({
+        cardIds,
+        talkId: talkIdForSpread,
+        focusType,
+        focusText,
+        rationale: finalRationale,
+        rationaleSource: isNewFlowSuccessful ? 'ai' : 'template',
+        aiModel: 'gemini-1.5-flash',
+        score: 100,
+        matchReasons: [],
+      });
     }
 
     return NextResponse.json({
@@ -280,4 +291,25 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Extract speaker name from YouTube talk data
+ * TED videos often format: "Title | Speaker" or "Speaker: Title"
+ */
+function extractSpeakerFromYouTube(talk: { title: string; speakerName?: string | null }): string {
+  // If we have a speaker name that's not just the channel name, use it
+  if (talk.speakerName && talk.speakerName !== 'TED' && talk.speakerName !== 'TEDx Talks') {
+    return talk.speakerName;
+  }
+
+  // Try to parse from title: "Title | Speaker Name"
+  const pipeMatch = talk.title.match(/\|\s*([^|]+)$/);
+  if (pipeMatch) return pipeMatch[1].trim();
+
+  // Try to parse from title: "Speaker Name: Title"
+  const colonMatch = talk.title.match(/^([^:]+):/);
+  if (colonMatch) return colonMatch[1].trim();
+
+  return 'TED Speaker'; // Fallback
 }
