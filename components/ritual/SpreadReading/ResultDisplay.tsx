@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { ExternalLink, Share2, RefreshCw, Clock } from 'lucide-react';
 import type { SpreadTalk, SpreadCard, MatchReason } from '@/lib/spread-reading/types';
+import { GPTFallbackModal } from './GPTFallbackModal';
 
 interface ResultDisplayProps {
   talk: SpreadTalk;
@@ -36,8 +38,6 @@ function OpenAIIcon({ className }: { className?: string }) {
   );
 }
 
-const GPT_URL = 'https://chatgpt.com/g/g-6965a1a328ec8191bc976bd89d963972-tarottalks-spread-reader';
-
 export function ResultDisplay({
   talk,
   rationale,
@@ -48,6 +48,7 @@ export function ResultDisplay({
   onClose,
   onTalkClick,
 }: ResultDisplayProps) {
+  const [showGPTModal, setShowGPTModal] = useState(false);
   const talkUrl = talk.slug ? `/talks/${talk.slug}` : null;
   const thumbnailUrl = talk.thumbnailUrl || '/images/default-talk-thumb.jpg';
 
@@ -140,10 +141,8 @@ export function ResultDisplay({
                 Try Another
               </span>
             </button>
-            <a
-              href={GPT_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => setShowGPTModal(true)}
               className="group relative px-4 py-3 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl transition-colors flex items-center justify-center"
               aria-label="Try the TarotTALKS GPT for a deeper reading"
             >
@@ -153,7 +152,7 @@ export function ResultDisplay({
                 <span className="block font-medium">✨ Want a deeper reading?</span>
                 <span className="text-gray-300">Try the TarotTALKS GPT →</span>
               </span>
-            </a>
+            </button>
           </div>
         ) : (
           /* AI mode: Standard button */
@@ -183,6 +182,14 @@ export function ResultDisplay({
       >
         Close
       </button>
+
+      {/* GPT Fallback Modal */}
+      {showGPTModal && (
+        <GPTFallbackModal
+          cards={cards}
+          onClose={() => setShowGPTModal(false)}
+        />
+      )}
     </div>
   );
 }

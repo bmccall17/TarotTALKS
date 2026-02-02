@@ -290,6 +290,27 @@ export default function BehaviorPage() {
           </div>
         </div>
       </div>
+
+      {/* Developer Tools */}
+      <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
+        <h2 className="text-lg font-semibold text-gray-100 mb-4">Developer Tools</h2>
+        <div className="space-y-3 text-sm">
+          <div>
+            <span className="text-gray-400">Test Mode ON</span>
+            <span className="text-gray-500 mx-2">—</span>
+            <code className="bg-gray-900 text-indigo-300 px-2 py-1 rounded">?analytics_test=1</code>
+            <span className="text-gray-500 ml-2">(skips Gemini/YouTube APIs)</span>
+          </div>
+          <div>
+            <span className="text-gray-400">Test Mode OFF</span>
+            <span className="text-gray-500 mx-2">—</span>
+            <code className="bg-gray-900 text-indigo-300 px-2 py-1 rounded">?analytics_test=0</code>
+          </div>
+          <p className="text-gray-500 text-xs pt-2">
+            Add to any page URL to toggle. Persists in localStorage until changed.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
