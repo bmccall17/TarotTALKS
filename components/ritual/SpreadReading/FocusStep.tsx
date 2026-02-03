@@ -18,19 +18,18 @@ export function FocusStep({ onSelect, onBack, isLoading }: FocusStepProps) {
   const focusOptions = Object.entries(FOCUS_TYPE_LABELS) as [FocusType, string][];
 
   const handleFocusClick = (focus: FocusType) => {
-    if (focus === 'surprise_me') {
-      // Immediate selection for surprise_me, but still pass any custom text
-      onSelect('surprise_me', customText.trim() || undefined);
+    // Toggle selection - clicking again deselects
+    if (selectedFocus === focus) {
+      setSelectedFocus(null);
     } else {
       setSelectedFocus(focus);
     }
   };
 
   const handleContinue = () => {
-    if (selectedFocus) {
-      // Always pass customText if provided, regardless of focus type
-      onSelect(selectedFocus, customText.trim() || undefined);
-    }
+    // Pass whatever is selected (focus and/or text), or 'surprise_me' if nothing selected
+    const focusToUse = selectedFocus || 'surprise_me';
+    onSelect(focusToUse, customText.trim() || undefined);
   };
 
   return (
@@ -93,22 +92,20 @@ export function FocusStep({ onSelect, onBack, isLoading }: FocusStepProps) {
         >
           Back
         </button>
-        {selectedFocus && selectedFocus !== 'surprise_me' && (
-          <button
-            onClick={handleContinue}
-            disabled={isLoading}
-            className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {isLoading ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Reading...
-              </>
-            ) : (
-              'Read My Spread'
-            )}
-          </button>
-        )}
+        <button
+          onClick={handleContinue}
+          disabled={isLoading}
+          className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {isLoading ? (
+            <>
+              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Reading...
+            </>
+          ) : (
+            'Read My Spread'
+          )}
+        </button>
       </div>
     </div>
   );
