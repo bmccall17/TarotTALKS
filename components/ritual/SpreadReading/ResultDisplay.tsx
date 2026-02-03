@@ -197,12 +197,12 @@ export function ResultDisplay({
             Try Another
           </button>
         )}
-        {onShare && (
-          isTestMode ? (
-            <div className="flex-1 px-4 py-3 bg-amber-700/50 border border-amber-600 text-amber-200 rounded-xl flex items-center justify-center gap-2 text-sm font-medium">
-              Testing Mode
-            </div>
-          ) : (
+        {isTestMode ? (
+          <div className="flex-1 px-4 py-3 bg-amber-700/50 border border-amber-600 text-amber-200 rounded-xl flex items-center justify-center gap-2 text-sm font-medium">
+            Testing Mode
+          </div>
+        ) : (
+          onShare && (
             <button
               onClick={onShare}
               className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-colors flex items-center justify-center gap-2"
