@@ -1,0 +1,27 @@
+# Large data files
+docs/
+
+# Development notes
+devnotes/
+
+# Screenshots
+Screenshot*.png
+*.screenshot.png
+
+# Agent/Claude files
+.agent/
+.claude/
+
+# Node modules (Vercel installs fresh)
+node_modules/
+
+# Build artifacts
+.next/
+tsconfig.tsbuildinfo
+
+# Git
+.git/
+
+# Environment files
+.env
+.env*.local

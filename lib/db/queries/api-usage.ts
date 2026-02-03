@@ -8,7 +8,7 @@ import { db } from '@/lib/db';
 import { apiUsageEvents } from '@/lib/db/schema';
 
 export type ApiName = 'gemini' | 'youtube';
-export type ErrorType = 'rate_limit' | 'quota_exceeded' | 'network' | 'api_error';
+export type ErrorType = 'rate_limit' | 'quota_exceeded' | 'network' | 'api_error' | 'circuit_breaker';
 
 export interface LogApiCallParams {
   apiName: ApiName;
