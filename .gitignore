@@ -56,6 +56,9 @@ Thumbs.db
 # Claude Desktop
 .claude/
 
+# Claude Code agent files
+.agent/
+
 # Temporary and error files
 deploymenterrors.txt
 *.log
