@@ -16,6 +16,7 @@ A chronological record of major releases and feature deployments for TarotTALKS.
 
 | Version | Title | Date |
 |---------|-------|------|
+| [v1.4.3](devnotes/releases/v1.4.3.md) | Deployment Pipeline Fix 🔧 | Feb 3, 2026 |
 | [v1.4.2](devnotes/releases/v1.4.2.md) | Signal Deck Evolve: Next Cards to Post Improve 📡 | Feb 3, 2026 |
 | [v1.4.1](devnotes/releases/v1.4.1.md) | Focus & Context Flow + YouTube Title Parser 🎯 | Feb 3, 2026 |
 | [v1.3.13](devnotes/releases/v1.3.13.md) | Theme Management & Talk Language Indicator 🎨 | Feb 2, 2026 |
@@ -43,6 +44,7 @@ A chronological record of major releases and feature deployments for TarotTALKS.
 
 | Version | Title | Date |
 |---------|-------|------|
+| [v1.4.3](devnotes/releases/v1.4.3.md) | Deployment Pipeline Fix 🔧 | Feb 3, 2026 |
 | [v1.4.2](devnotes/releases/v1.4.2.md) | Signal Deck Evolve: Next Cards to Post Improve 📡 | Feb 3, 2026 |
 | [v1.4.1](devnotes/releases/v1.4.1.md) | Focus & Context Flow + YouTube Title Parser 🎯 | Feb 3, 2026 |
 | [v1.3.13](devnotes/releases/v1.3.13.md) | Theme Management & Talk Language Indicator 🎨 | Feb 2, 2026 |
