@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Video, Link as LinkIcon, AlertTriangle, ArrowLeft, Sparkles, BarChart3, Share2, Radio, Palette } from 'lucide-react';
+import { Home, Video, Link as LinkIcon, AlertTriangle, ArrowLeft, Sparkles, BarChart3, Share2, Radio, Palette, Layers } from 'lucide-react';
 
 export function AdminNav() {
   const pathname = usePathname();
@@ -57,6 +57,10 @@ export function AdminNav() {
             <Link href="/admin/themes" className={navLinkClass('/admin/themes')}>
               <Palette className="w-4 h-4" />
               <span>Themes</span>
+            </Link>
+            <Link href="/admin/spreads" className={navLinkClass('/admin/spreads')}>
+              <Layers className="w-4 h-4" />
+              <span>Spreads</span>
             </Link>
           </div>
         </div>
