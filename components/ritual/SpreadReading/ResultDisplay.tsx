@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ExternalLink, Share2, RefreshCw, Clock } from 'lucide-react';
 import type { SpreadTalk, SpreadCard, MatchReason, FocusType } from '@/lib/spread-reading/types';
 import { FOCUS_TYPE_LABELS } from '@/lib/spread-reading/types';
@@ -54,7 +54,15 @@ export function ResultDisplay({
   onTalkClick,
 }: ResultDisplayProps) {
   const [showGPTModal, setShowGPTModal] = useState(false);
+  const [isTestMode, setIsTestMode] = useState(false);
   const talkUrl = talk.slug ? `/talks/${talk.slug}` : null;
+
+  // Check for test mode on mount
+  useEffect(() => {
+    const testMode = typeof window !== 'undefined' &&
+      localStorage.getItem('tarot_analytics_test_mode') === 'true';
+    setIsTestMode(testMode);
+  }, []);
   const thumbnailUrl = talk.thumbnailUrl || '/images/default-talk-thumb.jpg';
 
   const handleTalkClick = () => {
@@ -190,13 +198,19 @@ export function ResultDisplay({
           </button>
         )}
         {onShare && (
-          <button
-            onClick={onShare}
-            className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-colors flex items-center justify-center gap-2"
-          >
-            <Share2 className="w-4 h-4" />
-            Share
-          </button>
+          isTestMode ? (
+            <div className="flex-1 px-4 py-3 bg-amber-700/50 border border-amber-600 text-amber-200 rounded-xl flex items-center justify-center gap-2 text-sm font-medium">
+              Testing Mode
+            </div>
+          ) : (
+            <button
+              onClick={onShare}
+              className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
+              <Share2 className="w-4 h-4" />
+              Share
+            </button>
+          )
         )}
       </div>
 

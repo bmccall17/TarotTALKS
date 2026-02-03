@@ -4,7 +4,7 @@
 
 import { db } from '../index';
 import { spreads, cards, talks } from '../schema';
-import { eq, and, or, isNull, lt, desc, sql, count } from 'drizzle-orm';
+import { eq, and, or, isNull, lt, desc, sql, count, inArray } from 'drizzle-orm';
 
 export type SpreadStats = {
   total: number;
@@ -163,10 +163,12 @@ export async function getSpreadsForAdmin(options: {
     result.map(async (spread) => {
       // Get card names
       const cardIds = [spread.card1Id, spread.card2Id, spread.card3Id].filter(Boolean) as string[];
-      const cardNames = await db
-        .select({ id: cards.id, name: cards.name })
-        .from(cards)
-        .where(sql`${cards.id} = ANY(${cardIds})`);
+      const cardNames = cardIds.length > 0
+        ? await db
+            .select({ id: cards.id, name: cards.name })
+            .from(cards)
+            .where(inArray(cards.id, cardIds))
+        : [];
 
       const cardNameMap = new Map(cardNames.map(c => [c.id, c.name]));
 
