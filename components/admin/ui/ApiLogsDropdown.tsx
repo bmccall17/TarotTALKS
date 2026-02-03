@@ -27,7 +27,43 @@ type ApiCallLog = {
     model?: string;
     tokensUsed?: number;
     error?: string;
+    // Circuit breaker properties
+    reason?: string;
+    cooldownUntil?: string;
+    attempts?: number;
+    isQuotaExceeded?: boolean;
+    circuitBreakerTripped?: boolean;
+    status?: number;
   };
+};
+
+// Error explanations for tooltips
+const errorExplanations: Record<string, { title: string; description: string; action: string }> = {
+  circuit_breaker: {
+    title: 'Circuit Breaker Blocked',
+    description: 'The daily quota was exceeded earlier. This call was blocked immediately without hitting the API to save quota.',
+    action: 'Resets automatically at midnight Pacific Time.',
+  },
+  quota_exceeded: {
+    title: 'Daily Quota Exceeded',
+    description: 'Google\'s free tier daily limit was reached. The circuit breaker has been tripped.',
+    action: 'All Gemini calls will be blocked until midnight PT.',
+  },
+  rate_limit: {
+    title: 'Rate Limit Hit',
+    description: 'Internal rate limiter blocked this call (10 req/min max) or Google returned 429.',
+    action: 'Automatic retry with exponential backoff.',
+  },
+  api_error: {
+    title: 'API Error',
+    description: 'Google returned an error (not quota-related).',
+    action: 'Check API key configuration or try again.',
+  },
+  network: {
+    title: 'Network Error',
+    description: 'Could not reach Google\'s servers.',
+    action: 'Check server connectivity.',
+  },
 };
 
 interface ApiLogsDropdownProps {
@@ -41,6 +77,7 @@ export function ApiLogsDropdown({ apiName, days = 7, limit = 10 }: ApiLogsDropdo
   const [logs, setLogs] = useState<ApiCallLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
+  const [hoveredLogId, setHoveredLogId] = useState<string | null>(null);
 
   // Fetch logs when expanded
   useEffect(() => {
@@ -99,12 +136,73 @@ export function ApiLogsDropdown({ apiName, days = 7, limit = 10 }: ApiLogsDropdo
           {logs.map((log) => (
             <div
               key={log.id}
-              className={`p-2 rounded border text-xs ${
+              className={`p-2 rounded border text-xs relative ${
                 log.success
                   ? 'bg-gray-800/50 border-gray-700'
                   : 'bg-red-900/20 border-red-800/50'
               }`}
+              onMouseEnter={() => setHoveredLogId(log.id)}
+              onMouseLeave={() => setHoveredLogId(null)}
             >
+              {/* Detailed hover tooltip for Gemini errors */}
+              {apiName === 'gemini' && hoveredLogId === log.id && (
+                <div className="absolute z-50 right-0 top-full mt-1 w-64 p-3 bg-gray-900 border border-gray-700 rounded-lg shadow-xl text-xs">
+                  {log.success ? (
+                    <>
+                      <div className="font-medium text-green-400 mb-1">Gemini Call Succeeded</div>
+                      {log.properties.attempts && log.properties.attempts > 1 && (
+                        <div className="text-gray-400 mb-1">
+                          Succeeded after {log.properties.attempts} attempt{log.properties.attempts > 1 ? 's' : ''}
+                        </div>
+                      )}
+                      {log.source && (
+                        <div className="text-gray-500 text-[10px]">
+                          Source: {log.source}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {log.errorType && errorExplanations[log.errorType] ? (
+                        <>
+                          <div className="font-medium text-red-400 mb-1">
+                            {errorExplanations[log.errorType].title}
+                          </div>
+                          <div className="text-gray-400 mb-2">
+                            {errorExplanations[log.errorType].description}
+                          </div>
+                          <div className="text-yellow-400/80 text-[10px] pt-2 border-t border-gray-700">
+                            {errorExplanations[log.errorType].action}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-gray-400">
+                          Error type: {log.errorType || 'unknown'}
+                        </div>
+                      )}
+                      {/* Additional context for circuit breaker */}
+                      {log.errorType === 'circuit_breaker' && log.properties.cooldownUntil && (
+                        <div className="text-gray-500 text-[10px] mt-2">
+                          Cooldown until: {new Date(log.properties.cooldownUntil).toLocaleString()}
+                        </div>
+                      )}
+                      {/* Show if circuit breaker was tripped by this call */}
+                      {log.properties.circuitBreakerTripped && (
+                        <div className="text-orange-400 text-[10px] mt-2">
+                          This call tripped the circuit breaker
+                        </div>
+                      )}
+                      {/* Show status code if present */}
+                      {log.properties.status && (
+                        <div className="text-gray-500 text-[10px] mt-1">
+                          HTTP Status: {log.properties.status}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
               {/* Header */}
               <div className="flex items-center justify-between mb-1">
                 <span className="text-gray-500">{formatRelativeTime(log.createdAt)}</span>
@@ -114,8 +212,13 @@ export function ApiLogsDropdown({ apiName, days = 7, limit = 10 }: ApiLogsDropdo
                       fallback
                     </span>
                   )}
+                  {log.errorType === 'circuit_breaker' && (
+                    <span className="px-1 py-0.5 bg-orange-500/20 text-orange-400 rounded text-[9px]">
+                      blocked
+                    </span>
+                  )}
                   <span className={log.success ? 'text-green-400' : 'text-red-400'}>
-                    {log.success ? 'OK' : log.errorType?.toUpperCase() || 'ERR'}
+                    {log.success ? 'OK' : log.errorType?.toUpperCase().replace('_', ' ') || 'ERR'}
                   </span>
                 </div>
               </div>

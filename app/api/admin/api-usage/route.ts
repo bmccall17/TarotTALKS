@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllApiUsageStats } from '@/lib/db/queries/admin-api-usage';
+import { getCircuitBreakerStatus } from '@/lib/services/gemini';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,8 +11,16 @@ export async function GET(request: NextRequest) {
     const validDays = Math.min(Math.max(1, days), 90);
 
     const stats = await getAllApiUsageStats(validDays);
+    const circuitBreaker = getCircuitBreakerStatus();
 
-    return NextResponse.json(stats);
+    return NextResponse.json({
+      ...stats,
+      gemini: {
+        ...stats.gemini,
+        circuitBreakerOpen: circuitBreaker.isOpen,
+        cooldownUntil: circuitBreaker.cooldownUntil,
+      },
+    });
   } catch (error) {
     console.error('Error fetching API usage stats:', error);
     return NextResponse.json(
