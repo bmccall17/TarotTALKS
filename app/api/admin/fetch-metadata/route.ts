@@ -220,8 +220,9 @@ function parseYouTubeTitle(rawTitle: string): ParsedYouTubeTitle {
     return { speakerName: null, eventName: null, cleanTitle: '' };
   }
 
-  // Event name detection regex: TED, TED2023, TEDx, TEDxBoston, TEDx San Francisco
-  const eventRegex = /^TED(x[A-Za-z\s]+|\d{4})?$/i;
+  // Event name detection regex - matches various TED event formats:
+  // TED, TED2023, TEDx, TEDxBoston, TEDx San Francisco, TEDWomen, TEDGlobal, TED Salon, TED-Ed
+  const eventRegex = /^TED(-?Ed|x[A-Za-z\s]*|Women|Global|Salon|\d{4}|[A-Z][a-z]+)?(\s+\d{4})?$/i;
 
   // Helper to check if a string looks like a speaker name
   const looksLikeSpeakerName = (str: string): boolean => {
@@ -449,8 +450,11 @@ export async function POST(request: NextRequest) {
       : null;
 
     // Merge metadata (TED data preferred for title/thumbnail, YouTube fills rest)
+    // Use cleanTitle from parsed YouTube when we extracted speaker/event from pipe-separated format
+    const youtubeCleanTitle = parsedYouTube?.cleanTitle || youtubeData?.title || null;
+
     const merged: MergedMetadata = {
-      title: tedData?.title || youtubeData?.title || null,
+      title: tedData?.title || youtubeCleanTitle,
       description: youtubeData?.description || null,
       durationSeconds: youtubeData?.durationSeconds || null,
       year: youtubeData?.year || null,
