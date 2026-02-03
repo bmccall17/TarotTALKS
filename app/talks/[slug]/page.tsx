@@ -162,15 +162,30 @@ export default async function TalkDetailPage({ params }: { params: Promise<{ slu
             )}
 
             {(talk.tedUrl || talk.youtubeUrl) ? (
-              <a
-                href={(talk.tedUrl || talk.youtubeUrl) as string}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 w-full sm:w-auto bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
-              >
-                Watch on TED
-                <ExternalLink className="w-4 h-4" />
-              </a>
+              <div className="flex flex-wrap gap-3">
+                {talk.tedUrl && (
+                  <a
+                    href={talk.tedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 bg-[#EB0028] text-white px-6 py-3 rounded-lg hover:bg-[#c90022] transition-colors font-medium"
+                  >
+                    Watch on TED
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                )}
+                {talk.youtubeUrl && (
+                  <a
+                    href={talk.youtubeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 bg-[#FF0000] text-white px-6 py-3 rounded-lg hover:bg-[#cc0000] transition-colors font-medium"
+                  >
+                    Watch on YouTube
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                )}
+              </div>
             ) : (
               <div className="inline-flex items-center justify-center gap-2 w-full sm:w-auto bg-gray-700 text-gray-400 px-6 py-3 rounded-lg font-medium cursor-not-allowed">
                 No Video Available
