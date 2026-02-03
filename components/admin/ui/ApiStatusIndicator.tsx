@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ApiLogsDropdown } from './ApiLogsDropdown';
 
 export type ApiHealthData = {
   apiName: 'gemini' | 'youtube';
@@ -193,6 +194,9 @@ export function ApiStatusIndicator({ data, compact = false }: ApiStatusIndicator
             )}
           </div>
         )}
+
+        {/* Collapsible Logs Dropdown */}
+        <ApiLogsDropdown apiName={data.apiName} />
       </div>
     </div>
   );
