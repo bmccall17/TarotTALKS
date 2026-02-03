@@ -31,8 +31,24 @@ const platformOptions: Array<{ value: Platform; label: string }> = [
   { value: 'other', label: 'Other' },
 ];
 
+type TagPackData = {
+  tagPackText: string;
+  speakerName: string;
+  speakerHandle: string;
+  talkId: string;
+};
+
+type PreselectedCard = {
+  id: string;
+  slug: string;
+  name: string;
+  tagPackText?: string;
+  speakerName?: string;
+  speakerHandle?: string;
+};
+
 type Props = {
-  onCreateShare?: (card: { id: string; slug: string; name: string }) => void;
+  onCreateShare?: (card: PreselectedCard) => void;
 };
 
 export function NextCardWidget({ onCreateShare }: Props) {
@@ -76,9 +92,35 @@ export function NextCardWidget({ onCreateShare }: Props) {
     }
   }, [showDropdown]);
 
-  const handleShareClick = (card: UnpostedCard) => {
-    if (onCreateShare) {
+  const [loadingShareId, setLoadingShareId] = useState<string | null>(null);
+
+  const handleShareClick = async (card: UnpostedCard) => {
+    if (!onCreateShare) return;
+
+    setLoadingShareId(card.id);
+    try {
+      // Fetch TagPack data for pre-population
+      const response = await fetch(`/api/admin/cards/${card.id}/tagpack`);
+      if (response.ok) {
+        const data: TagPackData = await response.json();
+        onCreateShare({
+          id: card.id,
+          slug: card.slug,
+          name: card.name,
+          tagPackText: data.tagPackText,
+          speakerName: data.speakerName,
+          speakerHandle: data.speakerHandle,
+        });
+      } else {
+        // Fallback without TagPack data
+        onCreateShare({ id: card.id, slug: card.slug, name: card.name });
+      }
+    } catch (error) {
+      console.error('Error fetching TagPack:', error);
+      // Fallback without TagPack data
       onCreateShare({ id: card.id, slug: card.slug, name: card.name });
+    } finally {
+      setLoadingShareId(null);
     }
   };
 
@@ -186,8 +228,7 @@ export function NextCardWidget({ onCreateShare }: Props) {
               {/* Card Name */}
               <div className="flex-1 min-w-0">
                 <Link
-                  href={`/cards/${card.slug}`}
-                  target="_blank"
+                  href={`/admin/cards/${card.id}/edit`}
                   className="text-sm text-gray-200 hover:text-indigo-300 truncate block transition-colors"
                 >
                   {card.name}
@@ -197,9 +238,14 @@ export function NextCardWidget({ onCreateShare }: Props) {
               {/* Share Button */}
               <button
                 onClick={() => handleShareClick(card)}
-                className="flex items-center gap-1 px-2.5 py-1 text-xs bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 rounded-md transition-colors"
+                disabled={loadingShareId === card.id}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 rounded-md transition-colors disabled:opacity-50"
               >
-                <Share2 className="w-3 h-3" />
+                {loadingShareId === card.id ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Share2 className="w-3 h-3" />
+                )}
                 <span>Share</span>
               </button>
             </div>

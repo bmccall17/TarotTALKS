@@ -81,7 +81,14 @@ export function SharesList() {
   // Form modal state
   const [showForm, setShowForm] = useState(false);
   const [editingShare, setEditingShare] = useState<Share | null>(null);
-  const [preselectedCard, setPreselectedCard] = useState<{ id: string; slug: string; name: string } | null>(null);
+  const [preselectedCard, setPreselectedCard] = useState<{
+    id: string;
+    slug: string;
+    name: string;
+    tagPackText?: string;
+    speakerName?: string;
+    speakerHandle?: string;
+  } | null>(null);
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -143,7 +150,14 @@ export function SharesList() {
     setShowForm(true);
   };
 
-  const handleCreateShareForCard = (card: { id: string; slug: string; name: string }) => {
+  const handleCreateShareForCard = (card: {
+    id: string;
+    slug: string;
+    name: string;
+    tagPackText?: string;
+    speakerName?: string;
+    speakerHandle?: string;
+  }) => {
     setEditingShare(null);
     setPreselectedCard(card);
     setShowForm(true);

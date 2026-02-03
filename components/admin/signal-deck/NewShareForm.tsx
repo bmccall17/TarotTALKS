@@ -33,6 +33,9 @@ type PreselectedCard = {
   id: string;
   slug: string;
   name: string;
+  tagPackText?: string;
+  speakerName?: string;
+  speakerHandle?: string;
 };
 
 type Props = {
@@ -217,7 +220,7 @@ export function NewShareForm({ share, preselectedCard, onSave, onClose }: Props)
     return () => clearTimeout(timeout);
   }, [formData.postUrl, detectedPlatform, isEditing, lastFetchedUrl, preselectedCard]);
 
-  // Handle preselected card - set sharedUrl and resolved content
+  // Handle preselected card - set sharedUrl, resolved content, and TagPack data
   useEffect(() => {
     if (!preselectedCard) return;
 
@@ -226,6 +229,10 @@ export function NewShareForm({ share, preselectedCard, onSave, onClose }: Props)
       ...prev,
       sharedUrl: cardUrl,
       cardId: preselectedCard.id,
+      // Pre-populate from TagPack data if available
+      notes: preselectedCard.tagPackText || prev.notes,
+      speakerName: preselectedCard.speakerName || prev.speakerName,
+      speakerHandle: preselectedCard.speakerHandle || prev.speakerHandle,
     }));
     setResolvedContent({ type: 'card', name: preselectedCard.name });
   }, [preselectedCard]);

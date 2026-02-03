@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { cards, cardTalkMappings, talks } from '@/lib/db/schema';
-import { eq, ilike, or, desc, sql, inArray } from 'drizzle-orm';
+import { eq, ilike, or, desc, sql, inArray, and } from 'drizzle-orm';
+import { formatTagPack } from '@/lib/utils/social-handles';
 
 export async function getAllCardsForAdmin(searchQuery?: string) {
   const query = db
@@ -125,4 +126,74 @@ export async function updateCard(
     .returning();
 
   return updated;
+}
+
+/**
+ * Get TagPack data for a card's primary mapping
+ * Used to pre-populate the Share form with talk info
+ */
+export async function getCardTagPackData(cardId: string): Promise<{
+  tagPackText: string;
+  speakerName: string;
+  speakerHandle: string;
+  talkId: string;
+} | null> {
+  // Get the card with its primary mapping and talk
+  const results = await db
+    .select({
+      cardName: cards.name,
+      cardSlug: cards.slug,
+      talkId: talks.id,
+      talkTitle: talks.title,
+      talkEventName: talks.eventName,
+      talkYear: talks.year,
+      speakerName: talks.speakerName,
+      speakerTwitterHandle: talks.speakerTwitterHandle,
+      speakerBlueskyHandle: talks.speakerBlueskyHandle,
+      rationaleShort: cardTalkMappings.rationaleShort,
+      isPrimary: cardTalkMappings.isPrimary,
+    })
+    .from(cards)
+    .innerJoin(cardTalkMappings, eq(cardTalkMappings.cardId, cards.id))
+    .innerJoin(talks, eq(cardTalkMappings.talkId, talks.id))
+    .where(and(eq(cards.id, cardId), eq(talks.isDeleted, false)))
+    .orderBy(desc(cardTalkMappings.isPrimary), desc(cardTalkMappings.strength));
+
+  if (results.length === 0) return null;
+
+  // Get primary mapping or first one
+  const mapping = results.find((r) => r.isPrimary) || results[0];
+
+  // Build TagPack text (similar to TagPackCopyButton format)
+  const lines: string[] = [];
+
+  // Talk title & event
+  if (mapping.talkTitle) {
+    const eventInfo = [mapping.talkEventName, mapping.talkYear].filter(Boolean).join(' ');
+    lines.push(`"${mapping.talkTitle}"${eventInfo ? ` (${eventInfo})` : ''}`);
+  }
+
+  // Card link
+  const cardUrl = `https://tarottalks.app/cards/${mapping.cardSlug}`;
+  lines.push(`🃏 ${mapping.cardName}: ${cardUrl}`);
+
+  // Rationale
+  if (mapping.rationaleShort) {
+    lines.push(`💡 ${mapping.rationaleShort}`);
+  }
+
+  // Speaker tags - prefer Bluesky, fallback to Twitter
+  const speakerHandle = mapping.speakerBlueskyHandle || mapping.speakerTwitterHandle || '';
+  if (speakerHandle) {
+    const platform = mapping.speakerBlueskyHandle ? 'bluesky' : 'twitter';
+    const tagPack = formatTagPack(platform, speakerHandle, true);
+    lines.push(tagPack);
+  }
+
+  return {
+    tagPackText: lines.join('\n'),
+    speakerName: mapping.speakerName || '',
+    speakerHandle: speakerHandle,
+    talkId: mapping.talkId,
+  };
 }
