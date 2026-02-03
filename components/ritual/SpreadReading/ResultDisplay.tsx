@@ -92,22 +92,6 @@ export function ResultDisplay({
         ))}
       </div>
 
-      {/* User's Focus - show if they selected a focus or provided context */}
-      {(focusLabel || focusText) && (
-        <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-3 text-sm">
-          {focusLabel && (
-            <p className="text-gray-400">
-              <span className="text-gray-500">Focus:</span> {focusLabel}
-            </p>
-          )}
-          {focusText && (
-            <p className={`text-gray-400 ${focusLabel ? 'mt-1' : ''}`}>
-              <span className="text-gray-500">Context:</span> {focusText}
-            </p>
-          )}
-        </div>
-      )}
-
       {/* Talk Recommendation */}
       <div
         onClick={handleTalkClick}
@@ -145,10 +129,25 @@ export function ResultDisplay({
       </div>
 
       {/* Rationale */}
-      <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
+      <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 space-y-3">
         <p className="text-sm text-gray-300 leading-relaxed italic">
           {rationale}
         </p>
+        {/* Focus & Context - shown below rationale like GPTFallbackModal */}
+        {(focusLabel || focusText) && (
+          <div className="pt-2 border-t border-gray-700/50 space-y-1">
+            {focusLabel && (
+              <p className="text-sm text-gray-400">
+                <span className="text-gray-500">Focus:</span> {focusLabel}
+              </p>
+            )}
+            {focusText && (
+              <p className="text-sm text-gray-400">
+                <span className="text-gray-500">Context:</span> {focusText}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Actions */}

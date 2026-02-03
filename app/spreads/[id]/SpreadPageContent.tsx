@@ -147,24 +147,6 @@ export function SpreadPageContent({ spread }: SpreadPageContentProps) {
           ))}
         </div>
 
-        {/* Reading Focus */}
-        {(focusLabel || spread.focusText) && (
-          <div className="max-w-2xl mx-auto mb-8">
-            <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4">
-              {focusLabel && (
-                <p className="text-gray-400 text-sm">
-                  <span className="text-gray-500">Focus:</span> {focusLabel}
-                </p>
-              )}
-              {spread.focusText && (
-                <p className={`text-gray-400 text-sm ${focusLabel ? 'mt-2' : ''}`}>
-                  <span className="text-gray-500">Context:</span> {spread.focusText}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Talk Recommendation */}
         {showTalk && spread.talk && (
           <div className="max-w-2xl mx-auto mb-8">
@@ -211,12 +193,27 @@ export function SpreadPageContent({ spread }: SpreadPageContentProps) {
         {/* Rationale */}
         {showRationale && (
           <div className="max-w-2xl mx-auto mb-12">
-            <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6">
+            <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6 space-y-4">
               <p className="text-gray-300 leading-relaxed italic text-center">
                 "{spread.rationale}"
               </p>
+              {/* Focus & Context - shown below rationale */}
+              {(focusLabel || spread.focusText) && (
+                <div className="pt-3 border-t border-gray-800/50 space-y-1">
+                  {focusLabel && (
+                    <p className="text-sm text-gray-400 text-center">
+                      <span className="text-gray-500">Focus:</span> {focusLabel}
+                    </p>
+                  )}
+                  {spread.focusText && (
+                    <p className="text-sm text-gray-400 text-center">
+                      <span className="text-gray-500">Context:</span> {spread.focusText}
+                    </p>
+                  )}
+                </div>
+              )}
               {spread.rationaleSource === 'ai' && (
-                <p className="text-gray-600 text-xs text-center mt-4">
+                <p className="text-gray-600 text-xs text-center">
                   ✨ Enhanced with AI
                 </p>
               )}
