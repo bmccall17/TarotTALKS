@@ -10,13 +10,15 @@ type FetchedMetadata = {
   year: number | null;
   thumbnailUrl: string | null;
   speakerName: string | null;
+  eventName: string | null;
   source: {
     title?: 'ted' | 'youtube';
     description?: 'youtube';
     thumbnailUrl?: 'ted' | 'youtube';
     year?: 'youtube';
     durationSeconds?: 'youtube';
-    speakerName?: 'ted';
+    speakerName?: 'ted' | 'youtube';
+    eventName?: 'youtube';
   };
 };
 
@@ -30,6 +32,7 @@ type Props = {
     year: number;
     thumbnailUrl: string;
     speakerName: string;
+    eventName: string;
   }>) => void;
 };
 
@@ -40,6 +43,7 @@ export function MetadataFetcher({ tedUrl, youtubeUrl, onApplyMetadata }: Props) 
   const [selectedFields, setSelectedFields] = useState<Record<string, boolean>>({
     title: true,
     speakerName: true,
+    eventName: true,
     description: true,
     durationSeconds: true,
     year: true,
@@ -110,6 +114,9 @@ export function MetadataFetcher({ tedUrl, youtubeUrl, onApplyMetadata }: Props) 
     }
     if (selectedFields.speakerName && fetchedData.speakerName) {
       metadata.speakerName = fetchedData.speakerName;
+    }
+    if (selectedFields.eventName && fetchedData.eventName) {
+      metadata.eventName = fetchedData.eventName;
     }
     if (selectedFields.description && fetchedData.description) {
       metadata.description = fetchedData.description;
@@ -253,6 +260,29 @@ export function MetadataFetcher({ tedUrl, youtubeUrl, onApplyMetadata }: Props) 
                     </span>
                   </div>
                   <p className="text-sm text-gray-400 mt-1">{fetchedData.speakerName}</p>
+                </div>
+              </label>
+            )}
+
+            {/* Event Name */}
+            {fetchedData.eventName && (
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={selectedFields.eventName}
+                  onChange={(e) =>
+                    setSelectedFields({ ...selectedFields, eventName: e.target.checked })
+                  }
+                  className="mt-1 w-4 h-4 rounded border-gray-600 bg-gray-800 text-indigo-600 focus:ring-2 focus:ring-indigo-500"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-300">Event Name</span>
+                    <span className="text-xs bg-gray-800 px-2 py-0.5 rounded text-gray-400">
+                      from {fetchedData.source.eventName}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-400 mt-1">{fetchedData.eventName}</p>
                 </div>
               </label>
             )}

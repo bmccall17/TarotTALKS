@@ -197,6 +197,146 @@ type TedMetadata = {
   thumbnailError?: string | null;
 };
 
+/**
+ * Parsed components from a YouTube video title
+ */
+type ParsedYouTubeTitle = {
+  speakerName: string | null;
+  eventName: string | null;
+  cleanTitle: string;
+};
+
+/**
+ * Parse YouTube video title to extract speaker name, event name, and clean title
+ * Handles common TED/TEDx title formats:
+ * - "Speaker Name: Talk Title"
+ * - "Speaker Name -- Talk Title"
+ * - "Talk Title | Speaker Name"
+ * - "Talk Title | Speaker Name | TEDxEvent"
+ * - "Talk Title | Speaker Name | TED2023"
+ */
+function parseYouTubeTitle(rawTitle: string): ParsedYouTubeTitle {
+  if (!rawTitle) {
+    return { speakerName: null, eventName: null, cleanTitle: '' };
+  }
+
+  // Event name detection regex: TED, TED2023, TEDx, TEDxBoston, TEDx San Francisco
+  const eventRegex = /^TED(x[A-Za-z\s]+|\d{4})?$/i;
+
+  // Helper to check if a string looks like a speaker name
+  const looksLikeSpeakerName = (str: string): boolean => {
+    const trimmed = str.trim();
+    // Speaker names typically:
+    // - Are 2-4 words
+    // - Start with capital letters
+    // - Don't start with common title words
+    const words = trimmed.split(/\s+/);
+    if (words.length < 1 || words.length > 5) return false;
+
+    const titleWords = ['how', 'why', 'what', 'the', 'a', 'an', 'when', 'where', 'is', 'are', 'can', 'do', 'does', 'your', 'my', 'our', 'this', 'that', 'these', 'inside', 'beyond'];
+    if (titleWords.includes(words[0].toLowerCase())) return false;
+
+    // Should have at least one capital letter (proper noun)
+    if (!/[A-Z]/.test(trimmed)) return false;
+
+    return true;
+  };
+
+  let speakerName: string | null = null;
+  let eventName: string | null = null;
+  let cleanTitle: string = rawTitle;
+
+  // Pattern 1: "Speaker Name: Talk Title" (colon format)
+  const colonMatch = rawTitle.match(/^([^:]+):\s*(.+)$/);
+  if (colonMatch) {
+    const potentialSpeaker = colonMatch[1].trim();
+    const potentialTitle = colonMatch[2].trim();
+
+    if (looksLikeSpeakerName(potentialSpeaker)) {
+      speakerName = potentialSpeaker;
+      cleanTitle = potentialTitle;
+
+      // Check if title ends with event name after pipe
+      const pipeMatch = cleanTitle.match(/^(.+)\|\s*([^|]+)$/);
+      if (pipeMatch) {
+        const lastSegment = pipeMatch[2].trim();
+        if (eventRegex.test(lastSegment)) {
+          eventName = lastSegment;
+          cleanTitle = pipeMatch[1].trim();
+        }
+      }
+
+      return { speakerName, eventName, cleanTitle };
+    }
+  }
+
+  // Pattern 2: "Speaker Name -- Talk Title" (double dash format)
+  const dashMatch = rawTitle.match(/^([^-]+)\s*--\s*(.+)$/);
+  if (dashMatch) {
+    const potentialSpeaker = dashMatch[1].trim();
+    const potentialTitle = dashMatch[2].trim();
+
+    if (looksLikeSpeakerName(potentialSpeaker)) {
+      speakerName = potentialSpeaker;
+      cleanTitle = potentialTitle;
+
+      // Check if title ends with event name after pipe
+      const pipeMatch = cleanTitle.match(/^(.+)\|\s*([^|]+)$/);
+      if (pipeMatch) {
+        const lastSegment = pipeMatch[2].trim();
+        if (eventRegex.test(lastSegment)) {
+          eventName = lastSegment;
+          cleanTitle = pipeMatch[1].trim();
+        }
+      }
+
+      return { speakerName, eventName, cleanTitle };
+    }
+  }
+
+  // Pattern 3: Pipe-separated format "Title | Speaker | Event" or "Title | Speaker"
+  const segments = rawTitle.split('|').map((s) => s.trim());
+
+  if (segments.length >= 2) {
+    // Check last segment for event name
+    const lastSegment = segments[segments.length - 1];
+    if (eventRegex.test(lastSegment)) {
+      eventName = lastSegment;
+      segments.pop(); // Remove event from segments
+    }
+
+    // Now find speaker name among remaining segments
+    // Heuristic: speaker name is typically shorter and looks like a name
+    if (segments.length >= 2) {
+      // Find the segment that looks most like a speaker name
+      let speakerIndex = -1;
+      let shortestNameLength = Infinity;
+
+      for (let i = 0; i < segments.length; i++) {
+        const segment = segments[i];
+        if (looksLikeSpeakerName(segment) && segment.length < shortestNameLength) {
+          speakerIndex = i;
+          shortestNameLength = segment.length;
+        }
+      }
+
+      if (speakerIndex !== -1) {
+        speakerName = segments[speakerIndex];
+        // Remove speaker from segments and join remaining as title
+        segments.splice(speakerIndex, 1);
+        cleanTitle = segments.join(' | ').trim();
+      } else {
+        // No clear speaker found, use all segments as title
+        cleanTitle = segments.join(' | ').trim();
+      }
+    } else if (segments.length === 1) {
+      cleanTitle = segments[0];
+    }
+  }
+
+  return { speakerName, eventName, cleanTitle };
+}
+
 type YoutubeMetadata = {
   title: string | null;
   description: string | null;
@@ -212,13 +352,15 @@ type MergedMetadata = {
   year: number | null;
   thumbnailUrl: string | null;
   speakerName: string | null;
+  eventName: string | null;
   source: {
     title?: 'ted' | 'youtube';
     description?: 'youtube';
     thumbnailUrl?: 'ted' | 'youtube';
     year?: 'youtube';
     durationSeconds?: 'youtube';
-    speakerName?: 'ted';
+    speakerName?: 'ted' | 'youtube';
+    eventName?: 'youtube';
   };
 };
 
@@ -301,6 +443,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Parse YouTube title for speaker/event extraction
+    const parsedYouTube = youtubeData?.title
+      ? parseYouTubeTitle(youtubeData.title)
+      : null;
+
     // Merge metadata (TED data preferred for title/thumbnail, YouTube fills rest)
     const merged: MergedMetadata = {
       title: tedData?.title || youtubeData?.title || null,
@@ -308,7 +455,8 @@ export async function POST(request: NextRequest) {
       durationSeconds: youtubeData?.durationSeconds || null,
       year: youtubeData?.year || null,
       thumbnailUrl: tedData?.thumbnailUrl || youtubeData?.thumbnailUrl || null,
-      speakerName: tedData?.authorName || null,
+      speakerName: tedData?.authorName || parsedYouTube?.speakerName || null,
+      eventName: parsedYouTube?.eventName || null,
       source: {},
     };
 
@@ -329,7 +477,10 @@ export async function POST(request: NextRequest) {
       merged.source.durationSeconds = 'youtube';
     }
     if (merged.speakerName) {
-      merged.source.speakerName = 'ted';
+      merged.source.speakerName = tedData?.authorName ? 'ted' : 'youtube';
+    }
+    if (merged.eventName) {
+      merged.source.eventName = 'youtube';
     }
 
     return NextResponse.json({
