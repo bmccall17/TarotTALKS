@@ -41,7 +41,10 @@ interface RequestBody {
 export async function POST(request: Request) {
   try {
     const body: RequestBody = await request.json();
-    const { cardIds, focusType, focusText, save = true, skipAI = false, sessionId } = body;
+    const { cardIds, focusType, focusText, save: requestedSave = true, skipAI = false, sessionId } = body;
+
+    // Force save=false in test mode to avoid polluting the database
+    const save = skipAI ? false : requestedSave;
 
     // Build context for API call logging
     const apiCallContext = { sessionId, source: 'spread_reading' };
@@ -106,6 +109,7 @@ export async function POST(request: Request) {
     // Skip AI if requested (test mode)
     if (skipAI) {
       console.log('[ReadMySpread] ⚠️ skipAI=true, bypassing Intelligence Evolution flow');
+      console.log('[ReadMySpread] ⚠️ Test mode: spread will NOT be saved to database');
       geminiAvailable = false;
       youtubeAvailable = false;
     }
@@ -387,23 +391,27 @@ export async function POST(request: Request) {
         matchReasons: [],
       });
 
-      // Log detailed selection info for admin visibility
+      // Log detailed selection info for admin visibility (only when YouTube was actually used)
       // This creates a 'spread_selection' log entry with spread context
-      logApiCall({
-        apiName: 'youtube',
-        success: true,
-        sessionId,
-        source: 'spread_selection',
-        properties: {
-          selectedTalkId: selectedTalk.id,
-          selectedTalkTitle: selectedTalk.title?.slice(0, 100),
-          spreadId: savedSpread.shortId, // Use shortId for URL
-          spreadUrl: `https://tarottalks.app/spreads/${savedSpread.shortId}`,
-          fallbackMode: !geminiAvailable,
-          youtubeUsed,
-          cardNames: cards.map(c => c.name),
-        },
-      });
+      // NOTE: Only log as 'youtube' API call when YouTube was actually called
+      // to avoid false entries in "Recent YouTube Calls"
+      if (youtubeUsed) {
+        logApiCall({
+          apiName: 'youtube',
+          success: true,
+          sessionId,
+          source: 'spread_selection',
+          properties: {
+            selectedTalkId: selectedTalk.id,
+            selectedTalkTitle: selectedTalk.title?.slice(0, 100),
+            spreadId: savedSpread.shortId, // Use shortId for URL
+            spreadUrl: `https://tarottalks.app/spreads/${savedSpread.shortId}`,
+            fallbackMode: !geminiAvailable,
+            youtubeUsed,
+            cardNames: cards.map(c => c.name),
+          },
+        });
+      }
     }
 
     return NextResponse.json({
@@ -421,6 +429,7 @@ export async function POST(request: Request) {
       _debug: {
         newFlowUsed: isNewFlowSuccessful,
         skipAI,
+        saveSkipped: skipAI, // In test mode, spreads are not saved
         geminiAvailable,
         youtubeAvailable,
         youtubeUsed,
