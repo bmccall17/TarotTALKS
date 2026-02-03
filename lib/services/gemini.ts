@@ -6,6 +6,8 @@
  */
 
 import { logApiCall } from '@/lib/db/queries/api-usage';
+import type { FocusType } from '@/lib/spread-reading/types';
+import { FOCUS_TYPE_LABELS } from '@/lib/spread-reading/types';
 
 // Context for API call logging (optional)
 export interface ApiCallContext {
@@ -346,10 +348,11 @@ export async function generateSynthesisAndQueries(params: {
     archetypes?: string[];
     themes?: string[];
   }>;
+  focusType?: FocusType;
   focusText?: string;
   context?: ApiCallContext;
 }): Promise<SynthesisResult | { error: string }> {
-  const { cards, focusText, context } = params;
+  const { cards, focusType, focusText, context } = params;
 
   // Construct enriched card context
   const cardContext = cards.map(c => {
@@ -395,7 +398,7 @@ ${systemInstruction}
 ## THE SPREAD
 ${cardContext}
 
-${focusText ? `## USER FOCUS\n"${focusText}"\n` : ''}
+${(focusType && focusType !== 'surprise_me') || focusText ? `## USER FOCUS\n${focusType && focusType !== 'surprise_me' && focusType !== 'custom' && FOCUS_TYPE_LABELS[focusType] ? `Area: ${FOCUS_TYPE_LABELS[focusType]}\n` : ''}${focusText ? `Context: "${focusText}"\n` : ''}` : ''}
 
 ## OUTPUT
 `;

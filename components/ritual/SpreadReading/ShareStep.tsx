@@ -2,25 +2,54 @@
 
 import { useState } from 'react';
 import { Copy, Check, Link, MessageCircle, X } from 'lucide-react';
+import type { FocusType } from '@/lib/spread-reading/types';
+import { FOCUS_TYPE_LABELS } from '@/lib/spread-reading/types';
 
 interface ShareStepProps {
   spreadShortId: string;
   rationale: string;
+  focusType?: FocusType | null;
+  focusText?: string;
   onClose: () => void;
   onBack: () => void;
 }
 
 type ShareFormat = 'link' | 'text';
 
-export function ShareStep({ spreadShortId, rationale, onClose, onBack }: ShareStepProps) {
+export function ShareStep({ spreadShortId, rationale, focusType, focusText, onClose, onBack }: ShareStepProps) {
   const [copied, setCopied] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<ShareFormat>('link');
 
   // Use production URL for shares (not /update staging URL)
   const spreadUrl = `https://tarottalks.app/spreads/${spreadShortId}`;
 
-  // Text format with rationale for Discord/WhatsApp
-  const textSnippet = `"${rationale}"\n\n${spreadUrl}`;
+  // Get focus label for display
+  const focusLabel = focusType && focusType !== 'surprise_me' && focusType !== 'custom'
+    ? FOCUS_TYPE_LABELS[focusType]
+    : null;
+
+  // Build text format with focus context and rationale for Discord/WhatsApp
+  const buildTextSnippet = (): string => {
+    const parts: string[] = [];
+
+    // Add focus context if present
+    if (focusLabel) {
+      parts.push(`Focus: ${focusLabel}`);
+    }
+    if (focusText) {
+      parts.push(`Context: ${focusText}`);
+    }
+
+    // Add rationale
+    parts.push(`"${rationale}"`);
+
+    // Add URL
+    parts.push(spreadUrl);
+
+    return parts.join('\n\n');
+  };
+
+  const textSnippet = buildTextSnippet();
 
   const handleCopy = async () => {
     const content = selectedFormat === 'link' ? spreadUrl : textSnippet;

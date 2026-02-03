@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ExternalLink, Share2, RefreshCw, Clock } from 'lucide-react';
 import type { SpreadTalk, SpreadCard, MatchReason, FocusType } from '@/lib/spread-reading/types';
+import { FOCUS_TYPE_LABELS } from '@/lib/spread-reading/types';
 import { GPTFallbackModal } from './GPTFallbackModal';
 
 interface ResultDisplayProps {
@@ -63,6 +64,11 @@ export function ResultDisplay({
     }
   };
 
+  // Get focus label for display
+  const focusLabel = focusType && focusType !== 'surprise_me' && focusType !== 'custom'
+    ? FOCUS_TYPE_LABELS[focusType]
+    : null;
+
   return (
     <div className="space-y-5">
       {/* Cards Summary */}
@@ -85,6 +91,22 @@ export function ResultDisplay({
           </div>
         ))}
       </div>
+
+      {/* User's Focus - show if they selected a focus or provided context */}
+      {(focusLabel || focusText) && (
+        <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-3 text-sm">
+          {focusLabel && (
+            <p className="text-gray-400">
+              <span className="text-gray-500">Focus:</span> {focusLabel}
+            </p>
+          )}
+          {focusText && (
+            <p className={`text-gray-400 ${focusLabel ? 'mt-1' : ''}`}>
+              <span className="text-gray-500">Context:</span> {focusText}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Talk Recommendation */}
       <div

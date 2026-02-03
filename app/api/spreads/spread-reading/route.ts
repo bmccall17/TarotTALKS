@@ -128,6 +128,7 @@ export async function POST(request: Request) {
       try {
         const synthesisResult = await generateSynthesisAndQueries({
           cards: geminiCards,
+          focusType: focusType,
           focusText: focusText,
           context: apiCallContext
         });

@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { ExternalLink, Clock, Share2, Copy, Check } from 'lucide-react';
-import { POSITION_LABELS } from '@/lib/spread-reading/types';
-import type { SpreadCard, SpreadTalk, MatchReason, PrivacyLevel } from '@/lib/spread-reading/types';
+import { POSITION_LABELS, FOCUS_TYPE_LABELS } from '@/lib/spread-reading/types';
+import type { SpreadCard, SpreadTalk, MatchReason, PrivacyLevel, FocusType } from '@/lib/spread-reading/types';
 
 interface SpreadData {
   id: string;
@@ -37,6 +37,14 @@ export function SpreadPageContent({ spread }: SpreadPageContentProps) {
 
   const showTalk = spread.privacyLevel !== 'cards_only';
   const showRationale = spread.privacyLevel === 'full';
+
+  // Get focus label for display
+  const focusLabel = spread.focusType &&
+    spread.focusType !== 'surprise_me' &&
+    spread.focusType !== 'custom' &&
+    FOCUS_TYPE_LABELS[spread.focusType as keyof typeof FOCUS_TYPE_LABELS]
+      ? FOCUS_TYPE_LABELS[spread.focusType as keyof typeof FOCUS_TYPE_LABELS]
+      : null;
 
   // Track view on mount (only once)
   useEffect(() => {
@@ -138,6 +146,24 @@ export function SpreadPageContent({ spread }: SpreadPageContentProps) {
             </Link>
           ))}
         </div>
+
+        {/* Reading Focus */}
+        {(focusLabel || spread.focusText) && (
+          <div className="max-w-2xl mx-auto mb-8">
+            <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4">
+              {focusLabel && (
+                <p className="text-gray-400 text-sm">
+                  <span className="text-gray-500">Focus:</span> {focusLabel}
+                </p>
+              )}
+              {spread.focusText && (
+                <p className={`text-gray-400 text-sm ${focusLabel ? 'mt-2' : ''}`}>
+                  <span className="text-gray-500">Context:</span> {spread.focusText}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Talk Recommendation */}
         {showTalk && spread.talk && (

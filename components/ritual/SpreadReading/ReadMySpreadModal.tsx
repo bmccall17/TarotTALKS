@@ -242,6 +242,8 @@ export function ReadMySpreadModal({
             <ShareStep
               spreadShortId={result.spread.shortId}
               rationale={result.rationale}
+              focusType={selectedFocusType}
+              focusText={selectedFocusText}
               onClose={onClose}
               onBack={handleBackToResult}
             />
