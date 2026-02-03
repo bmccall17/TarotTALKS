@@ -28,20 +28,20 @@ export function ShareStep({ spreadShortId, rationale, focusType, focusText, onCl
     ? FOCUS_TYPE_LABELS[focusType]
     : null;
 
-  // Build text format with focus context and rationale for Discord/WhatsApp
+  // Build text format with rationale and focus context for Discord/WhatsApp
   const buildTextSnippet = (): string => {
     const parts: string[] = [];
 
-    // Add focus context if present
-    if (focusLabel) {
-      parts.push(`Focus: ${focusLabel}`);
-    }
-    if (focusText) {
-      parts.push(`Context: ${focusText}`);
-    }
+    // Add rationale first (no quotes)
+    parts.push(rationale);
 
-    // Add rationale
-    parts.push(`"${rationale}"`);
+    // Add focus context below rationale if present
+    if (focusLabel || focusText) {
+      const focusParts: string[] = [];
+      if (focusLabel) focusParts.push(`Focus: ${focusLabel}`);
+      if (focusText) focusParts.push(`Context: ${focusText}`);
+      parts.push(focusParts.join('\n'));
+    }
 
     // Add URL
     parts.push(spreadUrl);
