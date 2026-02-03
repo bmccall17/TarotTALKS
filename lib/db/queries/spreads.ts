@@ -4,7 +4,7 @@
 
 import { db } from '../index';
 import { spreads, cards, talks, cardTalkMappings } from '../schema';
-import { eq, and, or, isNull, inArray, desc } from 'drizzle-orm';
+import { eq, and, or, isNull, inArray, desc, sql } from 'drizzle-orm';
 import type { SpreadCard, SpreadTalk, CardTalkMapping, FocusType, PrivacyLevel, MatchReason } from '@/lib/spread-reading/types';
 
 /**
@@ -230,4 +230,31 @@ export async function countSpreads(): Promise<number> {
 
   // This is a workaround - count will be returned differently
   return 0; // We'll fix this with proper count
+}
+
+/**
+ * Increment view count for a spread (called when spread page is viewed)
+ */
+export async function incrementSpreadView(shortId: string): Promise<void> {
+  await db
+    .update(spreads)
+    .set({
+      viewCount: sql`COALESCE(${spreads.viewCount}, 0) + 1`,
+      lastViewedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(spreads.shortId, shortId));
+}
+
+/**
+ * Mark a spread as shared (called when user clicks Share button)
+ */
+export async function markSpreadAsShared(shortId: string): Promise<void> {
+  await db
+    .update(spreads)
+    .set({
+      isShared: true,
+      updatedAt: new Date(),
+    })
+    .where(eq(spreads.shortId, shortId));
 }

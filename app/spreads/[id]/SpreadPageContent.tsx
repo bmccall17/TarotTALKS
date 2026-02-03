@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { ExternalLink, Clock, Share2, Copy, Check } from 'lucide-react';
 import { POSITION_LABELS } from '@/lib/spread-reading/types';
@@ -33,9 +33,24 @@ function formatDuration(seconds: number | null): string {
 
 export function SpreadPageContent({ spread }: SpreadPageContentProps) {
   const [copied, setCopied] = useState(false);
+  const hasTrackedView = useRef(false);
 
   const showTalk = spread.privacyLevel !== 'cards_only';
   const showRationale = spread.privacyLevel === 'full';
+
+  // Track view on mount (only once)
+  useEffect(() => {
+    if (!hasTrackedView.current) {
+      hasTrackedView.current = true;
+      fetch(`/api/spreads/${spread.shortId}/track`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'view' }),
+      }).catch(() => {
+        // Silently fail - view tracking is non-critical
+      });
+    }
+  }, [spread.shortId]);
 
   const handleCopyLink = async () => {
     const url = `https://tarottalks.app/spreads/${spread.shortId}`;
@@ -43,6 +58,15 @@ export function SpreadPageContent({ spread }: SpreadPageContentProps) {
       await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+
+      // Track share action
+      fetch(`/api/spreads/${spread.shortId}/track`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'share' }),
+      }).catch(() => {
+        // Silently fail - share tracking is non-critical
+      });
     } catch (err) {
       console.error('Failed to copy:', err);
     }

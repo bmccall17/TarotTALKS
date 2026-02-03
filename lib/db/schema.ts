@@ -215,6 +215,11 @@ export const spreads = pgTable('spreads', {
   // Privacy
   privacyLevel: privacyLevelEnum('privacy_level').default('full'),
 
+  // Cleanup tracking (for identifying orphaned spreads)
+  viewCount: integer('view_count').default(0),
+  lastViewedAt: timestamp('last_viewed_at'),
+  isShared: boolean('is_shared').default(false),
+
   // Timestamps
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

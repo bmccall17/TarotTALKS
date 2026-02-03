@@ -387,7 +387,7 @@ export async function POST(request: Request) {
       });
 
       // Log detailed selection info for admin visibility
-      // This creates a 'youtube_selection' log entry with spread context
+      // This creates a 'spread_selection' log entry with spread context
       logApiCall({
         apiName: 'youtube',
         success: true,
@@ -396,8 +396,8 @@ export async function POST(request: Request) {
         properties: {
           selectedTalkId: selectedTalk.id,
           selectedTalkTitle: selectedTalk.title?.slice(0, 100),
-          spreadId: savedSpread.id,
-          spreadUrl: `https://tarottalks.app/spreads/${savedSpread.id}`,
+          spreadId: savedSpread.shortId, // Use shortId for URL
+          spreadUrl: `https://tarottalks.app/spreads/${savedSpread.shortId}`,
           fallbackMode: !geminiAvailable,
           youtubeUsed,
           cardNames: cards.map(c => c.name),
