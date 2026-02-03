@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ExternalLink, Share2, RefreshCw, Clock } from 'lucide-react';
-import type { SpreadTalk, SpreadCard, MatchReason } from '@/lib/spread-reading/types';
+import type { SpreadTalk, SpreadCard, MatchReason, FocusType } from '@/lib/spread-reading/types';
 import { GPTFallbackModal } from './GPTFallbackModal';
 
 interface ResultDisplayProps {
@@ -13,6 +13,8 @@ interface ResultDisplayProps {
   score: number;
   matchReasons: MatchReason[];
   spreadShortId?: string;
+  focusType?: FocusType | null;
+  focusText?: string;
   onTryAgain: () => void;
   onShare?: () => void;
   onClose: () => void;
@@ -43,6 +45,8 @@ export function ResultDisplay({
   rationale,
   rationaleSource,
   cards,
+  focusType,
+  focusText,
   onTryAgain,
   onShare,
   onClose,
@@ -187,6 +191,8 @@ export function ResultDisplay({
       {showGPTModal && (
         <GPTFallbackModal
           cards={cards}
+          focusType={focusType}
+          focusText={focusText}
           onClose={() => setShowGPTModal(false)}
         />
       )}

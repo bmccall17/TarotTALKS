@@ -2,17 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { X, Copy, ExternalLink, Check } from 'lucide-react';
-import type { SpreadCard } from '@/lib/spread-reading/types';
+import type { SpreadCard, FocusType } from '@/lib/spread-reading/types';
+import { FOCUS_TYPE_LABELS } from '@/lib/spread-reading/types';
 
 const POSITION_LABELS = ['Aware Self', 'Supporting Shadow', 'Emerging Path'];
 const GPT_URL = 'https://chatgpt.com/g/g-6965a1a328ec8191bc976bd89d963972-tarottalks-spread-reader';
 
 interface GPTFallbackModalProps {
   cards: SpreadCard[];
+  focusType?: FocusType | null;
+  focusText?: string;
   onClose: () => void;
 }
 
-export function GPTFallbackModal({ cards, onClose }: GPTFallbackModalProps) {
+export function GPTFallbackModal({ cards, focusType, focusText, onClose }: GPTFallbackModalProps) {
   const [copied, setCopied] = useState(false);
   const [copyEnabled, setCopyEnabled] = useState(true);
   const [isMobile, setIsMobile] = useState(true);
@@ -27,10 +30,42 @@ export function GPTFallbackModal({ cards, onClose }: GPTFallbackModalProps) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Get focus label for display
+  const getFocusLabel = (): string | null => {
+    if (!focusType) return null;
+    if (focusType === 'custom') return null; // Custom focus uses focusText instead
+    if (focusType === 'surprise_me') return null; // No specific focus
+    return FOCUS_TYPE_LABELS[focusType] || null;
+  };
+
+  const focusLabel = getFocusLabel();
+
   // Build the spread text from cards in position order
-  const spreadText = cards
+  const cardsText = cards
     .map((card, index) => `${POSITION_LABELS[index]}: ${card.name}`)
     .join(', ');
+
+  // Build complete spread text including focus and personal context
+  const buildSpreadText = (): string => {
+    const parts: string[] = [];
+
+    // Add cards
+    parts.push(cardsText);
+
+    // Add focus area if selected
+    if (focusLabel) {
+      parts.push(`Focus: ${focusLabel}`);
+    }
+
+    // Add personal question/context if provided
+    if (focusText) {
+      parts.push(`Context: ${focusText}`);
+    }
+
+    return parts.join('\n');
+  };
+
+  const spreadText = buildSpreadText();
 
   const handleContinue = async () => {
     const shouldCopy = isMobile || copyEnabled;
@@ -76,10 +111,20 @@ export function GPTFallbackModal({ cards, onClose }: GPTFallbackModalProps) {
           </p>
 
           {/* Spread Text Box */}
-          <div className="bg-gray-800 border border-gray-600 rounded-lg p-4">
+          <div className="bg-gray-800 border border-gray-600 rounded-lg p-4 space-y-2">
             <p className="text-gray-100 text-sm leading-relaxed font-medium">
-              {spreadText}
+              {cardsText}
             </p>
+            {focusLabel && (
+              <p className="text-gray-300 text-sm">
+                <span className="text-gray-500">Focus:</span> {focusLabel}
+              </p>
+            )}
+            {focusText && (
+              <p className="text-gray-300 text-sm">
+                <span className="text-gray-500">Context:</span> {focusText}
+              </p>
+            )}
           </div>
 
           {/* Desktop: Copy checkbox */}

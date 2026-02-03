@@ -19,8 +19,8 @@ export function FocusStep({ onSelect, onBack, isLoading }: FocusStepProps) {
 
   const handleFocusClick = (focus: FocusType) => {
     if (focus === 'surprise_me') {
-      // Immediate selection for surprise_me
-      onSelect('surprise_me');
+      // Immediate selection for surprise_me, but still pass any custom text
+      onSelect('surprise_me', customText.trim() || undefined);
     } else {
       setSelectedFocus(focus);
     }
@@ -28,13 +28,8 @@ export function FocusStep({ onSelect, onBack, isLoading }: FocusStepProps) {
 
   const handleContinue = () => {
     if (selectedFocus) {
-      if (selectedFocus === 'surprise_me') {
-        onSelect('surprise_me');
-      } else if (customText.trim()) {
-        onSelect('custom', customText.trim());
-      } else {
-        onSelect(selectedFocus);
-      }
+      // Always pass customText if provided, regardless of focus type
+      onSelect(selectedFocus, customText.trim() || undefined);
     }
   };
 
@@ -72,24 +67,22 @@ export function FocusStep({ onSelect, onBack, isLoading }: FocusStepProps) {
         ))}
       </div>
 
-      {/* Custom Text Input - Shows when any focus (except surprise_me) is selected */}
-      {selectedFocus && selectedFocus !== 'surprise_me' && (
-        <div className="space-y-3 animate-fadeIn">
-          <label className="block text-sm text-gray-400 text-center">
-            Add a personal question or context (optional)
-          </label>
-          <textarea
-            value={customText}
-            onChange={(e) => setCustomText(e.target.value)}
-            placeholder="e.g., I'm feeling stuck in my career..."
-            disabled={isLoading}
-            className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl
-                     text-gray-100 placeholder-gray-500
-                     focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-                     resize-none h-20"
-          />
-        </div>
-      )}
+      {/* Custom Text Input - Always visible */}
+      <div className="space-y-3">
+        <label className="block text-sm text-gray-400 text-center">
+          Add a personal question or context (optional)
+        </label>
+        <textarea
+          value={customText}
+          onChange={(e) => setCustomText(e.target.value)}
+          placeholder="e.g., I'm feeling stuck in my career..."
+          disabled={isLoading}
+          className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl
+                   text-gray-100 placeholder-gray-500
+                   focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+                   resize-none h-20"
+        />
+      </div>
 
       {/* Actions */}
       <div className="flex gap-3 pt-2">

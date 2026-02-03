@@ -8,6 +8,7 @@ import { LoadingState } from './LoadingState';
 import { ResultDisplay } from './ResultDisplay';
 import { ShareStep } from './ShareStep';
 import type { FocusType, SpreadCard, SpreadTalk, MatchReason } from '@/lib/spread-reading/types';
+import { FOCUS_TYPE_LABELS } from '@/lib/spread-reading/types';
 
 type Step = 'focus' | 'loading' | 'result' | 'share';
 
@@ -49,6 +50,8 @@ export function ReadMySpreadModal({
   const [result, setResult] = useState<ReadingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [selectedFocusType, setSelectedFocusType] = useState<FocusType | null>(null);
+  const [selectedFocusText, setSelectedFocusText] = useState<string | undefined>(undefined);
 
   // Set mounted state for portal
   useEffect(() => {
@@ -128,11 +131,16 @@ export function ReadMySpreadModal({
   }, [getCardIds]);
 
   const handleFocusSelect = useCallback((focusType: FocusType, focusText?: string) => {
+    // Store the focus selection for later use in GPT fallback modal
+    setSelectedFocusType(focusType);
+    setSelectedFocusText(focusText);
     fetchReading(focusType, focusText);
   }, [fetchReading]);
 
   const handleTryAgain = useCallback(() => {
     setResult(null);
+    setSelectedFocusType(null);
+    setSelectedFocusText(undefined);
     setStep('focus');
   }, []);
 
@@ -220,6 +228,8 @@ export function ReadMySpreadModal({
               score={result.score}
               matchReasons={result.matchReasons}
               spreadShortId={result.spread?.shortId}
+              focusType={selectedFocusType}
+              focusText={selectedFocusText}
               onTryAgain={handleTryAgain}
               onShare={result.spread ? handleShare : undefined}
               onClose={onClose}
