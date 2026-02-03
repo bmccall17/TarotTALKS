@@ -4,6 +4,24 @@ import { useState } from 'react';
 import { HelpCircle } from 'lucide-react';
 import { ApiLogsDropdown } from './ApiLogsDropdown';
 
+export type TodayUsage = {
+  total: number;
+  successful: number;
+  failed: number;
+  circuitBreakerBlocked: number;
+  actualApiCalls: number;
+  dailyQuota: number;
+  estimatedRemaining: number;
+  quotaPercentUsed: number;
+};
+
+export type HourlyUsage = {
+  hour: string;
+  total: number;
+  successful: number;
+  failed: number;
+};
+
 export type ApiHealthData = {
   apiName: 'gemini' | 'youtube';
   isHealthy: boolean;
@@ -17,6 +35,10 @@ export type ApiHealthData = {
   // Circuit breaker status (Gemini only)
   circuitBreakerOpen?: boolean;
   cooldownUntil?: string | null;
+  // Today's quota tracking (Gemini only)
+  todayUsage?: TodayUsage;
+  // Hourly usage for graph (Gemini only)
+  hourlyUsage?: HourlyUsage[];
 };
 
 // Help tooltip content for Gemini metrics
@@ -43,8 +65,31 @@ interface ApiStatusIndicatorProps {
 export function ApiStatusIndicator({ data, compact = false }: ApiStatusIndicatorProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const [showHelpTooltip, setShowHelpTooltip] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   const apiDisplayName = data.apiName === 'gemini' ? 'Gemini' : 'YouTube';
+
+  // Handle force reset
+  const handleForceReset = async () => {
+    setIsResetting(true);
+    setResetMessage(null);
+    try {
+      const res = await fetch('/api/admin/api-usage/reset-circuit-breaker', { method: 'POST' });
+      const result = await res.json();
+      if (res.ok) {
+        setResetMessage('Circuit breaker reset. Refresh page to see updated status.');
+        setShowResetConfirm(false);
+      } else {
+        setResetMessage(result.error || 'Failed to reset');
+      }
+    } catch {
+      setResetMessage('Network error');
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   // Calculate countdown to circuit breaker reset
   const getCountdown = (cooldownUntil: string | null) => {
@@ -258,6 +303,126 @@ export function ApiStatusIndicator({ data, compact = false }: ApiStatusIndicator
             </span>
           </div>
         )}
+
+        {/* Daily Quota Counter (Gemini only) */}
+        {data.apiName === 'gemini' && data.todayUsage && (
+          <div className="border-t border-gray-700 pt-2 mt-2">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-gray-400">Today&apos;s Quota</span>
+              <span className={`font-mono text-sm ${
+                data.todayUsage.quotaPercentUsed >= 90 ? 'text-red-400' :
+                data.todayUsage.quotaPercentUsed >= 70 ? 'text-yellow-400' : 'text-green-400'
+              }`}>
+                {data.todayUsage.actualApiCalls} / {data.todayUsage.dailyQuota}
+              </span>
+            </div>
+            {/* Progress bar */}
+            <div className="h-2 bg-gray-700 rounded-full overflow-hidden mb-1">
+              <div
+                className={`h-full transition-all ${
+                  data.todayUsage.quotaPercentUsed >= 90 ? 'bg-red-500' :
+                  data.todayUsage.quotaPercentUsed >= 70 ? 'bg-yellow-500' : 'bg-green-500'
+                }`}
+                style={{ width: `${Math.min(100, data.todayUsage.quotaPercentUsed)}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-gray-500">
+              <span>{data.todayUsage.quotaPercentUsed}% used</span>
+              <span>{data.todayUsage.estimatedRemaining} remaining</span>
+            </div>
+            {data.todayUsage.circuitBreakerBlocked > 0 && (
+              <div className="text-[10px] text-orange-400 mt-1">
+                {data.todayUsage.circuitBreakerBlocked} calls blocked by circuit breaker (not counted)
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 24-Hour Usage Graph (Gemini only) */}
+        {data.apiName === 'gemini' && data.hourlyUsage && data.hourlyUsage.length > 0 && (
+          <div className="border-t border-gray-700 pt-2 mt-2">
+            <div className="text-gray-400 text-xs mb-2">24-Hour Usage</div>
+            <div className="flex items-end gap-[2px] h-12">
+              {data.hourlyUsage.map((hour, i) => {
+                const maxTotal = Math.max(...data.hourlyUsage!.map(h => h.total), 1);
+                const height = hour.total > 0 ? Math.max(4, (hour.total / maxTotal) * 100) : 0;
+                const successHeight = hour.successful > 0 ? (hour.successful / hour.total) * height : 0;
+                const failedHeight = height - successHeight;
+                const hourDate = new Date(hour.hour);
+                const isNow = i === data.hourlyUsage!.length - 1;
+
+                return (
+                  <div
+                    key={hour.hour}
+                    className="flex-1 flex flex-col justify-end group relative"
+                    title={`${hourDate.toLocaleTimeString('en-US', { hour: 'numeric' })}: ${hour.total} calls (${hour.successful} ok, ${hour.failed} failed)`}
+                  >
+                    {hour.total > 0 ? (
+                      <>
+                        <div
+                          className="bg-red-500/70 rounded-t-sm"
+                          style={{ height: `${failedHeight}%` }}
+                        />
+                        <div
+                          className={`rounded-b-sm ${isNow ? 'bg-green-400' : 'bg-green-500/70'}`}
+                          style={{ height: `${successHeight}%` }}
+                        />
+                      </>
+                    ) : (
+                      <div className="bg-gray-700/50 rounded-sm" style={{ height: '4px' }} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex justify-between text-[9px] text-gray-500 mt-1">
+              <span>24h ago</span>
+              <span>Now</span>
+            </div>
+          </div>
+        )}
+
+        {/* Force Reset Button (Gemini only, when circuit breaker is open) */}
+        {data.apiName === 'gemini' && data.circuitBreakerOpen && (
+          <div className="border-t border-gray-700 pt-2 mt-2">
+            {!showResetConfirm ? (
+              <button
+                onClick={() => setShowResetConfirm(true)}
+                className="w-full px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 rounded text-xs hover:bg-yellow-500/20 transition-colors"
+              >
+                Force Reset Circuit Breaker
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <div className="text-[10px] text-yellow-400 bg-yellow-500/10 p-2 rounded">
+                  <strong>Warning:</strong> Resetting allows API calls to proceed, but Google&apos;s quota may still be exhausted. This could result in immediate 429 errors.
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowResetConfirm(false)}
+                    className="flex-1 px-2 py-1 bg-gray-700 text-gray-300 rounded text-xs hover:bg-gray-600"
+                    disabled={isResetting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleForceReset}
+                    className="flex-1 px-2 py-1 bg-red-500/20 border border-red-500/30 text-red-400 rounded text-xs hover:bg-red-500/30"
+                    disabled={isResetting}
+                  >
+                    {isResetting ? 'Resetting...' : 'Confirm Reset'}
+                  </button>
+                </div>
+              </div>
+            )}
+            {resetMessage && (
+              <div className={`text-[10px] mt-2 ${resetMessage.includes('error') || resetMessage.includes('Failed') ? 'text-red-400' : 'text-green-400'}`}>
+                {resetMessage}
+              </div>
+            )}
+          </div>
+        )}
+
         {data.lastErrorAt && (
           <div className="border-t border-gray-700 pt-2 mt-2 space-y-1">
             <div className="flex justify-between">

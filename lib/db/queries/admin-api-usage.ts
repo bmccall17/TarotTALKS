@@ -328,3 +328,134 @@ export async function getApiCallLogs(
     properties: row.properties ? JSON.parse(row.properties) : {},
   }));
 }
+
+/**
+ * Get today's API call count for quota tracking
+ * "Today" is defined as since midnight Pacific Time (when Google resets quotas)
+ */
+export async function getTodayApiCallCount(apiName: 'gemini' | 'youtube'): Promise<{
+  total: number;
+  successful: number;
+  failed: number;
+  circuitBreakerBlocked: number;
+}> {
+  // Get midnight Pacific Time today
+  const now = new Date();
+  const midnightPT = new Date(now);
+  midnightPT.setUTCHours(8, 0, 0, 0); // Midnight PT = 8 AM UTC
+  if (midnightPT > now) {
+    midnightPT.setDate(midnightPT.getDate() - 1);
+  }
+
+  // Total calls today
+  const totalResult = await db
+    .select({ count: count() })
+    .from(apiUsageEvents)
+    .where(
+      and(
+        eq(apiUsageEvents.apiName, apiName),
+        gte(apiUsageEvents.createdAt, midnightPT)
+      )
+    );
+  const total = totalResult[0]?.count ?? 0;
+
+  // Successful calls
+  const successResult = await db
+    .select({ count: count() })
+    .from(apiUsageEvents)
+    .where(
+      and(
+        eq(apiUsageEvents.apiName, apiName),
+        eq(apiUsageEvents.success, true),
+        gte(apiUsageEvents.createdAt, midnightPT)
+      )
+    );
+  const successful = successResult[0]?.count ?? 0;
+
+  // Circuit breaker blocked calls (these don't count against API quota)
+  const blockedResult = await db
+    .select({ count: count() })
+    .from(apiUsageEvents)
+    .where(
+      and(
+        eq(apiUsageEvents.apiName, apiName),
+        eq(apiUsageEvents.errorType, 'circuit_breaker'),
+        gte(apiUsageEvents.createdAt, midnightPT)
+      )
+    );
+  const circuitBreakerBlocked = blockedResult[0]?.count ?? 0;
+
+  return {
+    total,
+    successful,
+    failed: total - successful,
+    circuitBreakerBlocked,
+  };
+}
+
+export type HourlyUsageStat = {
+  hour: string; // ISO string for the hour start
+  total: number;
+  successful: number;
+  failed: number;
+};
+
+/**
+ * Get hourly API usage stats for the past 24 hours
+ */
+export async function getHourlyApiUsage(apiName: 'gemini' | 'youtube'): Promise<HourlyUsageStat[]> {
+  const now = new Date();
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+  // Get all events from the past 24 hours
+  const events = await db
+    .select({
+      success: apiUsageEvents.success,
+      createdAt: apiUsageEvents.createdAt,
+    })
+    .from(apiUsageEvents)
+    .where(
+      and(
+        eq(apiUsageEvents.apiName, apiName),
+        gte(apiUsageEvents.createdAt, twentyFourHoursAgo)
+      )
+    )
+    .orderBy(apiUsageEvents.createdAt);
+
+  // Group by hour
+  const hourlyMap = new Map<string, { total: number; successful: number; failed: number }>();
+
+  // Initialize all 24 hours with zeros
+  for (let i = 23; i >= 0; i--) {
+    const hourStart = new Date(now);
+    hourStart.setMinutes(0, 0, 0);
+    hourStart.setHours(hourStart.getHours() - i);
+    const key = hourStart.toISOString();
+    hourlyMap.set(key, { total: 0, successful: 0, failed: 0 });
+  }
+
+  // Count events by hour
+  for (const event of events) {
+    const eventHour = new Date(event.createdAt);
+    eventHour.setMinutes(0, 0, 0);
+    const key = eventHour.toISOString();
+
+    const existing = hourlyMap.get(key);
+    if (existing) {
+      existing.total++;
+      if (event.success) {
+        existing.successful++;
+      } else {
+        existing.failed++;
+      }
+    }
+  }
+
+  // Convert to array sorted by time
+  return Array.from(hourlyMap.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([hour, stats]) => ({
+      hour,
+      ...stats,
+    }));
+}

@@ -66,6 +66,25 @@ export function getCircuitBreakerStatus(): {
   };
 }
 
+/**
+ * Force reset the circuit breaker (admin action)
+ * WARNING: This allows API calls to proceed even if quota may still be exhausted
+ */
+export function forceResetCircuitBreaker(): { success: boolean; message: string } {
+  if (!circuitBreakerCooldownUntil) {
+    return { success: false, message: 'Circuit breaker is not currently tripped' };
+  }
+
+  const wasOpenUntil = circuitBreakerCooldownUntil.toISOString();
+  circuitBreakerCooldownUntil = null;
+  console.log(`[Gemini] Circuit breaker force reset by admin (was open until ${wasOpenUntil})`);
+
+  return { success: true, message: `Circuit breaker reset. Was scheduled until ${wasOpenUntil}` };
+}
+
+// Gemini 2.0 Flash free tier daily limit (approximate)
+export const GEMINI_DAILY_QUOTA = 1500;
+
 type GeminiResponse = {
   text: string;
   success: true;
