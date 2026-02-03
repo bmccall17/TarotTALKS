@@ -21,6 +21,51 @@ let lastResetTime = Date.now();
 const MAX_REQUESTS_PER_MINUTE = 10; // Conservative limit (15 allowed, use 10)
 const RESET_INTERVAL_MS = 60 * 1000; // 1 minute
 
+// Circuit breaker state - persistent across requests (resets on server restart)
+let circuitBreakerCooldownUntil: Date | null = null;
+
+/**
+ * Check if the circuit breaker is open (quota exhausted, in cooldown)
+ */
+function isCircuitBreakerOpen(): boolean {
+  if (!circuitBreakerCooldownUntil) return false;
+  if (new Date() >= circuitBreakerCooldownUntil) {
+    // Cooldown expired, reset circuit breaker
+    circuitBreakerCooldownUntil = null;
+    console.log('[Gemini] Circuit breaker reset - cooldown expired');
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Trip the circuit breaker - sets cooldown until next midnight Pacific Time
+ */
+function tripCircuitBreaker(): void {
+  // Set cooldown until next midnight Pacific Time (UTC-8)
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setUTCHours(8, 0, 0, 0); // Midnight PT = 8 AM UTC
+  if (midnight <= now) {
+    midnight.setDate(midnight.getDate() + 1);
+  }
+  circuitBreakerCooldownUntil = midnight;
+  console.log(`[Gemini] Circuit breaker tripped - cooldown until ${midnight.toISOString()}`);
+}
+
+/**
+ * Get circuit breaker status for monitoring/admin
+ */
+export function getCircuitBreakerStatus(): {
+  isOpen: boolean;
+  cooldownUntil: string | null;
+} {
+  return {
+    isOpen: isCircuitBreakerOpen(),
+    cooldownUntil: circuitBreakerCooldownUntil?.toISOString() || null,
+  };
+}
+
 type GeminiResponse = {
   text: string;
   success: true;
@@ -72,6 +117,24 @@ export async function generateWithGemini(
   maxRetries: number = 3,
   context?: ApiCallContext
 ): Promise<GeminiResponse> {
+  // CHECK CIRCUIT BREAKER FIRST - skip API call if quota exhausted
+  if (isCircuitBreakerOpen()) {
+    console.log('[Gemini] Circuit breaker open - skipping API call');
+    logApiCall({
+      apiName: 'gemini',
+      success: false,
+      errorType: 'circuit_breaker',
+      sessionId: context?.sessionId,
+      source: context?.source,
+      properties: { reason: 'circuit_breaker_open', cooldownUntil: circuitBreakerCooldownUntil?.toISOString() },
+    });
+    return {
+      error: 'Gemini temporarily unavailable (quota cooldown)',
+      success: false,
+      rateLimited: true,
+    };
+  }
+
   const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -163,6 +226,11 @@ export async function generateWithGemini(
         }
 
         if (response.status === 429) {
+          // TRIP CIRCUIT BREAKER on quota exhaustion to prevent further requests
+          if (isQuotaExceeded) {
+            tripCircuitBreaker();
+          }
+
           // Log as quota_exceeded or rate_limit based on error message
           const errorType = isQuotaExceeded ? 'quota_exceeded' : 'rate_limit';
           logApiCall({
@@ -171,7 +239,7 @@ export async function generateWithGemini(
             errorType,
             sessionId: context?.sessionId,
             source: context?.source,
-            properties: { status: 429, attempts: attempt + 1, isQuotaExceeded },
+            properties: { status: 429, attempts: attempt + 1, isQuotaExceeded, circuitBreakerTripped: isQuotaExceeded },
           });
           const errorMsg = isQuotaExceeded
             ? 'Daily quota exceeded - resets at midnight PT'
