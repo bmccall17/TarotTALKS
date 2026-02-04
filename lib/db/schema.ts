@@ -236,3 +236,50 @@ export const spreads = pgTable('spreads', {
   idxCard3: index('idx_spreads_card_3').on(table.card3Id),
   idxTalk: index('idx_spreads_talk').on(table.talkId),
 }));
+
+// Platform Style Patterns table (Platform Style Learning System)
+export const platformStylePatterns = pgTable('platform_style_patterns', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  platform: varchar('platform', { length: 20 }).notNull().unique(),
+
+  // Length statistics
+  avgLength: integer('avg_length'),
+  minLength: integer('min_length'),
+  maxLength: integer('max_length'),
+  medianLength: integer('median_length'),
+  weightedAvgLength: integer('weighted_avg_length'),
+
+  // Hashtag patterns (stored as JSON strings)
+  hashtagUsagePct: real('hashtag_usage_pct'),
+  hashtagAvgCount: real('hashtag_avg_count'),
+  commonHashtags: text('common_hashtags'), // JSON array
+
+  // Emoji patterns
+  emojiUsagePct: real('emoji_usage_pct'),
+  emojiAvgCount: real('emoji_avg_count'),
+  commonEmojis: text('common_emojis'), // JSON array
+  emojiPositions: text('emoji_positions'), // JSON: {"start": 0.3, "middle": 0.2, "end": 0.5}
+
+  // Mention patterns
+  mentionUsagePct: real('mention_usage_pct'),
+  mentionAvgCount: real('mention_avg_count'),
+  mentionTypes: text('mention_types'), // JSON: {"speaker": 0.8, "org": 0.1, "other": 0.1}
+
+  // Top performer analysis
+  engagementThreshold: integer('engagement_threshold'),
+  topPerformerTraits: text('top_performer_traits'), // JSON
+  topPerformerCount: integer('top_performer_count'),
+
+  // Example posts
+  examplePostIds: text('example_post_ids'), // JSON array of UUIDs
+
+  // Freshness tracking
+  postsAnalyzed: integer('posts_analyzed').default(0).notNull(),
+  lastAnalyzedAt: timestamp('last_analyzed_at'),
+
+  // Timestamps
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  idxPlatform: index('idx_platform_style_patterns_platform').on(table.platform),
+}));
