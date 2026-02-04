@@ -6,7 +6,7 @@
  * for high-intent users.
  */
 
-import { generateSpreadRationale as geminiGenerate } from '@/lib/services/gemini';
+import { generateSpreadRationale as geminiGenerate, GEMINI_MODEL } from '@/lib/services/gemini';
 import { SpreadCard, SpreadTalk, MatchReason, FocusType, POSITION_LABELS } from './types';
 
 interface RationaleInput {
@@ -155,7 +155,7 @@ export async function generateRationale(
       return {
         rationale: result.text,
         source: 'ai',
-        model: 'gemini-2.0-flash',
+        model: GEMINI_MODEL,
       };
     }
 

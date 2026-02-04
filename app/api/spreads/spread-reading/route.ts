@@ -24,7 +24,8 @@ import {
 } from '@/lib/spread-reading';
 import {
   generateSynthesisAndQueries,
-  selectBestTalkWithAI
+  selectBestTalkWithAI,
+  GEMINI_MODEL,
 } from '@/lib/services/gemini';
 import { searchYouTube, type YouTubeResult, type SearchYouTubeOptions } from '@/lib/services/youtube';
 import { logApiCall } from '@/lib/db/queries/api-usage';
@@ -386,7 +387,7 @@ export async function POST(request: Request) {
         focusText,
         rationale: finalRationale,
         rationaleSource: isNewFlowSuccessful ? 'ai' : 'template',
-        aiModel: 'gemini-2.0-flash',
+        aiModel: GEMINI_MODEL,
         score: 100,
         matchReasons: [],
       });
@@ -420,7 +421,7 @@ export async function POST(request: Request) {
       rationale: finalRationale,
       rationaleSource: isNewFlowSuccessful ? 'ai' : 'template',
       youtubeUsed, // Whether YouTube candidates were included
-      aiModel: 'gemini-2.0-flash',
+      aiModel: GEMINI_MODEL,
       score: 100,
       matchReasons: [],
       cards,
