@@ -124,10 +124,12 @@ export async function GET(
   // Talk thumbnail dimensions (16:9 aspect, prominent)
   const thumbWidth = 900;
   const thumbHeight = 506;
+  const thumbLeft = 40;
+  const thumbTop = 90; // After brand header
 
-  // Card dimensions (small, accent)
-  const cardWidth = 140;
-  const cardHeight = 276;
+  // Card dimensions
+  const cardWidth = 200;
+  const cardHeight = 394;
 
   return new ImageResponse(
     (
@@ -170,7 +172,7 @@ export async function GET(
           style={{
             display: 'flex',
             justifyContent: 'center',
-            marginBottom: 30,
+            marginBottom: 24,
           }}
         >
           {talkThumbnailUrl ? (
@@ -203,7 +205,7 @@ export async function GET(
           )}
         </div>
 
-        {/* Talk Title */}
+        {/* Talk Title - Left justified, limited width to avoid card overlap */}
         <div
           style={{
             display: 'flex',
@@ -211,39 +213,36 @@ export async function GET(
             fontSize: 36,
             fontWeight: 700,
             marginBottom: 12,
-            textAlign: 'center',
-            justifyContent: 'center',
             lineHeight: 1.2,
-            paddingLeft: 40,
-            paddingRight: 40,
+            paddingLeft: 50,
+            paddingRight: 280, // Leave room for card
           }}
         >
           {truncatedTitle}
         </div>
 
-        {/* Speaker Name */}
+        {/* Speaker Name - Left justified */}
         <div
           style={{
             display: 'flex',
             color: '#a5b4fc',
             fontSize: 28,
-            justifyContent: 'center',
-            marginBottom: 30,
+            paddingLeft: 50,
           }}
         >
           {talkData.speakerName}
         </div>
 
-        {/* Card Section - Bottom left */}
+        {/* Card Section - Bottom right, overlapping talk image */}
         {primaryCard && cardImageUrl && (
           <div
             style={{
               position: 'absolute',
-              left: 40,
+              right: 60,
               bottom: 40,
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'flex-end',
-              gap: 16,
             }}
           >
             <img
@@ -252,24 +251,26 @@ export async function GET(
               width={cardWidth}
               height={cardHeight}
               style={{
-                borderRadius: 10,
+                borderRadius: 12,
                 objectFit: 'contain',
-                border: '2px solid rgba(255, 255, 255, 0.3)',
+                border: '3px solid rgba(255, 255, 255, 0.3)',
+                filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.5))',
               }}
             />
+            {/* Card Name - Right justified, 3x bigger */}
             <div
               style={{
                 display: 'flex',
-                flexDirection: 'column',
-                color: '#d1d5db',
-                fontSize: 18,
-                marginBottom: 10,
+                color: '#ffffff',
+                fontSize: 54,
+                fontWeight: 700,
+                marginTop: 12,
+                textAlign: 'right',
+                lineHeight: 1.0,
+                textTransform: 'uppercase',
               }}
             >
-              <span style={{ display: 'flex', marginBottom: 4 }}>Associated with</span>
-              <span style={{ display: 'flex', color: '#ffffff', fontSize: 24, fontWeight: 600 }}>
-                {primaryCard.name}
-              </span>
+              {primaryCard.name}
             </div>
           </div>
         )}
