@@ -16,6 +16,7 @@ A chronological record of major releases and feature deployments for TarotTALKS.
 
 | Version | Title | Date |
 |---------|-------|------|
+| [v1.5.3](devnotes/releases/v1.5.3.md) | Instagram Share Images for Cards & Talks 📸 | Feb 4, 2026 |
 | [v1.5.2](devnotes/releases/v1.5.2.md) | Bibliography RAG Cleanup & Thumbnail Upscaling 🧹🖼️ | Feb 4, 2026 |
 | [v1.5.1](devnotes/releases/v1.5.1.md) | Gemini 2.0 Flash Migration ⚡ | Feb 3, 2026 |
 | [v1.5.0](devnotes/releases/v1.5.0.md) | Gemini Pro Upgrade & Budget Tracking 💰 | Feb 3, 2026 |
@@ -49,6 +50,7 @@ A chronological record of major releases and feature deployments for TarotTALKS.
 
 | Version | Title | Date |
 |---------|-------|------|
+| [v1.5.3](devnotes/releases/v1.5.3.md) | Instagram Share Images for Cards & Talks 📸 | Feb 4, 2026 |
 | [v1.5.2](devnotes/releases/v1.5.2.md) | Bibliography RAG Cleanup & Thumbnail Upscaling 🧹🖼️ | Feb 4, 2026 |
 | [v1.5.1](devnotes/releases/v1.5.1.md) | Gemini 2.0 Flash Migration ⚡ | Feb 3, 2026 |
 | [v1.5.0](devnotes/releases/v1.5.0.md) | Gemini Pro Upgrade & Budget Tracking 💰 | Feb 3, 2026 |
