@@ -2,10 +2,12 @@
  * SERVER ONLY - Supabase Storage Operations
  *
  * This file handles image upload/download to Supabase Storage.
+ * Thumbnails are automatically upscaled to 1280x720 and converted to WebP.
  * NEVER import this file from client components.
  */
 
 import { createServiceClient, getStorageBucket, getPublicStorageUrl } from './server';
+import { processImage } from '@/lib/utils/image-processing';
 
 // Allowed content types for image uploads
 const ALLOWED_CONTENT_TYPES = [
@@ -62,7 +64,7 @@ export interface UploadResult {
  * Uses upsert to overwrite existing files with the same name.
  */
 export async function uploadImageBuffer(
-  buffer: ArrayBuffer,
+  buffer: ArrayBuffer | Buffer,
   talkId: string,
   contentType: string | null,
   bucket?: string
@@ -100,7 +102,8 @@ export async function uploadImageBuffer(
 }
 
 /**
- * Download an image from a URL and upload it to Supabase Storage.
+ * Download an image from a URL, upscale to 1280x720, convert to WebP,
+ * and upload it to Supabase Storage.
  * Returns the new Supabase Storage URL on success.
  */
 export async function downloadAndUploadImage(
@@ -116,12 +119,34 @@ export async function downloadAndUploadImage(
       throw new Error(`Fetch failed with status: ${response.status}`);
     }
 
-    const contentType = response.headers.get('content-type');
-    const buffer = await response.arrayBuffer();
+    const originalContentType = response.headers.get('content-type');
+    const originalBuffer = await response.arrayBuffer();
+    const originalSize = Math.round(originalBuffer.byteLength / 1024);
 
-    console.log(`📤 Uploading to Supabase Storage (${Math.round(buffer.byteLength / 1024)}KB)...`);
+    console.log(`📦 Original image: ${originalSize}KB (${originalContentType})`);
 
-    return uploadImageBuffer(buffer, talkId, contentType, bucket);
+    // Try to process the image (upscale + convert to WebP)
+    let bufferToUpload: ArrayBuffer | Buffer = originalBuffer;
+    let contentTypeToUse: string | null = originalContentType;
+
+    try {
+      const processed = await processImage(originalBuffer);
+      bufferToUpload = processed.buffer;
+      contentTypeToUse = 'image/webp';
+
+      const processedSize = Math.round(processed.buffer.byteLength / 1024);
+      console.log(
+        `✨ Processed: ${processed.originalWidth}x${processed.originalHeight} → ` +
+          `${processed.width}x${processed.height} WebP (${processedSize}KB)`
+      );
+    } catch (processError) {
+      // Fallback: upload original image without processing
+      console.warn('⚠️  Image processing failed, uploading original:', processError);
+    }
+
+    console.log(`📤 Uploading to Supabase Storage...`);
+
+    return uploadImageBuffer(bufferToUpload, talkId, contentTypeToUse, bucket);
   } catch (err) {
     console.error('Download and upload failed:', err);
     return {
