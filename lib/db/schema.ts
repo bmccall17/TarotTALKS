@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp, uuid, varchar, pgEnum, bigint, index, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, boolean, timestamp, uuid, varchar, pgEnum, bigint, index, jsonb, real } from 'drizzle-orm/pg-core';
 
 // Enums
 export const arcanaTypeEnum = pgEnum('arcana_type', ['major', 'minor']);
