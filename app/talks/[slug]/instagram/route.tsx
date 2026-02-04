@@ -241,10 +241,26 @@ export async function GET(
               right: 60,
               bottom: 40,
               display: 'flex',
-              flexDirection: 'column',
+              flexDirection: 'row',
               alignItems: 'flex-end',
+              gap: 16,
             }}
           >
+            {/* Card Name - Right justified, aligned with bottom of card */}
+            <div
+              style={{
+                display: 'flex',
+                color: '#ffffff',
+                fontSize: 54,
+                fontWeight: 700,
+                textAlign: 'right',
+                lineHeight: 1.0,
+                textTransform: 'uppercase',
+                marginBottom: 10,
+              }}
+            >
+              {primaryCard.name}
+            </div>
             <img
               src={cardImageUrl}
               alt=""
@@ -253,25 +269,9 @@ export async function GET(
               style={{
                 borderRadius: 12,
                 objectFit: 'contain',
-                border: '3px solid rgba(255, 255, 255, 0.3)',
                 filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.5))',
               }}
             />
-            {/* Card Name - Right justified, 3x bigger */}
-            <div
-              style={{
-                display: 'flex',
-                color: '#ffffff',
-                fontSize: 54,
-                fontWeight: 700,
-                marginTop: 12,
-                textAlign: 'right',
-                lineHeight: 1.0,
-                textTransform: 'uppercase',
-              }}
-            >
-              {primaryCard.name}
-            </div>
           </div>
         )}
       </div>
