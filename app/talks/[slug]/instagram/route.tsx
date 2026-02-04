@@ -8,6 +8,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { getTalkWithMappedCards } from '@/lib/db/queries/talks';
+import { getThumbnailUrl } from '@/lib/utils/thumbnails';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 
@@ -86,11 +87,12 @@ export async function GET(
   // Get the primary card (first one, sorted by strength)
   const primaryCard = talkData.mappedCards[0]?.card;
 
-  // Build URLs directly like the working OG images do
-  const talkThumbnailUrl = talkData.thumbnailUrl?.startsWith('http')
-    ? talkData.thumbnailUrl
-    : talkData.thumbnailUrl
-    ? `https://tarottalks.app${talkData.thumbnailUrl}`
+  // Get thumbnail URL using the utility (handles YouTube fallback)
+  const thumbnailUrl = getThumbnailUrl(talkData.thumbnailUrl, talkData.youtubeVideoId);
+  const talkThumbnailUrl = thumbnailUrl?.startsWith('http')
+    ? thumbnailUrl
+    : thumbnailUrl
+    ? `https://tarottalks.app${thumbnailUrl}`
     : null;
 
   const cardImageUrl = primaryCard?.imageUrl?.startsWith('http')
