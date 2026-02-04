@@ -30,6 +30,15 @@ export async function GET(request: NextRequest) {
     // Calculate actual API calls (excluding circuit breaker blocks which don't hit the API)
     const actualApiCalls = geminiToday.total - geminiToday.circuitBreakerBlocked;
 
+    // Calculate daily quota based on budget
+    // $88/month ÷ 30 days = $2.93/day
+    // Average cost per reading with gemini-2.0-flash is ~$0.00006 (much cheaper than 1.5-pro)
+    // But let's base it on actual spend: dailyBudget / avgCostPerCall
+    const avgCostPerCall = todaySpend.avgCostPerCall || 0.0001; // fallback to avoid division by zero
+    const dailyQuota = Math.round(GEMINI_DAILY_BUDGET / avgCostPerCall);
+    const estimatedRemaining = Math.max(0, dailyQuota - actualApiCalls);
+    const quotaPercentUsed = dailyQuota > 0 ? Math.round((actualApiCalls / dailyQuota) * 100) : 0;
+
     return NextResponse.json({
       ...stats,
       gemini: {
@@ -41,6 +50,9 @@ export async function GET(request: NextRequest) {
         todayUsage: {
           ...geminiToday,
           actualApiCalls,
+          dailyQuota,
+          estimatedRemaining,
+          quotaPercentUsed,
         },
         // Cost tracking (paid tier)
         todaySpend,

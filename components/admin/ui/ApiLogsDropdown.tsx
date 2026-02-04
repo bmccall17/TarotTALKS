@@ -27,6 +27,7 @@ type ApiCallLog = {
     model?: string;
     tokensUsed?: number;
     error?: string;
+    synthesis?: string;
     // Circuit breaker properties
     reason?: string;
     cooldownUntil?: string;
@@ -288,6 +289,13 @@ export function ApiLogsDropdown({ apiName, days = 7, limit = 10 }: ApiLogsDropdo
               {log.properties.cardNames && log.properties.cardNames.length > 0 && (
                 <div className="text-gray-500 text-[9px] mt-1 truncate">
                   {log.properties.cardNames.join(', ')}
+                </div>
+              )}
+
+              {/* Gemini synthesis */}
+              {apiName === 'gemini' && log.properties.synthesis && (
+                <div className="mt-1 text-[9px] text-purple-400 truncate">
+                  {log.properties.synthesis}
                 </div>
               )}
 

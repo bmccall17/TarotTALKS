@@ -392,10 +392,29 @@ export async function POST(request: Request) {
         matchReasons: [],
       });
 
-      // Log detailed selection info for admin visibility (only when YouTube was actually used)
-      // This creates a 'spread_selection' log entry with spread context
-      // NOTE: Only log as 'youtube' API call when YouTube was actually called
-      // to avoid false entries in "Recent YouTube Calls"
+      // Log detailed selection info for admin visibility
+      // This creates log entries with spread context for easier debugging
+
+      // Log Gemini completion with spread URL (if Gemini was used)
+      if (geminiAvailable && isNewFlowSuccessful) {
+        logApiCall({
+          apiName: 'gemini',
+          success: true,
+          sessionId,
+          source: 'spread_completion',
+          properties: {
+            selectedTalkId: selectedTalk.id,
+            selectedTalkTitle: selectedTalk.title?.slice(0, 100),
+            spreadId: savedSpread.shortId,
+            spreadUrl: `https://tarottalks.app/spreads/${savedSpread.shortId}`,
+            youtubeUsed,
+            cardNames: cards.map(c => c.name),
+            synthesis: synthesis?.slice(0, 200),
+          },
+        });
+      }
+
+      // Log YouTube selection (only when YouTube was actually used)
       if (youtubeUsed) {
         logApiCall({
           apiName: 'youtube',
@@ -405,7 +424,7 @@ export async function POST(request: Request) {
           properties: {
             selectedTalkId: selectedTalk.id,
             selectedTalkTitle: selectedTalk.title?.slice(0, 100),
-            spreadId: savedSpread.shortId, // Use shortId for URL
+            spreadId: savedSpread.shortId,
             spreadUrl: `https://tarottalks.app/spreads/${savedSpread.shortId}`,
             fallbackMode: !geminiAvailable,
             youtubeUsed,
