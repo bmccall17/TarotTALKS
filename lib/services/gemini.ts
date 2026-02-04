@@ -11,7 +11,7 @@ import { FOCUS_TYPE_LABELS } from '@/lib/spread-reading/types';
 
 // Gemini model configuration
 export const GEMINI_MODEL: GeminiModel = 'gemini-1.5-pro';
-export const GEMINI_MODEL_ENDPOINT = 'gemini-1.5-pro-latest';
+export const GEMINI_MODEL_ENDPOINT = 'gemini-1.5-pro';
 
 // Monthly budget in USD
 export const GEMINI_MONTHLY_BUDGET = 88;
