@@ -2,7 +2,7 @@
  * Gemini API Service
  *
  * Wrapper for Google Gemini API with cost tracking for paid tier.
- * Using Gemini 1.5 Pro with $88/month budget.
+ * Using Gemini 2.0 Flash with $88/month budget.
  */
 
 import { logApiCall, calculateGeminiCost, type GeminiModel } from '@/lib/db/queries/api-usage';
@@ -10,8 +10,9 @@ import type { FocusType } from '@/lib/spread-reading/types';
 import { FOCUS_TYPE_LABELS } from '@/lib/spread-reading/types';
 
 // Gemini model configuration
-export const GEMINI_MODEL: GeminiModel = 'gemini-1.5-pro';
-export const GEMINI_MODEL_ENDPOINT = 'gemini-1.5-pro';
+// NOTE: gemini-1.5-pro was deprecated. Using gemini-2.0-flash (fast, cost-effective)
+export const GEMINI_MODEL: GeminiModel = 'gemini-2.0-flash';
+export const GEMINI_MODEL_ENDPOINT = 'gemini-2.0-flash';
 
 // Monthly budget in USD
 export const GEMINI_MONTHLY_BUDGET = 88;
