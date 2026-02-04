@@ -179,6 +179,7 @@ function renderCardOnly(
 
 /**
  * Render the card+talk version (new default design)
+ * Layout: Card prominent on left, name centered under brand, talk full-width below
  */
 function renderCardWithTalk(
   cardData: CardData,
@@ -186,7 +187,7 @@ function renderCardWithTalk(
   sparkles: ReturnType<typeof generateSparkles>
 ) {
   const keywords: string[] = cardData.keywords ? JSON.parse(cardData.keywords) : [];
-  const displayKeywords = keywords.slice(0, 3); // Fewer keywords to make room for talk
+  const displayKeywords = keywords.slice(0, 3);
   const cardImageUrl = normalizeImageUrl(cardData.imageUrl) || '';
 
   // Get the primary talk from mappings
@@ -231,44 +232,20 @@ function renderCardWithTalk(
         style={{
           display: 'flex',
           fontSize: 32,
-          marginBottom: 20,
+          marginBottom: 12,
         }}
       >
         <span style={{ color: IMAGE_STYLES.brandGray }}>Tarot</span>
         <span style={{ color: IMAGE_STYLES.brandRed, fontWeight: 700 }}>TALKS</span>
       </div>
 
-      {/* Card Image - reduced height to make room for talk */}
-      <div
-        style={{
-          width: 300,
-          height: 380,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: 20,
-        }}
-      >
-        <img
-          src={cardImageUrl}
-          alt={cardData.name}
-          width={192}
-          height={380}
-          style={{
-            borderRadius: 12,
-            objectFit: 'contain',
-            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4)',
-          }}
-        />
-      </div>
-
-      {/* Card Name */}
+      {/* Card Name - Prominent, centered under brand */}
       <div
         style={{
           color: IMAGE_STYLES.textWhite,
-          fontSize: 40,
+          fontSize: 44,
           fontWeight: 700,
-          marginBottom: 16,
+          marginBottom: 20,
           textTransform: 'uppercase',
           textAlign: 'center',
         }}
@@ -276,31 +253,52 @@ function renderCardWithTalk(
         {cardData.name}
       </div>
 
-      {/* Talk Card Component */}
+      {/* Card Image - Large, aligned left */}
+      <div
+        style={{
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'flex-start',
+          paddingLeft: 60,
+          marginBottom: 24,
+        }}
+      >
+        <img
+          src={cardImageUrl}
+          alt={cardData.name}
+          width={280}
+          height={550}
+          style={{
+            borderRadius: 14,
+            objectFit: 'contain',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4)',
+          }}
+        />
+      </div>
+
+      {/* Talk Section - Full width at bottom */}
       {primaryTalk && (
         <div
           style={{
             display: 'flex',
-            alignItems: 'center',
-            gap: 16,
-            background: 'rgba(0, 0, 0, 0.3)',
+            flexDirection: 'column',
+            width: '100%',
+            background: 'rgba(0, 0, 0, 0.35)',
             borderRadius: 16,
-            padding: '16px 24px',
-            maxWidth: 900,
-            marginBottom: 16,
+            overflow: 'hidden',
           }}
         >
-          {/* Talk Thumbnail */}
+          {/* Talk Thumbnail - Full width */}
           {talkThumbnailUrl && (
             <img
               src={talkThumbnailUrl}
               alt={primaryTalk.title}
-              width={120}
-              height={68}
+              width={1000}
+              height={180}
               style={{
-                borderRadius: 8,
+                width: '100%',
+                height: 180,
                 objectFit: 'cover',
-                flexShrink: 0,
               }}
             />
           )}
@@ -310,8 +308,7 @@ function renderCardWithTalk(
               display: 'flex',
               flexDirection: 'column',
               gap: 4,
-              flex: 1,
-              minWidth: 0,
+              padding: '14px 20px',
             }}
           >
             <div
@@ -320,12 +317,10 @@ function renderCardWithTalk(
                 fontSize: 20,
                 fontWeight: 600,
                 lineHeight: 1.3,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
               }}
             >
-              {primaryTalk.title.length > 60
-                ? primaryTalk.title.slice(0, 57) + '...'
+              {primaryTalk.title.length > 70
+                ? primaryTalk.title.slice(0, 67) + '...'
                 : primaryTalk.title}
             </div>
             <div
@@ -340,37 +335,11 @@ function renderCardWithTalk(
         </div>
       )}
 
-      {/* Keywords */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 10,
-          justifyContent: 'center',
-          maxWidth: 900,
-        }}
-      >
-        {displayKeywords.map((keyword, index) => (
-          <span
-            key={index}
-            style={{
-              background: IMAGE_STYLES.keywordBg,
-              color: IMAGE_STYLES.textAccent,
-              padding: '8px 16px',
-              borderRadius: 20,
-              fontSize: 16,
-            }}
-          >
-            {keyword}
-          </span>
-        ))}
-      </div>
-
       {/* Footer URL */}
       <div
         style={{
           position: 'absolute',
-          bottom: 30,
+          bottom: 24,
           color: IMAGE_STYLES.brandGray,
           fontSize: 18,
         }}

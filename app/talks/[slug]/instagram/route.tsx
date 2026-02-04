@@ -157,7 +157,7 @@ export async function GET(
             lineHeight: 1.3,
           }}
         >
-          &ldquo;{displayTitle}&rdquo;
+          "{displayTitle}"
         </div>
 
         {/* Speaker Name */}
