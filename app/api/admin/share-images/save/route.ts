@@ -6,7 +6,7 @@ import path from 'path';
 /**
  * POST /api/admin/share-images/save
  * Saves a generated share image to the public folder as a fallback
- * Body: { slug: string, type: 'opengraph' | 'twitter' | 'instagram', imageData: string (base64), category?: 'cards' | 'talks' }
+ * Body: { slug: string, type: 'opengraph' | 'twitter' | 'instagram' | 'instagramCardOnly', imageData: string (base64), category?: 'cards' | 'talks' }
  *
  * For cards (default): /public/images/share/[type]/[slug].png
  * For talks: /public/images/share/[type]/talks/[slug].png
@@ -24,9 +24,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate type
-    if (!['opengraph', 'twitter', 'instagram'].includes(type)) {
+    if (!['opengraph', 'twitter', 'instagram', 'instagramCardOnly'].includes(type)) {
       return NextResponse.json(
-        { error: 'Invalid type. Must be opengraph, twitter, or instagram' },
+        { error: 'Invalid type. Must be opengraph, twitter, instagram, or instagramCardOnly' },
         { status: 400 }
       );
     }
@@ -78,13 +78,14 @@ export async function GET(request: NextRequest) {
 
     const baseDir = path.join(process.cwd(), 'public', 'images', 'share');
 
-    const result: { opengraph: string[]; twitter: string[]; instagram: string[] } = {
+    const result: { opengraph: string[]; twitter: string[]; instagram: string[]; instagramCardOnly: string[] } = {
       opengraph: [],
       twitter: [],
       instagram: [],
+      instagramCardOnly: [],
     };
 
-    for (const type of ['opengraph', 'twitter', 'instagram'] as const) {
+    for (const type of ['opengraph', 'twitter', 'instagram', 'instagramCardOnly'] as const) {
       // For talks, look in the talks subdirectory
       const dir = category === 'talks'
         ? path.join(baseDir, type, 'talks')
