@@ -99,7 +99,52 @@ What this command does and why.
 | Command | Description | Claude | Antigravity |
 |---------|-------------|--------|-------------|
 | `/ship` | Sprint close-out & release | `.claude/commands/ship.md` | `.agent/workflows/ship.md` |
+| `/completion-drive` | Assumption control strategy | `.claude/commands/completion-drive.md` | `.agent/workflows/completion-drive.md` |
 
 ---
 
-*Last updated: Feb 3, 2026*
+## `/completion-drive` - Assumption Control Strategy
+
+**Purpose:** Meta-cognitive strategy for complex tasks where assumptions might compound into errors. Maintains flow state while ensuring systematic accuracy.
+
+### Usage
+```
+/completion-drive [task description]
+```
+
+### What It Does
+1. **Parallel Domain Planning** - Deploys specialized agents to plan different domains, marking uncertainties with `PLAN_UNCERTAINTY` tags
+2. **Plan Synthesis** - Validates interfaces between plans, resolves cross-domain conflicts
+3. **Implementation** - Executes unified plan at speed, marking runtime uncertainties with `COMPLETION_DRIVE` tags
+4. **Systematic Verification** - Validates all tagged assumptions, fixes errors
+5. **Process Cleanup** - Ensures all tags resolved, provides accuracy report
+
+### When to Use
+- Complex multi-domain tasks (frontend + backend + database)
+- Tasks where assumptions might compound
+- When you want systematic verification of all decisions made
+
+### Key Files
+- `docs/completion_drive_plans/` - Planning phase output
+- Source files with `COMPLETION_DRIVE` or `PLAN_UNCERTAINTY` tags during execution
+
+---
+
+## Portable Workflow Sync
+
+To bring these workflows to another computer or project, use the sync script:
+
+```bash
+# Copy workflows to a new project
+./scripts/sync-workflows.sh /path/to/target/project
+
+# Or manually copy the directories:
+cp -r .claude/commands/* /target/.claude/commands/
+cp -r .agent/workflows/* /target/.agent/workflows/
+```
+
+See `scripts/sync-workflows.sh` for the full sync utility.
+
+---
+
+*Last updated: Feb 4, 2026*
