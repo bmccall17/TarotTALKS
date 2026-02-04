@@ -204,8 +204,11 @@ export async function generateWithGemini(
       incrementRateLimit();
 
       // Use Gemini 1.5 Pro (paid tier model)
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_ENDPOINT}:generateContent`;
+      console.log(`[Gemini] Calling: ${apiUrl}`);
+
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_ENDPOINT}:generateContent?key=${apiKey}`,
+        `${apiUrl}?key=${apiKey}`,
         {
           method: 'POST',
           headers: {
