@@ -21,6 +21,7 @@ type Talk = {
 type SavedImages = {
   opengraph: string[];
   twitter: string[];
+  instagram: string[];
 };
 
 type TabType = 'cards' | 'talks';
@@ -34,7 +35,7 @@ export default function ShareImagesPage() {
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0, currentItem: '' });
   const [generatedItems, setGeneratedItems] = useState<Set<string>>(new Set());
-  const [savedImages, setSavedImages] = useState<SavedImages>({ opengraph: [], twitter: [] });
+  const [savedImages, setSavedImages] = useState<SavedImages>({ opengraph: [], twitter: [], instagram: [] });
   const [errors, setErrors] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(Date.now());
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -105,12 +106,15 @@ export default function ShareImagesPage() {
 
   const saveImageToPublic = async (
     slug: string,
-    type: 'opengraph' | 'twitter',
+    type: 'opengraph' | 'twitter' | 'instagram',
     category: TabType
   ): Promise<boolean> => {
     try {
       const basePath = category === 'cards' ? '/cards' : '/talks';
-      const imageUrl = `${basePath}/${slug}/${type}-image?t=${Date.now()}`;
+      // Instagram uses a different URL pattern (route handler, not image convention)
+      const imageUrl = type === 'instagram'
+        ? `${basePath}/${slug}/instagram?t=${Date.now()}`
+        : `${basePath}/${slug}/${type}-image?t=${Date.now()}`;
       const base64 = await fetchImageAsBase64(imageUrl);
       if (!base64) return false;
 
@@ -131,7 +135,8 @@ export default function ShareImagesPage() {
     setSaving(true);
     const items = activeTab === 'cards' ? cards : talks;
     const itemName = activeTab === 'cards' ? 'card' : 'talk';
-    setProgress({ current: 0, total: items.length * 2, currentItem: '' });
+    // Now 3 images per item: opengraph, twitter, instagram
+    setProgress({ current: 0, total: items.length * 3, currentItem: '' });
     setGeneratedItems(new Set());
     setErrors([]);
 
@@ -140,7 +145,7 @@ export default function ShareImagesPage() {
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const name = activeTab === 'cards' ? (item as Card).name : (item as Talk).title;
-      setProgress({ current: i * 2, total: items.length * 2, currentItem: `Saving ${name}...` });
+      setProgress({ current: i * 3, total: items.length * 3, currentItem: `Saving ${name}...` });
 
       // Save OpenGraph image
       const ogSuccess = await saveImageToPublic(item.slug, 'opengraph', activeTab);
@@ -148,7 +153,7 @@ export default function ShareImagesPage() {
         newErrors.push(`${name}: OpenGraph save failed`);
       }
 
-      setProgress({ current: i * 2 + 1, total: items.length * 2, currentItem: `Saving ${name}...` });
+      setProgress({ current: i * 3 + 1, total: items.length * 3, currentItem: `Saving ${name}...` });
 
       // Save Twitter image
       const twitterSuccess = await saveImageToPublic(item.slug, 'twitter', activeTab);
@@ -156,7 +161,18 @@ export default function ShareImagesPage() {
         newErrors.push(`${name}: Twitter save failed`);
       }
 
-      if (ogSuccess && twitterSuccess) {
+      setProgress({ current: i * 3 + 2, total: items.length * 3, currentItem: `Saving ${name}...` });
+
+      // Save Instagram image (only for cards for now, talks instagram route doesn't exist yet)
+      let igSuccess = true;
+      if (activeTab === 'cards') {
+        igSuccess = await saveImageToPublic(item.slug, 'instagram', activeTab);
+        if (!igSuccess) {
+          newErrors.push(`${name}: Instagram save failed`);
+        }
+      }
+
+      if (ogSuccess && twitterSuccess && igSuccess) {
         setGeneratedItems((prev) => new Set([...prev, item.slug]));
       }
 
@@ -164,16 +180,20 @@ export default function ShareImagesPage() {
       await new Promise((r) => setTimeout(r, 150));
     }
 
-    setProgress({ current: items.length * 2, total: items.length * 2, currentItem: 'Complete!' });
+    setProgress({ current: items.length * 3, total: items.length * 3, currentItem: 'Complete!' });
     setErrors(newErrors);
     setSaving(false);
     await fetchSavedImages(activeTab);
   };
 
-  const downloadImage = async (slug: string, type: 'opengraph' | 'twitter') => {
+  const downloadImage = async (slug: string, type: 'opengraph' | 'twitter' | 'instagram') => {
     try {
       const basePath = activeTab === 'cards' ? '/cards' : '/talks';
-      const response = await fetch(`${basePath}/${slug}/${type}-image`);
+      // Instagram uses a different URL pattern (route handler, not image convention)
+      const imageUrl = type === 'instagram'
+        ? `${basePath}/${slug}/instagram`
+        : `${basePath}/${slug}/${type}-image`;
+      const response = await fetch(imageUrl);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -211,13 +231,14 @@ export default function ShareImagesPage() {
     setGenerating(false);
   };
 
-  const isImageSaved = (slug: string, type: 'opengraph' | 'twitter') => {
+  const isImageSaved = (slug: string, type: 'opengraph' | 'twitter' | 'instagram') => {
     return savedImages[type].includes(slug);
   };
 
   const savedCount = {
     opengraph: savedImages.opengraph.length,
     twitter: savedImages.twitter.length,
+    instagram: savedImages.instagram.length,
   };
 
   const currentItems = activeTab === 'cards' ? cards : talks;
@@ -271,7 +292,7 @@ export default function ShareImagesPage() {
           <FolderOpen className="w-4 h-4" />
           <span className="font-medium">Saved Fallback Images ({activeTab})</span>
         </div>
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="grid grid-cols-3 gap-4 text-sm">
           <div>
             <span className="text-gray-400">OpenGraph:</span>{' '}
             <span className="text-green-300 font-medium">{savedCount.opengraph} / {totalItems}</span>
@@ -282,11 +303,16 @@ export default function ShareImagesPage() {
             <span className="text-green-300 font-medium">{savedCount.twitter} / {totalItems}</span>
             {savedCount.twitter === totalItems && <Check className="w-4 h-4 inline ml-1 text-green-400" />}
           </div>
+          <div>
+            <span className="text-gray-400">Instagram:</span>{' '}
+            <span className="text-pink-300 font-medium">{savedCount.instagram} / {totalItems}</span>
+            {savedCount.instagram === totalItems && <Check className="w-4 h-4 inline ml-1 text-pink-400" />}
+          </div>
         </div>
         <p className="text-xs text-gray-500 mt-2">
           Saved to:{' '}
           <code className="bg-gray-800 px-1 rounded">
-            /public/images/share/[opengraph|twitter]/{activeTab === 'talks' ? 'talks/' : ''}[slug].png
+            /public/images/share/[opengraph|twitter|instagram]/{activeTab === 'talks' ? 'talks/' : ''}[slug].png
           </code>
         </p>
       </div>
@@ -389,13 +415,14 @@ export default function ShareImagesPage() {
             {cards.map((card) => {
               const ogSaved = isImageSaved(card.slug, 'opengraph');
               const twitterSaved = isImageSaved(card.slug, 'twitter');
-              const bothSaved = ogSaved && twitterSaved;
+              const igSaved = isImageSaved(card.slug, 'instagram');
+              const allSaved = ogSaved && twitterSaved && igSaved;
 
               return (
                 <div
                   key={card.id}
                   className={`bg-gray-800/50 border rounded-xl p-4 transition-all ${
-                    bothSaved ? 'border-green-500/50' : 'border-gray-700'
+                    allSaved ? 'border-green-500/50' : 'border-gray-700'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-3">
@@ -409,6 +436,11 @@ export default function ShareImagesPage() {
                       {twitterSaved && (
                         <span className="text-xs px-1.5 py-0.5 bg-blue-900/50 text-blue-400 rounded" title="Twitter saved">
                           TW
+                        </span>
+                      )}
+                      {igSaved && (
+                        <span className="text-xs px-1.5 py-0.5 bg-gradient-to-r from-purple-900/50 via-pink-900/50 to-orange-900/50 text-pink-400 rounded" title="Instagram saved">
+                          IG
                         </span>
                       )}
                     </div>
@@ -440,6 +472,13 @@ export default function ShareImagesPage() {
                         <Download className="w-3 h-3" />
                         Twitter
                       </button>
+                      <button
+                        onClick={() => downloadImage(card.slug, 'instagram')}
+                        className="flex-1 flex items-center justify-center gap-1 px-2 py-1 text-xs bg-gradient-to-r from-purple-600/30 via-pink-500/30 to-orange-400/30 hover:from-purple-600/50 hover:via-pink-500/50 hover:to-orange-400/50 text-pink-300 rounded transition-colors"
+                      >
+                        <Download className="w-3 h-3" />
+                        IG
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -454,6 +493,7 @@ export default function ShareImagesPage() {
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">Card</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">OpenGraph</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">Twitter</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">Instagram</th>
                   <th className="px-4 py-3 text-center text-sm font-medium text-gray-400">Saved</th>
                   <th className="px-4 py-3 text-right text-sm font-medium text-gray-400">Actions</th>
                 </tr>
@@ -462,6 +502,7 @@ export default function ShareImagesPage() {
                 {cards.map((card) => {
                   const ogSaved = isImageSaved(card.slug, 'opengraph');
                   const twitterSaved = isImageSaved(card.slug, 'twitter');
+                  const igSaved = isImageSaved(card.slug, 'instagram');
 
                   return (
                     <tr key={card.id} className="hover:bg-gray-800/50">
@@ -494,6 +535,14 @@ export default function ShareImagesPage() {
                           loading="lazy"
                         />
                       </td>
+                      <td className="px-4 py-3">
+                        <img
+                          src={`/cards/${card.slug}/instagram?t=${refreshKey}`}
+                          alt={`Instagram: ${card.name}`}
+                          className="w-24 h-24 object-cover rounded border border-gray-700"
+                          loading="lazy"
+                        />
+                      </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-2">
                           {ogSaved ? (
@@ -510,6 +559,13 @@ export default function ShareImagesPage() {
                           ) : (
                             <span className="w-4 h-4 text-gray-600">-</span>
                           )}
+                          {igSaved ? (
+                            <span title="Instagram saved">
+                              <Check className="w-4 h-4 text-pink-400" />
+                            </span>
+                          ) : (
+                            <span className="w-4 h-4 text-gray-600">-</span>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -518,6 +574,13 @@ export default function ShareImagesPage() {
                             onClick={() => downloadImage(card.slug, 'opengraph')}
                             className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
                             title="Download OpenGraph"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => downloadImage(card.slug, 'instagram')}
+                            className="p-1.5 text-pink-400 hover:text-pink-300 hover:bg-gray-700 rounded transition-colors"
+                            title="Download Instagram"
                           >
                             <Download className="w-4 h-4" />
                           </button>
@@ -710,18 +773,18 @@ export default function ShareImagesPage() {
       {/* Stats */}
       <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-xl">
         <h3 className="font-medium text-gray-100 mb-2">Summary ({activeTab})</h3>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
           <div>
             <p className="text-gray-500">Total {activeTab === 'cards' ? 'Cards' : 'Talks'}</p>
             <p className="text-2xl font-bold text-gray-100">{totalItems}</p>
           </div>
           <div>
             <p className="text-gray-500">Images Per Item</p>
-            <p className="text-2xl font-bold text-gray-100">2</p>
+            <p className="text-2xl font-bold text-gray-100">{activeTab === 'cards' ? 3 : 2}</p>
           </div>
           <div>
             <p className="text-gray-500">Total Images</p>
-            <p className="text-2xl font-bold text-gray-100">{totalItems * 2}</p>
+            <p className="text-2xl font-bold text-gray-100">{totalItems * (activeTab === 'cards' ? 3 : 2)}</p>
           </div>
           <div>
             <p className="text-gray-500">OG Saved</p>
@@ -730,6 +793,10 @@ export default function ShareImagesPage() {
           <div>
             <p className="text-gray-500">Twitter Saved</p>
             <p className="text-2xl font-bold text-blue-400">{savedCount.twitter}</p>
+          </div>
+          <div>
+            <p className="text-gray-500">Instagram Saved</p>
+            <p className="text-2xl font-bold text-pink-400">{savedCount.instagram}</p>
           </div>
         </div>
       </div>

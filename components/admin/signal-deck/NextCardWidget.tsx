@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Sparkles, Share2, Loader2, CheckCircle, ChevronDown } from 'lucide-react';
+import { Sparkles, Share2, Loader2, CheckCircle, ChevronDown, Download } from 'lucide-react';
 import Link from 'next/link';
 
 type UnpostedCard = {
@@ -234,6 +234,17 @@ export function NextCardWidget({ onCreateShare }: Props) {
                   {card.name}
                 </Link>
               </div>
+
+              {/* Download IG Button */}
+              <a
+                href={`/cards/${card.slug}/instagram`}
+                download={`${card.slug}-instagram.png`}
+                className="flex items-center gap-1 px-2 py-1 text-xs bg-gradient-to-r from-purple-600/30 via-pink-500/30 to-orange-400/30 hover:from-purple-600/50 hover:via-pink-500/50 hover:to-orange-400/50 text-pink-300 rounded-md transition-colors"
+                title="Download Instagram image"
+              >
+                <Download className="w-3 h-3" />
+                <span>IG</span>
+              </a>
 
               {/* Share Button */}
               <button

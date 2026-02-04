@@ -6,7 +6,7 @@ import path from 'path';
 /**
  * POST /api/admin/share-images/save
  * Saves a generated share image to the public folder as a fallback
- * Body: { slug: string, type: 'opengraph' | 'twitter', imageData: string (base64), category?: 'cards' | 'talks' }
+ * Body: { slug: string, type: 'opengraph' | 'twitter' | 'instagram', imageData: string (base64), category?: 'cards' | 'talks' }
  *
  * For cards (default): /public/images/share/[type]/[slug].png
  * For talks: /public/images/share/[type]/talks/[slug].png
@@ -19,6 +19,14 @@ export async function POST(request: NextRequest) {
     if (!slug || !type || !imageData) {
       return NextResponse.json(
         { error: 'Missing required fields: slug, type, imageData' },
+        { status: 400 }
+      );
+    }
+
+    // Validate type
+    if (!['opengraph', 'twitter', 'instagram'].includes(type)) {
+      return NextResponse.json(
+        { error: 'Invalid type. Must be opengraph, twitter, or instagram' },
         { status: 400 }
       );
     }
@@ -70,12 +78,13 @@ export async function GET(request: NextRequest) {
 
     const baseDir = path.join(process.cwd(), 'public', 'images', 'share');
 
-    const result: { opengraph: string[]; twitter: string[] } = {
+    const result: { opengraph: string[]; twitter: string[]; instagram: string[] } = {
       opengraph: [],
       twitter: [],
+      instagram: [],
     };
 
-    for (const type of ['opengraph', 'twitter'] as const) {
+    for (const type of ['opengraph', 'twitter', 'instagram'] as const) {
       // For talks, look in the talks subdirectory
       const dir = category === 'talks'
         ? path.join(baseDir, type, 'talks')
