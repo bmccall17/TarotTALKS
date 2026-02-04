@@ -16,6 +16,7 @@ A chronological record of major releases and feature deployments for TarotTALKS.
 
 | Version | Title | Date |
 |---------|-------|------|
+| [v1.5.1](devnotes/releases/v1.5.1.md) | Gemini 2.0 Flash Migration ⚡ | Feb 3, 2026 |
 | [v1.5.0](devnotes/releases/v1.5.0.md) | Gemini Pro Upgrade & Budget Tracking 💰 | Feb 3, 2026 |
 | [v1.4.5](devnotes/releases/v1.4.5.md) | Admin Spreads Query Fix 🐛 | Feb 3, 2026 |
 | [v1.4.4](devnotes/releases/v1.4.4.md) | Admin API Monitoring Dashboard & Test Mode Fixes 📊 | Feb 3, 2026 |
@@ -47,6 +48,7 @@ A chronological record of major releases and feature deployments for TarotTALKS.
 
 | Version | Title | Date |
 |---------|-------|------|
+| [v1.5.1](devnotes/releases/v1.5.1.md) | Gemini 2.0 Flash Migration ⚡ | Feb 3, 2026 |
 | [v1.5.0](devnotes/releases/v1.5.0.md) | Gemini Pro Upgrade & Budget Tracking 💰 | Feb 3, 2026 |
 | [v1.4.5](devnotes/releases/v1.4.5.md) | Admin Spreads Query Fix 🐛 | Feb 3, 2026 |
 | [v1.4.4](devnotes/releases/v1.4.4.md) | Admin API Monitoring Dashboard & Test Mode Fixes 📊 | Feb 3, 2026 |
