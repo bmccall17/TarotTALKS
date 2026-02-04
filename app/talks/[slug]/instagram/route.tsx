@@ -8,18 +8,31 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { getTalkWithMappedCards } from '@/lib/db/queries/talks';
-import {
-  loadFonts,
-  getFontConfig,
-  generateSparkles,
-  normalizeImageUrl,
-  IMAGE_STYLES,
-  IMAGE_SIZES,
-} from '@/lib/image-utils';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
 
 export const runtime = 'nodejs';
 
-const size = IMAGE_SIZES.instagram;
+const size = { width: 1080, height: 1080 };
+
+// Load OpenDyslexic font from local filesystem
+async function loadFonts() {
+  try {
+    const fontsDir = join(process.cwd(), 'public', 'fonts');
+    const [regular, bold] = await Promise.all([
+      readFile(join(fontsDir, 'OpenDyslexic-Regular.woff')),
+      readFile(join(fontsDir, 'OpenDyslexic-Bold.woff')),
+    ]);
+
+    return {
+      regular: regular.buffer.slice(regular.byteOffset, regular.byteOffset + regular.byteLength),
+      bold: bold.buffer.slice(bold.byteOffset, bold.byteOffset + bold.byteLength),
+    };
+  } catch (error) {
+    console.error('Failed to load fonts from filesystem:', error);
+    return null;
+  }
+}
 
 export async function GET(
   request: NextRequest,
@@ -36,7 +49,15 @@ export async function GET(
     }),
   ]);
 
-  const { fontFamily, fontOptions } = getFontConfig(fonts);
+  const fontFamily = fonts ? 'OpenDyslexic' : 'system-ui, sans-serif';
+  const fontOptions = fonts
+    ? {
+        fonts: [
+          { name: 'OpenDyslexic', data: fonts.regular, weight: 400 as const },
+          { name: 'OpenDyslexic', data: fonts.bold, weight: 700 as const },
+        ],
+      }
+    : {};
 
   // Fallback for not found
   if (!talkData) {
@@ -49,8 +70,8 @@ export async function GET(
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: IMAGE_STYLES.gradient,
-            color: IMAGE_STYLES.textWhite,
+            background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)',
+            color: '#ffffff',
             fontSize: 48,
             fontFamily,
           }}
@@ -65,15 +86,39 @@ export async function GET(
   // Get the primary card (first one, sorted by strength)
   const primaryCard = talkData.mappedCards[0]?.card;
 
-  const talkThumbnailUrl = normalizeImageUrl(talkData.thumbnailUrl) || '';
-  const cardImageUrl = primaryCard ? normalizeImageUrl(primaryCard.imageUrl) : null;
+  // Build URLs directly like the working OG images do
+  const talkThumbnailUrl = talkData.thumbnailUrl?.startsWith('http')
+    ? talkData.thumbnailUrl
+    : talkData.thumbnailUrl
+    ? `https://tarottalks.app${talkData.thumbnailUrl}`
+    : null;
+
+  const cardImageUrl = primaryCard?.imageUrl?.startsWith('http')
+    ? primaryCard.imageUrl
+    : primaryCard?.imageUrl
+    ? `https://tarottalks.app${primaryCard.imageUrl}`
+    : null;
 
   // Truncate title if too long
   const displayTitle =
     talkData.title.length > 80 ? talkData.title.slice(0, 77) + '...' : talkData.title;
 
-  // Generate sparkles for 1080x1080 canvas
-  const sparkles = generateSparkles({ width: 1080, height: 1080, padding: 25 });
+  // Generate sparkles
+  const sparkles: Array<{ x: number; y: number; s: number; o: number }> = [];
+  let seed = Date.now();
+  const random = () => {
+    seed = (seed * 9301 + 49297) % 233280;
+    return seed / 233280;
+  };
+  const sparkleCount = 12 + Math.floor(random() * 4);
+  for (let i = 0; i < sparkleCount; i++) {
+    sparkles.push({
+      x: Math.floor(random() * 1030) + 25,
+      y: Math.floor(random() * 1030) + 25,
+      s: Math.floor(random() * 3) + 3,
+      o: 0.4 + random() * 0.5,
+    });
+  }
 
   return new ImageResponse(
     (
@@ -84,7 +129,7 @@ export async function GET(
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          background: IMAGE_STYLES.gradient,
+          background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)',
           padding: 40,
           position: 'relative',
           fontFamily,
@@ -114,41 +159,46 @@ export async function GET(
             marginBottom: 24,
           }}
         >
-          <span style={{ color: IMAGE_STYLES.brandGray }}>Tarot</span>
-          <span style={{ color: IMAGE_STYLES.brandRed, fontWeight: 700 }}>TALKS</span>
+          <span style={{ color: '#9ca3af' }}>Tarot</span>
+          <span style={{ color: '#EB0028', fontWeight: 700 }}>TALKS</span>
         </div>
 
-        {/* Talk Thumbnail - prominent, 16:9 aspect ratio */}
-        {talkThumbnailUrl && (
+        {/* Talk Thumbnail */}
+        {talkThumbnailUrl ? (
+          <img
+            src={talkThumbnailUrl}
+            alt=""
+            width={560}
+            height={315}
+            style={{
+              borderRadius: 16,
+              objectFit: 'cover',
+              marginBottom: 28,
+            }}
+          />
+        ) : (
           <div
             style={{
               width: 560,
               height: 315,
+              borderRadius: 16,
+              background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              color: '#9ca3af',
+              fontSize: 24,
               marginBottom: 28,
-              borderRadius: 16,
-              overflow: 'hidden',
-              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4)',
             }}
           >
-            <img
-              src={talkThumbnailUrl}
-              alt={talkData.title}
-              width={560}
-              height={315}
-              style={{
-                objectFit: 'cover',
-              }}
-            />
+            TED Talk
           </div>
         )}
 
         {/* Talk Title */}
         <div
           style={{
-            color: IMAGE_STYLES.textWhite,
+            color: '#ffffff',
             fontSize: 32,
             fontWeight: 700,
             marginBottom: 12,
@@ -157,13 +207,13 @@ export async function GET(
             lineHeight: 1.3,
           }}
         >
-          "{displayTitle}"
+          {displayTitle}
         </div>
 
         {/* Speaker Name */}
         <div
           style={{
-            color: IMAGE_STYLES.textAccent,
+            color: '#a5b4fc',
             fontSize: 24,
             marginBottom: 28,
             textAlign: 'center',
@@ -187,13 +237,12 @@ export async function GET(
             {/* Small Card Image */}
             <img
               src={cardImageUrl}
-              alt={primaryCard.name}
+              alt=""
               width={60}
               height={118}
               style={{
                 borderRadius: 8,
                 objectFit: 'contain',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
               }}
             />
             {/* Card Label */}
@@ -206,7 +255,7 @@ export async function GET(
             >
               <div
                 style={{
-                  color: IMAGE_STYLES.textMuted,
+                  color: '#d1d5db',
                   fontSize: 14,
                 }}
               >
@@ -214,7 +263,7 @@ export async function GET(
               </div>
               <div
                 style={{
-                  color: IMAGE_STYLES.textWhite,
+                  color: '#ffffff',
                   fontSize: 22,
                   fontWeight: 600,
                   textTransform: 'uppercase',
@@ -231,7 +280,7 @@ export async function GET(
           style={{
             position: 'absolute',
             bottom: 30,
-            color: IMAGE_STYLES.brandGray,
+            color: '#9ca3af',
             fontSize: 18,
           }}
         >
