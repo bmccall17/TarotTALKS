@@ -248,9 +248,9 @@ export async function GET(
   }
 
   // Default: Card+Talk version
-  // Card prominent on left, name centered under brand, talk full-width below
-  const truncatedTalkTitle = primaryTalk?.title && primaryTalk.title.length > 70
-    ? primaryTalk.title.slice(0, 67) + '...'
+  // Card prominent on left, talk thumbnail offset to the right below card
+  const truncatedTalkTitle = primaryTalk?.title && primaryTalk.title.length > 55
+    ? primaryTalk.title.slice(0, 52) + '...'
     : primaryTalk?.title;
 
   return new ImageResponse(
@@ -261,7 +261,6 @@ export async function GET(
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
           background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)',
           padding: 40,
           position: 'relative',
@@ -284,8 +283,8 @@ export async function GET(
           />
         ))}
 
-        {/* Brand Header */}
-        <div style={{ display: 'flex', fontSize: 32, marginBottom: 12 }}>
+        {/* Brand Header - centered */}
+        <div style={{ display: 'flex', fontSize: 32, marginBottom: 12, justifyContent: 'center' }}>
           <span style={{ color: '#9ca3af' }}>Tarot</span>
           <span style={{ color: '#EB0028', fontWeight: 700 }}>TALKS</span>
         </div>
@@ -296,7 +295,7 @@ export async function GET(
             color: '#ffffff',
             fontSize: 44,
             fontWeight: 700,
-            marginBottom: 20,
+            marginBottom: 16,
             textTransform: 'uppercase',
             textAlign: 'center',
           }}
@@ -304,100 +303,107 @@ export async function GET(
           {cardData.name}
         </div>
 
-        {/* Card Image - Large, aligned left */}
+        {/* Main content area - Card on left, Talk offset right below */}
         <div
           style={{
-            width: '100%',
             display: 'flex',
-            justifyContent: 'flex-start',
-            paddingLeft: 60,
-            marginBottom: 24,
+            flex: 1,
+            width: '100%',
+            position: 'relative',
           }}
         >
+          {/* Card Image - Large, on left */}
           <img
             src={cardImageUrl}
             alt=""
-            width={280}
-            height={550}
+            width={320}
+            height={630}
             style={{
               borderRadius: 14,
               objectFit: 'contain',
+              position: 'absolute',
+              left: 40,
+              top: 0,
             }}
           />
-        </div>
 
-        {/* Talk Section - Full width at bottom */}
-        {primaryTalk && (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              width: '100%',
-              background: 'rgba(0, 0, 0, 0.35)',
-              borderRadius: 16,
-              overflow: 'hidden',
-            }}
-          >
-            {/* Talk Thumbnail - Full width */}
-            {talkThumbnailUrl ? (
-              <img
-                src={talkThumbnailUrl}
-                alt=""
-                width={1000}
-                height={180}
-                style={{
-                  width: '100%',
-                  height: 180,
-                  objectFit: 'cover',
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: '100%',
-                  height: 180,
-                  background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#9ca3af',
-                  fontSize: 20,
-                }}
-              >
-                TED Talk
-              </div>
-            )}
-            {/* Talk Info */}
+          {/* Talk Section - Offset to the right, below card level */}
+          {primaryTalk && (
             <div
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 4,
-                padding: '14px 20px',
+                position: 'absolute',
+                right: 0,
+                bottom: 60,
+                width: 580,
               }}
             >
+              {/* Talk Thumbnail - Full image, 16:9 aspect ratio */}
+              {talkThumbnailUrl ? (
+                <img
+                  src={talkThumbnailUrl}
+                  alt=""
+                  width={580}
+                  height={326}
+                  style={{
+                    borderRadius: 12,
+                    objectFit: 'contain',
+                    marginBottom: 12,
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 580,
+                    height: 326,
+                    borderRadius: 12,
+                    background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#9ca3af',
+                    fontSize: 20,
+                    marginBottom: 12,
+                  }}
+                >
+                  TED Talk
+                </div>
+              )}
+              {/* Talk Info */}
               <div
                 style={{
-                  color: '#ffffff',
-                  fontSize: 20,
-                  fontWeight: 600,
-                  lineHeight: 1.3,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
                 }}
               >
-                {truncatedTalkTitle}
-              </div>
-              <div style={{ color: '#a5b4fc', fontSize: 16 }}>
-                {primaryTalk.speakerName}
+                <div
+                  style={{
+                    color: '#ffffff',
+                    fontSize: 20,
+                    fontWeight: 600,
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {truncatedTalkTitle}
+                </div>
+                <div style={{ color: '#a5b4fc', fontSize: 16 }}>
+                  {primaryTalk.speakerName}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Footer URL */}
         <div
           style={{
             position: 'absolute',
             bottom: 24,
+            left: 0,
+            right: 0,
+            textAlign: 'center',
             color: '#9ca3af',
             fontSize: 18,
           }}
