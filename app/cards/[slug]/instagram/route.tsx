@@ -236,14 +236,23 @@ export async function GET(
   }
 
   // Default: Card+Talk version
-  // Card overlays the left side of the talk image
-  const truncatedTalkTitle = primaryTalk?.title && primaryTalk.title.length > 50
-    ? primaryTalk.title.slice(0, 47) + '...'
+  // Layout: Card on left, Card name top-right (big), Speaker below, Talk image with title overlay
+  const truncatedTalkTitle = primaryTalk?.title && primaryTalk.title.length > 45
+    ? primaryTalk.title.slice(0, 42) + '...'
     : primaryTalk?.title;
 
-  // Talk image 40% larger: 580*1.4=812, 326*1.4=456
-  const talkWidth = 812;
-  const talkHeight = 456;
+  // Speaker name - prevent overflow
+  const speakerName = primaryTalk?.speakerName || '';
+  const displaySpeaker = speakerName.length > 30
+    ? speakerName.slice(0, 27) + '...'
+    : speakerName;
+
+  // Talk image dimensions - larger to fill blue box area
+  const talkWidth = 680;
+  const talkHeight = 383; // 16:9 aspect ratio
+
+  // Card left padding
+  const cardLeftPadding = 30;
 
   return new ImageResponse(
     (
@@ -276,26 +285,12 @@ export async function GET(
         ))}
 
         {/* Brand Header - centered */}
-        <div style={{ display: 'flex', fontSize: 32, marginBottom: 12, justifyContent: 'center' }}>
+        <div style={{ display: 'flex', fontSize: 32, marginBottom: 0, justifyContent: 'center' }}>
           <span style={{ color: '#9ca3af' }}>Tarot</span>
           <span style={{ color: '#EB0028', fontWeight: 700 }}>TALKS</span>
         </div>
 
-        {/* Card Name - Prominent, centered under brand */}
-        <div
-          style={{
-            color: '#ffffff',
-            fontSize: 44,
-            fontWeight: 700,
-            marginBottom: 16,
-            textTransform: 'uppercase',
-            textAlign: 'center',
-          }}
-        >
-          {cardData.name}
-        </div>
-
-        {/* Main content area - Talk in background, Card overlays left side */}
+        {/* Main content area */}
         <div
           style={{
             display: 'flex',
@@ -304,19 +299,72 @@ export async function GET(
             position: 'relative',
           }}
         >
-          {/* Talk Section - Larger, positioned right (rendered first = behind) */}
+          {/* Card Image - Left side */}
+          <img
+            src={cardImageUrl}
+            alt=""
+            width={340}
+            height={670}
+            style={{
+              borderRadius: 14,
+              objectFit: 'contain',
+              position: 'absolute',
+              left: cardLeftPadding,
+              top: 20,
+            }}
+          />
+
+          {/* Card Name - Top right, BIG (red box area) */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 40,
+              right: 40,
+              left: 400,
+              display: 'flex',
+              color: '#ffffff',
+              fontSize: 56,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              lineHeight: 1.1,
+            }}
+          >
+            {cardData.name}
+          </div>
+
+          {/* Speaker Name - Below card name, BIG (green box area) */}
           {primaryTalk && (
             <div
               style={{
-                display: 'flex',
-                flexDirection: 'column',
                 position: 'absolute',
-                right: 0,
-                bottom: 20,
-                width: talkWidth,
+                top: 160,
+                right: 40,
+                left: 400,
+                display: 'flex',
+                color: '#a5b4fc',
+                fontSize: 32,
+                fontWeight: 600,
               }}
             >
-              {/* Talk Thumbnail - Full image, 16:9 aspect ratio, 40% larger */}
+              {displaySpeaker}
+            </div>
+          )}
+
+          {/* Talk Image with Title Overlay - Bottom right (blue box area) */}
+          {primaryTalk && (
+            <div
+              style={{
+                position: 'absolute',
+                right: cardLeftPadding,
+                bottom: 20,
+                width: talkWidth,
+                height: talkHeight,
+                display: 'flex',
+                borderRadius: 16,
+                overflow: 'hidden',
+              }}
+            >
+              {/* Talk Thumbnail */}
               {talkThumbnailUrl ? (
                 <img
                   src={talkThumbnailUrl}
@@ -324,70 +372,49 @@ export async function GET(
                   width={talkWidth}
                   height={talkHeight}
                   style={{
-                    borderRadius: 12,
-                    objectFit: 'contain',
-                    marginBottom: 12,
+                    objectFit: 'cover',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
                   }}
                 />
               ) : (
                 <div
                   style={{
-                    width: talkWidth,
-                    height: talkHeight,
-                    borderRadius: 12,
+                    width: '100%',
+                    height: '100%',
                     background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: '#9ca3af',
                     fontSize: 24,
-                    marginBottom: 12,
                   }}
                 >
                   TED Talk
                 </div>
               )}
-              {/* Talk Info */}
+
+              {/* Talk Title Overlay - Bottom of image */}
               <div
                 style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  background: 'linear-gradient(transparent, rgba(0,0,0,0.85))',
+                  padding: '40px 20px 16px 20px',
                   display: 'flex',
-                  flexDirection: 'column',
-                  gap: 4,
-                  paddingLeft: 180,
+                  color: '#ffffff',
+                  fontSize: 22,
+                  fontWeight: 600,
+                  lineHeight: 1.3,
                 }}
               >
-                <div
-                  style={{
-                    color: '#ffffff',
-                    fontSize: 22,
-                    fontWeight: 600,
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {truncatedTalkTitle}
-                </div>
-                <div style={{ color: '#a5b4fc', fontSize: 18 }}>
-                  {primaryTalk.speakerName}
-                </div>
+                {truncatedTalkTitle}
               </div>
             </div>
           )}
-
-          {/* Card Image - Overlays left side of talk (rendered second = on top) */}
-          <img
-            src={cardImageUrl}
-            alt=""
-            width={320}
-            height={630}
-            style={{
-              borderRadius: 14,
-              objectFit: 'contain',
-              position: 'absolute',
-              left: 20,
-              top: 0,
-              zIndex: 10,
-            }}
-          />
         </div>
       </div>
     ),
