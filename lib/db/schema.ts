@@ -173,7 +173,7 @@ export const socialShares = pgTable('social_shares', {
   idxAtUri: index('idx_social_shares_at_uri').on(table.atUri),
 }));
 
-// API Usage Events table (API health monitoring)
+// API Usage Events table (API health monitoring + cost tracking)
 export const apiUsageEvents = pgTable('api_usage_events', {
   id: uuid('id').defaultRandom().primaryKey(),
   apiName: varchar('api_name', { length: 20 }).notNull(), // 'gemini' | 'youtube'
@@ -182,6 +182,11 @@ export const apiUsageEvents = pgTable('api_usage_events', {
   sessionId: varchar('session_id', { length: 12 }), // Links to user session for attribution
   source: varchar('source', { length: 30 }).notNull(), // 'spread_reading', etc.
   properties: text('properties').default('{}'),
+  // Token and cost tracking (Gemini paid tier)
+  inputTokens: integer('input_tokens'), // Prompt tokens
+  outputTokens: integer('output_tokens'), // Completion tokens
+  costUsd: real('cost_usd'), // Cost in USD (e.g., 0.0025 for $0.0025)
+  modelId: varchar('model_id', { length: 50 }), // e.g., 'gemini-1.5-pro'
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({
   idxApiName: index('idx_api_usage_api_name').on(table.apiName),

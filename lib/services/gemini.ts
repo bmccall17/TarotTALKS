@@ -1,13 +1,20 @@
 /**
  * Gemini API Service
  *
- * Wrapper for Google Gemini API with rate limiting for free tier.
- * Free tier limits: 15 RPM, 1M TPM
+ * Wrapper for Google Gemini API with cost tracking for paid tier.
+ * Using Gemini 1.5 Pro with $88/month budget.
  */
 
-import { logApiCall } from '@/lib/db/queries/api-usage';
+import { logApiCall, calculateGeminiCost, type GeminiModel } from '@/lib/db/queries/api-usage';
 import type { FocusType } from '@/lib/spread-reading/types';
 import { FOCUS_TYPE_LABELS } from '@/lib/spread-reading/types';
+
+// Gemini model configuration
+export const GEMINI_MODEL: GeminiModel = 'gemini-1.5-pro';
+export const GEMINI_MODEL_ENDPOINT = 'gemini-1.5-pro-latest';
+
+// Monthly budget in USD
+export const GEMINI_MONTHLY_BUDGET = 88;
 
 // Context for API call logging (optional)
 export interface ApiCallContext {
@@ -16,9 +23,10 @@ export interface ApiCallContext {
 }
 
 // Rate limiting state (in-memory, resets on server restart)
+// Paid tier has higher limits but we still want some protection
 let requestCount = 0;
 let lastResetTime = Date.now();
-const MAX_REQUESTS_PER_MINUTE = 10; // Conservative limit (15 allowed, use 10)
+const MAX_REQUESTS_PER_MINUTE = 30; // Paid tier allows more, but stay conservative
 const RESET_INTERVAL_MS = 60 * 1000; // 1 minute
 
 // Circuit breaker state - persistent across requests (resets on server restart)
@@ -82,12 +90,18 @@ export function forceResetCircuitBreaker(): { success: boolean; message: string 
   return { success: true, message: `Circuit breaker reset. Was scheduled until ${wasOpenUntil}` };
 }
 
-// Gemini 2.0 Flash free tier daily limit (approximate)
-export const GEMINI_DAILY_QUOTA = 1500;
+// Budget-based daily limit (rough estimate: $88/30 days ≈ $2.93/day)
+// At ~$0.006/reading, that's ~488 readings/day max
+export const GEMINI_DAILY_BUDGET = 2.93; // USD
 
 type GeminiResponse = {
   text: string;
   success: true;
+  // Token usage for cost tracking
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  costUsd?: number;
 } | {
   error: string;
   success: false;
@@ -189,9 +203,9 @@ export async function generateWithGemini(
 
       incrementRateLimit();
 
-      // Use Gemini 2.0 Flash (free tier model)
+      // Use Gemini 1.5 Pro (paid tier model)
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_ENDPOINT}:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: {
@@ -258,10 +272,11 @@ export async function generateWithGemini(
             errorType,
             sessionId: context?.sessionId,
             source: context?.source,
+            modelId: GEMINI_MODEL,
             properties: { status: 429, attempts: attempt + 1, isQuotaExceeded, circuitBreakerTripped: isQuotaExceeded },
           });
           const errorMsg = isQuotaExceeded
-            ? 'Daily quota exceeded - resets at midnight PT'
+            ? 'Budget limit reached - try again later'
             : 'Rate limit exceeded after retries';
           return { error: errorMsg, success: false, rateLimited: true };
         }
@@ -273,6 +288,7 @@ export async function generateWithGemini(
           errorType: 'api_error',
           sessionId: context?.sessionId,
           source: context?.source,
+          modelId: GEMINI_MODEL,
           properties: { status: response.status },
         });
         return { error: `API error: ${response.status}`, success: false };
@@ -283,15 +299,28 @@ export async function generateWithGemini(
       // Extract text from response
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
+      // Extract token usage from usageMetadata
+      const usageMetadata = data.usageMetadata;
+      const inputTokens = usageMetadata?.promptTokenCount ?? 0;
+      const outputTokens = usageMetadata?.candidatesTokenCount ?? 0;
+      const totalTokens = usageMetadata?.totalTokenCount ?? (inputTokens + outputTokens);
+
+      // Calculate cost
+      const costUsd = calculateGeminiCost(GEMINI_MODEL, inputTokens, outputTokens);
+
       if (!text) {
         console.error('No text in Gemini response:', data);
-        // Log as API error (unexpected response format)
+        // Log as API error (unexpected response format) - still track tokens if available
         logApiCall({
           apiName: 'gemini',
           success: false,
           errorType: 'api_error',
           sessionId: context?.sessionId,
           source: context?.source,
+          modelId: GEMINI_MODEL,
+          inputTokens,
+          outputTokens,
+          costUsd,
           properties: { reason: 'no_content' },
         });
         return { error: 'No content generated', success: false };
@@ -301,16 +330,28 @@ export async function generateWithGemini(
         console.log(`[Gemini] Success after ${attempt + 1} attempts`);
       }
 
-      // Log success
+      // Log success with token usage and cost
+      console.log(`[Gemini] ${GEMINI_MODEL}: ${inputTokens} in + ${outputTokens} out = $${costUsd.toFixed(6)}`);
       logApiCall({
         apiName: 'gemini',
         success: true,
         sessionId: context?.sessionId,
         source: context?.source,
+        modelId: GEMINI_MODEL,
+        inputTokens,
+        outputTokens,
+        costUsd,
         properties: { attempts: attempt + 1 },
       });
 
-      return { text: text.trim(), success: true };
+      return {
+        text: text.trim(),
+        success: true,
+        inputTokens,
+        outputTokens,
+        totalTokens,
+        costUsd,
+      };
     } catch (error) {
       console.error('Gemini API fetch error:', error);
       lastError = 'Network error';

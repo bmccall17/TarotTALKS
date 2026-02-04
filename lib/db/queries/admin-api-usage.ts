@@ -459,3 +459,183 @@ export async function getHourlyApiUsage(apiName: 'gemini' | 'youtube'): Promise<
       ...stats,
     }));
 }
+
+// ============================================================================
+// BUDGET TRACKING (Gemini Paid Tier)
+// ============================================================================
+
+export type BudgetStatus = {
+  // Current period (billing month)
+  periodStart: string;
+  periodEnd: string;
+  daysInPeriod: number;
+  daysPassed: number;
+  daysRemaining: number;
+
+  // Spending
+  totalSpent: number;
+  dailyAverage: number;
+  projectedMonthly: number;
+
+  // Budget
+  monthlyBudget: number;
+  remaining: number;
+  percentUsed: number;
+
+  // Alerts
+  alertLevel: 'ok' | 'warning' | 'danger' | 'critical';
+  alertMessage: string | null;
+};
+
+/**
+ * Get budget status for the current billing period
+ * Assumes billing period is calendar month
+ */
+export async function getGeminiBudgetStatus(monthlyBudget: number = 88): Promise<BudgetStatus> {
+  const now = new Date();
+
+  // Get start and end of current month
+  const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of month
+
+  const daysInPeriod = periodEnd.getDate();
+  const daysPassed = now.getDate();
+  const daysRemaining = daysInPeriod - daysPassed;
+
+  // Get total spending this period
+  const spendResult = await db
+    .select({
+      total: sql<number>`COALESCE(SUM(${apiUsageEvents.costUsd}), 0)`,
+    })
+    .from(apiUsageEvents)
+    .where(
+      and(
+        eq(apiUsageEvents.apiName, 'gemini'),
+        gte(apiUsageEvents.createdAt, periodStart)
+      )
+    );
+
+  const totalSpent = spendResult[0]?.total ?? 0;
+  const dailyAverage = daysPassed > 0 ? totalSpent / daysPassed : 0;
+  const projectedMonthly = dailyAverage * daysInPeriod;
+
+  const remaining = monthlyBudget - totalSpent;
+  const percentUsed = (totalSpent / monthlyBudget) * 100;
+
+  // Determine alert level
+  let alertLevel: BudgetStatus['alertLevel'] = 'ok';
+  let alertMessage: string | null = null;
+
+  if (percentUsed >= 100) {
+    alertLevel = 'critical';
+    alertMessage = `Budget exceeded by $${Math.abs(remaining).toFixed(2)}`;
+  } else if (percentUsed >= 90) {
+    alertLevel = 'critical';
+    alertMessage = `Only $${remaining.toFixed(2)} remaining (${(100 - percentUsed).toFixed(1)}%)`;
+  } else if (percentUsed >= 75) {
+    alertLevel = 'danger';
+    alertMessage = `75% of budget used - $${remaining.toFixed(2)} remaining`;
+  } else if (percentUsed >= 50) {
+    alertLevel = 'warning';
+    alertMessage = `50% of budget used - on track`;
+  }
+
+  return {
+    periodStart: periodStart.toISOString(),
+    periodEnd: periodEnd.toISOString(),
+    daysInPeriod,
+    daysPassed,
+    daysRemaining,
+    totalSpent,
+    dailyAverage,
+    projectedMonthly,
+    monthlyBudget,
+    remaining,
+    percentUsed,
+    alertLevel,
+    alertMessage,
+  };
+}
+
+export type DailySpend = {
+  date: string;
+  totalCost: number;
+  callCount: number;
+  inputTokens: number;
+  outputTokens: number;
+};
+
+/**
+ * Get daily spending breakdown for the past N days
+ */
+export async function getDailyGeminiSpend(days: number = 30): Promise<DailySpend[]> {
+  const cutoff = getDateCutoff(days);
+
+  const results = await db
+    .select({
+      date: sql<string>`DATE(${apiUsageEvents.createdAt})`,
+      totalCost: sql<number>`COALESCE(SUM(${apiUsageEvents.costUsd}), 0)`,
+      callCount: count(),
+      inputTokens: sql<number>`COALESCE(SUM(${apiUsageEvents.inputTokens}), 0)`,
+      outputTokens: sql<number>`COALESCE(SUM(${apiUsageEvents.outputTokens}), 0)`,
+    })
+    .from(apiUsageEvents)
+    .where(
+      and(
+        eq(apiUsageEvents.apiName, 'gemini'),
+        gte(apiUsageEvents.createdAt, cutoff)
+      )
+    )
+    .groupBy(sql`DATE(${apiUsageEvents.createdAt})`)
+    .orderBy(sql`DATE(${apiUsageEvents.createdAt})`);
+
+  return results.map(row => ({
+    date: row.date,
+    totalCost: row.totalCost,
+    callCount: row.callCount,
+    inputTokens: row.inputTokens,
+    outputTokens: row.outputTokens,
+  }));
+}
+
+/**
+ * Get today's Gemini spending (for real-time budget widget)
+ */
+export async function getTodayGeminiSpend(): Promise<{
+  totalCost: number;
+  callCount: number;
+  inputTokens: number;
+  outputTokens: number;
+  avgCostPerCall: number;
+}> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const result = await db
+    .select({
+      totalCost: sql<number>`COALESCE(SUM(${apiUsageEvents.costUsd}), 0)`,
+      callCount: count(),
+      inputTokens: sql<number>`COALESCE(SUM(${apiUsageEvents.inputTokens}), 0)`,
+      outputTokens: sql<number>`COALESCE(SUM(${apiUsageEvents.outputTokens}), 0)`,
+    })
+    .from(apiUsageEvents)
+    .where(
+      and(
+        eq(apiUsageEvents.apiName, 'gemini'),
+        eq(apiUsageEvents.success, true),
+        gte(apiUsageEvents.createdAt, today)
+      )
+    );
+
+  const row = result[0];
+  const totalCost = row?.totalCost ?? 0;
+  const callCount = row?.callCount ?? 0;
+
+  return {
+    totalCost,
+    callCount,
+    inputTokens: row?.inputTokens ?? 0,
+    outputTokens: row?.outputTokens ?? 0,
+    avgCostPerCall: callCount > 0 ? totalCost / callCount : 0,
+  };
+}

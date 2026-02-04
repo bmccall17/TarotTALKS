@@ -2,11 +2,42 @@
 
 import { useState, useEffect } from 'react';
 import { ApiStatusPair, type ApiHealthData } from '@/components/admin/ui/ApiStatusIndicator';
-import { Activity, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { Activity, ChevronDown, ChevronUp, ExternalLink, DollarSign, TrendingUp, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
+type BudgetStatus = {
+  periodStart: string;
+  periodEnd: string;
+  daysInPeriod: number;
+  daysPassed: number;
+  daysRemaining: number;
+  totalSpent: number;
+  dailyAverage: number;
+  projectedMonthly: number;
+  monthlyBudget: number;
+  remaining: number;
+  percentUsed: number;
+  alertLevel: 'ok' | 'warning' | 'danger' | 'critical';
+  alertMessage: string | null;
+};
+
+type TodaySpend = {
+  totalCost: number;
+  callCount: number;
+  inputTokens: number;
+  outputTokens: number;
+  avgCostPerCall: number;
+};
+
+type GeminiStats = ApiHealthData & {
+  model?: string;
+  todaySpend?: TodaySpend;
+  dailyBudget?: number;
+  budget?: BudgetStatus;
+};
+
 type ApiUsageStats = {
-  gemini: ApiHealthData;
+  gemini: GeminiStats;
   youtube: ApiHealthData;
   attribution: {
     geminiCalls: number;
@@ -37,6 +68,114 @@ type ApiCallLog = {
     defaultToTed?: boolean;
   };
 };
+
+function BudgetWidget({ budget, todaySpend, model }: { budget?: BudgetStatus; todaySpend?: TodaySpend; model?: string }) {
+  if (!budget) return null;
+
+  const alertColors = {
+    ok: 'text-green-400 bg-green-500/10',
+    warning: 'text-yellow-400 bg-yellow-500/10',
+    danger: 'text-orange-400 bg-orange-500/10',
+    critical: 'text-red-400 bg-red-500/10',
+  };
+
+  const progressColors = {
+    ok: 'bg-green-500',
+    warning: 'bg-yellow-500',
+    danger: 'bg-orange-500',
+    critical: 'bg-red-500',
+  };
+
+  return (
+    <div className="mt-4 pt-4 border-t border-gray-700">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <DollarSign className="w-4 h-4 text-emerald-400" />
+          <span className="text-sm font-medium text-gray-200">Gemini Budget</span>
+          {model && (
+            <span className="text-[10px] text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded">
+              {model}
+            </span>
+          )}
+        </div>
+        {budget.alertLevel !== 'ok' && (
+          <span className={`text-xs px-2 py-0.5 rounded flex items-center gap-1 ${alertColors[budget.alertLevel]}`}>
+            <AlertTriangle className="w-3 h-3" />
+            {budget.alertLevel === 'critical' ? 'CRITICAL' : budget.alertLevel === 'danger' ? 'HIGH' : 'WATCH'}
+          </span>
+        )}
+      </div>
+
+      {/* Progress bar */}
+      <div className="mb-3">
+        <div className="flex justify-between text-xs mb-1">
+          <span className="text-gray-400">
+            ${budget.totalSpent.toFixed(2)} / ${budget.monthlyBudget.toFixed(2)}
+          </span>
+          <span className="text-gray-400">{budget.percentUsed.toFixed(1)}%</span>
+        </div>
+        <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div
+            className={`h-full ${progressColors[budget.alertLevel]} transition-all duration-500`}
+            style={{ width: `${Math.min(100, budget.percentUsed)}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      <div className="grid grid-cols-3 gap-3 text-center">
+        <div className="bg-gray-800/50 rounded-lg p-2">
+          <div className="text-lg font-semibold text-gray-100">
+            ${budget.remaining.toFixed(2)}
+          </div>
+          <div className="text-[10px] text-gray-500">Remaining</div>
+        </div>
+        <div className="bg-gray-800/50 rounded-lg p-2">
+          <div className="text-lg font-semibold text-gray-100">
+            ${budget.dailyAverage.toFixed(3)}
+          </div>
+          <div className="text-[10px] text-gray-500">Daily Avg</div>
+        </div>
+        <div className="bg-gray-800/50 rounded-lg p-2">
+          <div className="text-lg font-semibold text-gray-100 flex items-center justify-center gap-1">
+            ${budget.projectedMonthly.toFixed(2)}
+            {budget.projectedMonthly > budget.monthlyBudget && (
+              <TrendingUp className="w-3 h-3 text-red-400" />
+            )}
+          </div>
+          <div className="text-[10px] text-gray-500">Projected</div>
+        </div>
+      </div>
+
+      {/* Today's spend */}
+      {todaySpend && todaySpend.callCount > 0 && (
+        <div className="mt-3 p-2 bg-gray-800/30 rounded-lg">
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-gray-400">Today</span>
+            <span className="text-gray-200">
+              ${todaySpend.totalCost.toFixed(4)} ({todaySpend.callCount} calls)
+            </span>
+          </div>
+          <div className="text-[10px] text-gray-500 mt-1">
+            {todaySpend.inputTokens.toLocaleString()} in + {todaySpend.outputTokens.toLocaleString()} out tokens
+          </div>
+        </div>
+      )}
+
+      {/* Alert message */}
+      {budget.alertMessage && (
+        <div className={`mt-3 p-2 rounded text-xs ${alertColors[budget.alertLevel]}`}>
+          {budget.alertMessage}
+        </div>
+      )}
+
+      {/* Days info */}
+      <div className="mt-2 text-[10px] text-gray-500 text-center">
+        Day {budget.daysPassed} of {budget.daysInPeriod} ({budget.daysRemaining} days left)
+      </div>
+    </div>
+  );
+}
 
 export function ApiHealthSection() {
   const [stats, setStats] = useState<ApiUsageStats | null>(null);
@@ -101,7 +240,7 @@ export function ApiHealthSection() {
       <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
         <div className="flex items-center gap-2 mb-4">
           <Activity className="w-5 h-5 text-indigo-400" />
-          <h2 className="text-lg font-semibold text-gray-100">API Health</h2>
+          <h2 className="text-lg font-semibold text-gray-100">API Health & Budget</h2>
         </div>
         <div className="animate-pulse flex gap-4">
           <div className="flex items-center gap-2">
@@ -122,7 +261,7 @@ export function ApiHealthSection() {
       <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
         <div className="flex items-center gap-2 mb-4">
           <Activity className="w-5 h-5 text-indigo-400" />
-          <h2 className="text-lg font-semibold text-gray-100">API Health</h2>
+          <h2 className="text-lg font-semibold text-gray-100">API Health & Budget</h2>
         </div>
         <p className="text-gray-500 text-sm">Unable to load API stats</p>
       </div>
@@ -130,17 +269,20 @@ export function ApiHealthSection() {
   }
 
   const allHealthy = stats.gemini.isHealthy && stats.youtube.isHealthy;
+  const budgetOk = !stats.gemini.budget || stats.gemini.budget.alertLevel === 'ok';
 
   return (
     <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Activity className="w-5 h-5 text-indigo-400" />
-          <h2 className="text-lg font-semibold text-gray-100">API Health</h2>
-          {allHealthy ? (
+          <h2 className="text-lg font-semibold text-gray-100">API Health & Budget</h2>
+          {allHealthy && budgetOk ? (
             <span className="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded">All systems go</span>
-          ) : (
+          ) : !allHealthy ? (
             <span className="text-xs text-red-400 bg-red-500/10 px-2 py-0.5 rounded">Issues detected</span>
+          ) : (
+            <span className="text-xs text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded">Budget alert</span>
           )}
         </div>
         <Link
@@ -152,6 +294,13 @@ export function ApiHealthSection() {
       </div>
 
       <ApiStatusPair gemini={stats.gemini} youtube={stats.youtube} compact />
+
+      {/* Budget Widget */}
+      <BudgetWidget
+        budget={stats.gemini.budget}
+        todaySpend={stats.gemini.todaySpend}
+        model={stats.gemini.model}
+      />
 
       {/* Quick attribution summary */}
       {(stats.attribution.geminiCalls > 0 || stats.attribution.youtubeCalls > 0) && (
