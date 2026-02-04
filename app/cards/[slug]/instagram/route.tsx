@@ -236,23 +236,19 @@ export async function GET(
   }
 
   // Default: Card+Talk version
-  // Layout: Card on left, Card name top-right (big), Speaker below, Talk image with title overlay
-  const truncatedTalkTitle = primaryTalk?.title && primaryTalk.title.length > 45
-    ? primaryTalk.title.slice(0, 42) + '...'
+  // Layout: Talk image in back, Card overlays it, Card name top-right (2x big), Speaker under card (2x big)
+  const truncatedTalkTitle = primaryTalk?.title && primaryTalk.title.length > 40
+    ? primaryTalk.title.slice(0, 37) + '...'
     : primaryTalk?.title;
 
-  // Speaker name - prevent overflow
-  const speakerName = primaryTalk?.speakerName || '';
-  const displaySpeaker = speakerName.length > 30
-    ? speakerName.slice(0, 27) + '...'
-    : speakerName;
+  // Talk image dimensions - large
+  const talkWidth = 750;
+  const talkHeight = 422; // 16:9 aspect ratio
 
-  // Talk image dimensions - larger to fill blue box area
-  const talkWidth = 680;
-  const talkHeight = 383; // 16:9 aspect ratio
-
-  // Card left padding
-  const cardLeftPadding = 30;
+  // Card dimensions
+  const cardWidth = 340;
+  const cardHeight = 670;
+  const cardLeft = 30;
 
   return new ImageResponse(
     (
@@ -299,64 +295,31 @@ export async function GET(
             position: 'relative',
           }}
         >
-          {/* Card Image - Left side */}
-          <img
-            src={cardImageUrl}
-            alt=""
-            width={340}
-            height={670}
-            style={{
-              borderRadius: 14,
-              objectFit: 'contain',
-              position: 'absolute',
-              left: cardLeftPadding,
-              top: 20,
-            }}
-          />
-
-          {/* Card Name - Top right, BIG (red box area) */}
+          {/* Card Name - Top right, 2x BIG */}
           <div
             style={{
               position: 'absolute',
-              top: 40,
-              right: 40,
+              top: 20,
+              right: 30,
               left: 400,
               display: 'flex',
               color: '#ffffff',
-              fontSize: 56,
+              fontSize: 90,
               fontWeight: 700,
               textTransform: 'uppercase',
-              lineHeight: 1.1,
+              lineHeight: 1.0,
             }}
           >
             {cardData.name}
           </div>
 
-          {/* Speaker Name - Below card name, BIG (green box area) */}
+          {/* Talk Image with Title Overlay - Background layer (rendered first) */}
           {primaryTalk && (
             <div
               style={{
                 position: 'absolute',
-                top: 160,
-                right: 40,
-                left: 400,
-                display: 'flex',
-                color: '#a5b4fc',
-                fontSize: 32,
-                fontWeight: 600,
-              }}
-            >
-              {displaySpeaker}
-            </div>
-          )}
-
-          {/* Talk Image with Title Overlay - Bottom right (blue box area) */}
-          {primaryTalk && (
-            <div
-              style={{
-                position: 'absolute',
-                right: cardLeftPadding,
-                bottom: 20,
+                right: 30,
+                bottom: 30,
                 width: talkWidth,
                 height: talkHeight,
                 display: 'flex',
@@ -402,17 +365,53 @@ export async function GET(
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  background: 'linear-gradient(transparent, rgba(0,0,0,0.85))',
-                  padding: '40px 20px 16px 20px',
+                  background: 'linear-gradient(transparent, rgba(0,0,0,0.9))',
+                  padding: '50px 20px 16px 20px',
                   display: 'flex',
                   color: '#ffffff',
-                  fontSize: 22,
+                  fontSize: 24,
                   fontWeight: 600,
                   lineHeight: 1.3,
                 }}
               >
                 {truncatedTalkTitle}
               </div>
+            </div>
+          )}
+
+          {/* Card Image - Overlays the Talk Image (rendered second = on top) */}
+          <img
+            src={cardImageUrl}
+            alt=""
+            width={cardWidth}
+            height={cardHeight}
+            style={{
+              borderRadius: 14,
+              objectFit: 'contain',
+              position: 'absolute',
+              left: cardLeft,
+              top: 20,
+            }}
+          />
+
+          {/* Speaker Name - Under card image, right-justified to card edge, 2x BIG */}
+          {primaryTalk && (
+            <div
+              style={{
+                position: 'absolute',
+                top: cardHeight + 30,
+                left: cardLeft,
+                width: cardWidth,
+                display: 'flex',
+                justifyContent: 'flex-end',
+                textAlign: 'right',
+                color: '#a5b4fc',
+                fontSize: 48,
+                fontWeight: 600,
+                lineHeight: 1.1,
+              }}
+            >
+              {primaryTalk.speakerName}
             </div>
           )}
         </div>
