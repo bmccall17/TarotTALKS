@@ -290,21 +290,6 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           </div>
         )}
 
-        {/* Bottom URL */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 20,
-            left: 0,
-            right: 0,
-            display: 'flex',
-            justifyContent: 'center',
-          }}
-        >
-          <span style={{ color: '#6b7280', fontSize: 14 }}>
-            tarottalks.app/spreads/{spread.shortId}
-          </span>
-        </div>
       </div>
     ),
     { ...size, ...fontOptions }

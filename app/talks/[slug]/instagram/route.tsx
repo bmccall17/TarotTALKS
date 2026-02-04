@@ -274,18 +274,6 @@ export async function GET(
             </div>
           </div>
         )}
-
-        {/* Footer URL */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 30,
-            color: '#9ca3af',
-            fontSize: 18,
-          }}
-        >
-          tarottalks.app
-        </div>
       </div>
     ),
     { ...size, ...fontOptions }

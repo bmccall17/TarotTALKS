@@ -229,18 +229,6 @@ export async function GET(
               </span>
             ))}
           </div>
-
-          {/* Footer URL */}
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 30,
-              color: '#9ca3af',
-              fontSize: 20,
-            }}
-          >
-            tarottalks.app
-          </div>
         </div>
       ),
       { ...size, ...fontOptions }
@@ -248,10 +236,14 @@ export async function GET(
   }
 
   // Default: Card+Talk version
-  // Card prominent on left, talk thumbnail offset to the right below card
-  const truncatedTalkTitle = primaryTalk?.title && primaryTalk.title.length > 55
-    ? primaryTalk.title.slice(0, 52) + '...'
+  // Card overlays the left side of the talk image
+  const truncatedTalkTitle = primaryTalk?.title && primaryTalk.title.length > 50
+    ? primaryTalk.title.slice(0, 47) + '...'
     : primaryTalk?.title;
+
+  // Talk image 40% larger: 580*1.4=812, 326*1.4=456
+  const talkWidth = 812;
+  const talkHeight = 456;
 
   return new ImageResponse(
     (
@@ -303,7 +295,7 @@ export async function GET(
           {cardData.name}
         </div>
 
-        {/* Main content area - Card on left, Talk offset right below */}
+        {/* Main content area - Talk in background, Card overlays left side */}
         <div
           style={{
             display: 'flex',
@@ -312,22 +304,7 @@ export async function GET(
             position: 'relative',
           }}
         >
-          {/* Card Image - Large, on left */}
-          <img
-            src={cardImageUrl}
-            alt=""
-            width={320}
-            height={630}
-            style={{
-              borderRadius: 14,
-              objectFit: 'contain',
-              position: 'absolute',
-              left: 40,
-              top: 0,
-            }}
-          />
-
-          {/* Talk Section - Offset to the right, below card level */}
+          {/* Talk Section - Larger, positioned right (rendered first = behind) */}
           {primaryTalk && (
             <div
               style={{
@@ -335,17 +312,17 @@ export async function GET(
                 flexDirection: 'column',
                 position: 'absolute',
                 right: 0,
-                bottom: 60,
-                width: 580,
+                bottom: 20,
+                width: talkWidth,
               }}
             >
-              {/* Talk Thumbnail - Full image, 16:9 aspect ratio */}
+              {/* Talk Thumbnail - Full image, 16:9 aspect ratio, 40% larger */}
               {talkThumbnailUrl ? (
                 <img
                   src={talkThumbnailUrl}
                   alt=""
-                  width={580}
-                  height={326}
+                  width={talkWidth}
+                  height={talkHeight}
                   style={{
                     borderRadius: 12,
                     objectFit: 'contain',
@@ -355,15 +332,15 @@ export async function GET(
               ) : (
                 <div
                   style={{
-                    width: 580,
-                    height: 326,
+                    width: talkWidth,
+                    height: talkHeight,
                     borderRadius: 12,
                     background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: '#9ca3af',
-                    fontSize: 20,
+                    fontSize: 24,
                     marginBottom: 12,
                   }}
                 >
@@ -376,39 +353,41 @@ export async function GET(
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 4,
+                  paddingLeft: 180,
                 }}
               >
                 <div
                   style={{
                     color: '#ffffff',
-                    fontSize: 20,
+                    fontSize: 22,
                     fontWeight: 600,
                     lineHeight: 1.3,
                   }}
                 >
                   {truncatedTalkTitle}
                 </div>
-                <div style={{ color: '#a5b4fc', fontSize: 16 }}>
+                <div style={{ color: '#a5b4fc', fontSize: 18 }}>
                   {primaryTalk.speakerName}
                 </div>
               </div>
             </div>
           )}
-        </div>
 
-        {/* Footer URL */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 24,
-            left: 0,
-            right: 0,
-            textAlign: 'center',
-            color: '#9ca3af',
-            fontSize: 18,
-          }}
-        >
-          tarottalks.app
+          {/* Card Image - Overlays left side of talk (rendered second = on top) */}
+          <img
+            src={cardImageUrl}
+            alt=""
+            width={320}
+            height={630}
+            style={{
+              borderRadius: 14,
+              objectFit: 'contain',
+              position: 'absolute',
+              left: 20,
+              top: 0,
+              zIndex: 10,
+            }}
+          />
         </div>
       </div>
     ),
