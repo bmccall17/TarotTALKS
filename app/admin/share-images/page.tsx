@@ -487,14 +487,19 @@ export default function ShareImagesPage() {
                   {/* OpenGraph Preview */}
                   <div className="space-y-2 mb-3">
                     <p className="text-xs text-gray-500">OpenGraph:</p>
-                    <div className="border border-gray-700 rounded overflow-hidden">
+                    <a
+                      href={`/cards/${card.slug}/opengraph-image`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block border border-gray-700 rounded overflow-hidden hover:border-gray-500 transition-colors"
+                    >
                       <img
                         src={`/cards/${card.slug}/opengraph-image?t=${refreshKey}`}
                         alt={`OG: ${card.name}`}
                         className="w-full h-auto"
                         loading="lazy"
                       />
-                    </div>
+                    </a>
                   </div>
 
                   {/* Instagram Previews - side by side */}
@@ -502,25 +507,35 @@ export default function ShareImagesPage() {
                     <p className="text-xs text-gray-500">Instagram:</p>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <div className="border border-pink-700/50 rounded overflow-hidden mb-1">
+                        <a
+                          href={`/cards/${card.slug}/instagram`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block border border-pink-700/50 rounded overflow-hidden mb-1 hover:border-pink-500 transition-colors"
+                        >
                           <img
                             src={`/cards/${card.slug}/instagram?t=${refreshKey}`}
                             alt={`IG Card+Talk: ${card.name}`}
                             className="w-full h-auto"
                             loading="lazy"
                           />
-                        </div>
+                        </a>
                         <p className="text-[10px] text-pink-400 text-center">Card+Talk</p>
                       </div>
                       <div>
-                        <div className="border border-purple-700/50 rounded overflow-hidden mb-1">
+                        <a
+                          href={`/cards/${card.slug}/instagram?v=card`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block border border-purple-700/50 rounded overflow-hidden mb-1 hover:border-purple-500 transition-colors"
+                        >
                           <img
                             src={`/cards/${card.slug}/instagram?v=card&t=${refreshKey}`}
                             alt={`IG Card-only: ${card.name}`}
                             className="w-full h-auto"
                             loading="lazy"
                           />
-                        </div>
+                        </a>
                         <p className="text-[10px] text-purple-400 text-center">Card only</p>
                       </div>
                     </div>
@@ -600,36 +615,44 @@ export default function ShareImagesPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <img
-                          src={`/cards/${card.slug}/opengraph-image?t=${refreshKey}`}
-                          alt={`OG: ${card.name}`}
-                          className="w-32 h-auto rounded border border-gray-700"
-                          loading="lazy"
-                        />
+                        <a href={`/cards/${card.slug}/opengraph-image`} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={`/cards/${card.slug}/opengraph-image?t=${refreshKey}`}
+                            alt={`OG: ${card.name}`}
+                            className="w-32 h-auto rounded border border-gray-700 hover:border-gray-500 transition-colors"
+                            loading="lazy"
+                          />
+                        </a>
                       </td>
                       <td className="px-4 py-3">
-                        <img
-                          src={`/cards/${card.slug}/twitter-image?t=${refreshKey}`}
-                          alt={`Twitter: ${card.name}`}
-                          className="w-32 h-auto rounded border border-gray-700"
-                          loading="lazy"
-                        />
+                        <a href={`/cards/${card.slug}/twitter-image`} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={`/cards/${card.slug}/twitter-image?t=${refreshKey}`}
+                            alt={`Twitter: ${card.name}`}
+                            className="w-32 h-auto rounded border border-gray-700 hover:border-gray-500 transition-colors"
+                            loading="lazy"
+                          />
+                        </a>
                       </td>
                       <td className="px-4 py-3">
-                        <img
-                          src={`/cards/${card.slug}/instagram?t=${refreshKey}`}
-                          alt={`IG Card+Talk: ${card.name}`}
-                          className="w-20 h-20 object-cover rounded border border-pink-700/50"
-                          loading="lazy"
-                        />
+                        <a href={`/cards/${card.slug}/instagram`} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={`/cards/${card.slug}/instagram?t=${refreshKey}`}
+                            alt={`IG Card+Talk: ${card.name}`}
+                            className="w-20 h-20 object-cover rounded border border-pink-700/50 hover:border-pink-500 transition-colors"
+                            loading="lazy"
+                          />
+                        </a>
                       </td>
                       <td className="px-4 py-3">
-                        <img
-                          src={`/cards/${card.slug}/instagram?v=card&t=${refreshKey}`}
-                          alt={`IG Card-only: ${card.name}`}
-                          className="w-20 h-20 object-cover rounded border border-purple-700/50"
-                          loading="lazy"
-                        />
+                        <a href={`/cards/${card.slug}/instagram?v=card`} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={`/cards/${card.slug}/instagram?v=card&t=${refreshKey}`}
+                            alt={`IG Card-only: ${card.name}`}
+                            className="w-20 h-20 object-cover rounded border border-purple-700/50 hover:border-purple-500 transition-colors"
+                            loading="lazy"
+                          />
+                        </a>
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
@@ -747,27 +770,37 @@ export default function ShareImagesPage() {
                   {/* OpenGraph Preview */}
                   <div className="space-y-2 mb-3">
                     <p className="text-xs text-gray-500">OpenGraph:</p>
-                    <div className="border border-gray-700 rounded overflow-hidden">
+                    <a
+                      href={`/talks/${talk.slug}/opengraph-image`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block border border-gray-700 rounded overflow-hidden hover:border-gray-500 transition-colors"
+                    >
                       <img
                         src={`/talks/${talk.slug}/opengraph-image?t=${refreshKey}`}
                         alt={`OG: ${talk.title}`}
                         className="w-full h-auto"
                         loading="lazy"
                       />
-                    </div>
+                    </a>
                   </div>
 
                   {/* Instagram Preview */}
                   <div className="space-y-2 mb-3">
                     <p className="text-xs text-gray-500">Instagram:</p>
-                    <div className="border border-pink-700/50 rounded overflow-hidden">
+                    <a
+                      href={`/talks/${talk.slug}/instagram`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block border border-pink-700/50 rounded overflow-hidden hover:border-pink-500 transition-colors"
+                    >
                       <img
                         src={`/talks/${talk.slug}/instagram?t=${refreshKey}`}
                         alt={`IG: ${talk.title}`}
                         className="w-full h-auto"
                         loading="lazy"
                       />
-                    </div>
+                    </a>
                   </div>
 
                   {/* Download buttons */}
@@ -841,28 +874,34 @@ export default function ShareImagesPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <img
-                          src={`/talks/${talk.slug}/opengraph-image?t=${refreshKey}`}
-                          alt={`OG: ${talk.title}`}
-                          className="w-32 h-auto rounded border border-gray-700"
-                          loading="lazy"
-                        />
+                        <a href={`/talks/${talk.slug}/opengraph-image`} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={`/talks/${talk.slug}/opengraph-image?t=${refreshKey}`}
+                            alt={`OG: ${talk.title}`}
+                            className="w-32 h-auto rounded border border-gray-700 hover:border-gray-500 transition-colors"
+                            loading="lazy"
+                          />
+                        </a>
                       </td>
                       <td className="px-4 py-3">
-                        <img
-                          src={`/talks/${talk.slug}/twitter-image?t=${refreshKey}`}
-                          alt={`Twitter: ${talk.title}`}
-                          className="w-32 h-auto rounded border border-gray-700"
-                          loading="lazy"
-                        />
+                        <a href={`/talks/${talk.slug}/twitter-image`} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={`/talks/${talk.slug}/twitter-image?t=${refreshKey}`}
+                            alt={`Twitter: ${talk.title}`}
+                            className="w-32 h-auto rounded border border-gray-700 hover:border-gray-500 transition-colors"
+                            loading="lazy"
+                          />
+                        </a>
                       </td>
                       <td className="px-4 py-3">
-                        <img
-                          src={`/talks/${talk.slug}/instagram?t=${refreshKey}`}
-                          alt={`IG: ${talk.title}`}
-                          className="w-20 h-20 object-cover rounded border border-pink-700/50"
-                          loading="lazy"
-                        />
+                        <a href={`/talks/${talk.slug}/instagram`} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={`/talks/${talk.slug}/instagram?t=${refreshKey}`}
+                            alt={`IG: ${talk.title}`}
+                            className="w-20 h-20 object-cover rounded border border-pink-700/50 hover:border-pink-500 transition-colors"
+                            loading="lazy"
+                          />
+                        </a>
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
