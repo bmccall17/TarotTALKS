@@ -31,6 +31,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const keywords = card.keywords ? JSON.parse(card.keywords) : [];
   const description = card.summary || `Explore the ${card.name} tarot card and discover TED talks that embody its wisdom.`;
 
+  // Static Supabase URL > dynamic Satori generator
+  const ogImageUrl = card.shareImageUrl
+    || `https://tarottalks.app/cards/${card.slug}/opengraph-image`;
+
   return {
     title: `${card.name} - TarotTALKS`,
     description,
@@ -40,7 +44,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       url: `https://tarottalks.app/cards/${card.slug}`,
       siteName: 'TarotTALKS',
       images: [{
-        url: `https://tarottalks.app/cards/${card.slug}/opengraph-image`,
+        url: ogImageUrl,
         width: 1200,
         height: 630,
         alt: `${card.name} - TarotTALKS`,
@@ -52,7 +56,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       card: 'summary_large_image',
       title: `${card.name} - TarotTALKS`,
       description,
-      images: [`https://tarottalks.app/cards/${card.slug}/twitter-image`],
+      images: [ogImageUrl],
     },
     keywords: [card.name, 'tarot', 'TED talks', 'TarotTALKS', ...keywords],
   };

@@ -39,6 +39,8 @@ export const cards = pgTable('cards', {
   meaningAwareSelf: text('meaning_aware_self'),
   meaningSupportingShadow: text('meaning_supporting_shadow'),
   meaningEmergingPath: text('meaning_emerging_path'),
+  // Static share image URL (0014_share_image_urls.sql)
+  shareImageUrl: text('share_image_url'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -66,6 +68,8 @@ export const talks = pgTable('talks', {
   // Spread reading enrichment (0008_spread_enrichment.sql)
   themesJson: text('themes_json'),
   coreMessage: text('core_message'),
+  // Static share image URL (0014_share_image_urls.sql)
+  shareImageUrl: text('share_image_url'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -224,6 +228,9 @@ export const spreads = pgTable('spreads', {
   viewCount: integer('view_count').default(0),
   lastViewedAt: timestamp('last_viewed_at'),
   isShared: boolean('is_shared').default(false),
+
+  // Static share image URL (0014_share_image_urls.sql)
+  shareImageUrl: text('share_image_url'),
 
   // Timestamps
   createdAt: timestamp('created_at').defaultNow().notNull(),

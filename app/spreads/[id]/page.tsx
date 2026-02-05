@@ -21,6 +21,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const cardNames = spread.cards.map((c, i) => `${POSITION_LABELS[i]}: ${c.name}`).join(' • ');
   const talkTitle = spread.talk?.title || 'Tarot Reading';
 
+  // Static Supabase URL > dynamic Satori generator
+  const ogImageUrl = spread.shareImageUrl
+    || `https://tarottalks.app/spreads/${id}/opengraph-image`;
+
   return {
     title: `${talkTitle} | TarotTALKS Spread`,
     description: `A TarotTALKS spread reading featuring ${cardNames}. ${spread.rationale.slice(0, 100)}...`,
@@ -31,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `https://tarottalks.app/spreads/${id}`,
       images: [
         {
-          url: `https://tarottalks.app/spreads/${id}/opengraph-image`,
+          url: ogImageUrl,
           width: 1200,
           height: 630,
           alt: `TarotTALKS spread with ${spread.cards.map(c => c.name).join(', ')}`,
@@ -42,6 +46,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       card: 'summary_large_image',
       title: `TarotTALKS: ${talkTitle}`,
       description: spread.rationale,
+      images: [ogImageUrl],
     },
   };
 }

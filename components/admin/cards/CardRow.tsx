@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Edit2 } from 'lucide-react';
+import { Edit2, ImagePlus, Check, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
 
 type Mapping = {
@@ -23,6 +24,7 @@ type Card = {
   imageUrl: string;
   summary: string;
   mappings: Mapping[];
+  shareImageUrl?: string | null;
 };
 
 type Props = {
@@ -31,6 +33,35 @@ type Props = {
 
 export function CardRow({ card }: Props) {
   const router = useRouter();
+  const [generatingImages, setGeneratingImages] = useState(false);
+  const [imageGenSuccess, setImageGenSuccess] = useState(false);
+
+  const handleGenerateImages = async () => {
+    try {
+      setGeneratingImages(true);
+      setImageGenSuccess(false);
+
+      const response = await fetch('/api/admin/share-images/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: 'cards',
+          slug: card.slug,
+          types: ['opengraph', 'twitter', 'instagram', 'instagram-card-only'],
+        }),
+      });
+
+      if (!response.ok) throw new Error('Generation failed');
+
+      setImageGenSuccess(true);
+      setTimeout(() => setImageGenSuccess(false), 3000);
+    } catch (error) {
+      console.error('Error generating images:', error);
+      alert('Failed to generate share images');
+    } finally {
+      setGeneratingImages(false);
+    }
+  };
 
   const arcanaLabel = card.arcanaType === 'major'
     ? 'Major Arcana'
@@ -103,6 +134,26 @@ export function CardRow({ card }: Props) {
       </td>
       <td className="px-6 py-4">
         <div className="flex items-center justify-end gap-2">
+          <button
+            onClick={handleGenerateImages}
+            disabled={generatingImages}
+            className={`p-2 rounded-lg transition-colors ${
+              imageGenSuccess
+                ? 'text-green-400 bg-green-900/20'
+                : card.shareImageUrl
+                  ? 'text-emerald-400 hover:bg-emerald-900/20'
+                  : 'text-orange-400 hover:bg-orange-900/20'
+            }`}
+            title={card.shareImageUrl ? 'Regenerate share images' : 'Generate share images'}
+          >
+            {generatingImages ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : imageGenSuccess ? (
+              <Check className="w-4 h-4" />
+            ) : (
+              <ImagePlus className="w-4 h-4" />
+            )}
+          </button>
           <button
             onClick={() => router.push(`/admin/cards/${card.id}/edit`)}
             className="p-2 text-indigo-400 hover:bg-indigo-900/20 rounded-lg transition-colors"

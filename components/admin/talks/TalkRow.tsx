@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Edit2, Trash2, RotateCcw, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Edit2, Trash2, RotateCcw, AlertTriangle, ExternalLink, ImagePlus, Check, RefreshCw } from 'lucide-react';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { HardDeleteDialog } from '../ui/HardDeleteDialog';
 
@@ -29,6 +29,7 @@ type Talk = {
   mappings: Mapping[];
   speakerTwitterHandle?: string | null;
   speakerBlueskyHandle?: string | null;
+  shareImageUrl?: string | null;
 };
 
 type Props = {
@@ -44,6 +45,8 @@ export function TalkRow({ talk, onDeleted, onRestored, onHardDeleted }: Props) {
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
   const [showHardDeleteDialog, setShowHardDeleteDialog] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [generatingImages, setGeneratingImages] = useState(false);
+  const [imageGenSuccess, setImageGenSuccess] = useState(false);
 
   const handleSoftDelete = async () => {
     try {
@@ -99,6 +102,37 @@ export function TalkRow({ talk, onDeleted, onRestored, onHardDeleted }: Props) {
       alert('Failed to hard delete talk');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenerateImages = async () => {
+    try {
+      setGeneratingImages(true);
+      setImageGenSuccess(false);
+
+      // Step 1: Upscale thumbnail if needed
+      await fetch(`/api/admin/talks/${talk.id}/upscale-thumbnail`, { method: 'POST' });
+
+      // Step 2: Generate share images
+      const response = await fetch('/api/admin/share-images/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: 'talks',
+          slug: talk.slug,
+          types: ['opengraph', 'twitter', 'instagram'],
+        }),
+      });
+
+      if (!response.ok) throw new Error('Generation failed');
+
+      setImageGenSuccess(true);
+      setTimeout(() => setImageGenSuccess(false), 3000);
+    } catch (error) {
+      console.error('Error generating images:', error);
+      alert('Failed to generate share images');
+    } finally {
+      setGeneratingImages(false);
     }
   };
 
@@ -242,6 +276,26 @@ export function TalkRow({ talk, onDeleted, onRestored, onHardDeleted }: Props) {
               </>
             ) : (
               <>
+                <button
+                  onClick={handleGenerateImages}
+                  disabled={generatingImages}
+                  className={`p-2 rounded-lg transition-colors ${
+                    imageGenSuccess
+                      ? 'text-green-400 bg-green-900/20'
+                      : talk.shareImageUrl
+                        ? 'text-emerald-400 hover:bg-emerald-900/20'
+                        : 'text-orange-400 hover:bg-orange-900/20'
+                  }`}
+                  title={talk.shareImageUrl ? 'Regenerate share images' : 'Upscale & create share images'}
+                >
+                  {generatingImages ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : imageGenSuccess ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <ImagePlus className="w-4 h-4" />
+                  )}
+                </button>
                 <button
                   onClick={() => router.push(`/admin/talks/${talk.id}/edit`)}
                   className="p-2 text-indigo-400 hover:bg-indigo-900/20 rounded-lg transition-colors"

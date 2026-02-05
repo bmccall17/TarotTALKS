@@ -29,9 +29,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const description = talk.description || `A TED talk by ${talk.speakerName}`;
 
-  // Use the dynamically generated OG image (opengraph-image.tsx)
-  // This creates a branded image with the talk thumbnail, card overlay, and TarotTALKS styling
-  const ogImageUrl = `https://tarottalks.app/talks/${slug}/opengraph-image`;
+  // Static Supabase URL > raw thumbnail > dynamic Satori generator
+  const ogImageUrl = talk.shareImageUrl
+    || talk.thumbnailUrl
+    || `https://tarottalks.app/talks/${slug}/opengraph-image`;
 
   return {
     title: `${talk.title} - TarotTALKS`,

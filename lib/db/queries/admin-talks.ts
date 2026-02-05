@@ -34,6 +34,7 @@ export async function getAllTalksForAdmin(includeDeleted: boolean = false) {
       speakerBlueskyHandle: talks.speakerBlueskyHandle,
       isDeleted: talks.isDeleted,
       deletedAt: talks.deletedAt,
+      shareImageUrl: talks.shareImageUrl,
       createdAt: talks.createdAt,
       updatedAt: talks.updatedAt,
     })
@@ -141,6 +142,7 @@ export async function searchTalksForAdmin(query: string, includeDeleted: boolean
       isDeleted: talks.isDeleted,
       speakerTwitterHandle: talks.speakerTwitterHandle,
       speakerBlueskyHandle: talks.speakerBlueskyHandle,
+      shareImageUrl: talks.shareImageUrl,
     })
     .from(talks)
     .where(whereClause)

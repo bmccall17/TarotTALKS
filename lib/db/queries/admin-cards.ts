@@ -14,6 +14,7 @@ export async function getAllCardsForAdmin(searchQuery?: string) {
       number: cards.number,
       imageUrl: cards.imageUrl,
       summary: cards.summary,
+      shareImageUrl: cards.shareImageUrl,
     })
     .from(cards);
 
