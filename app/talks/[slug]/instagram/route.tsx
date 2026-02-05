@@ -10,7 +10,7 @@ import { NextRequest } from 'next/server';
 import { getTalkWithMappedCards } from '@/lib/db/queries/talks';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { fetchImageAsDataUrl } from '@/lib/utils/og-image-helpers';
+import { getThumbnailPngUrl } from '@/lib/utils/og-image-helpers';
 
 export const runtime = 'nodejs';
 
@@ -84,14 +84,13 @@ export async function GET(
     );
   }
 
-  // Build URLs - fetch talk thumbnail as data URL for Supabase cross-origin compatibility
-  const talkThumbnailUrl = await fetchImageAsDataUrl(
-    talkData.thumbnailUrl?.startsWith('http')
-      ? talkData.thumbnailUrl
-      : talkData.thumbnailUrl
+  // Build URLs - use PNG copy for Satori compatibility (WebP not supported)
+  const absoluteThumbnailUrl = talkData.thumbnailUrl?.startsWith('http')
+    ? talkData.thumbnailUrl
+    : talkData.thumbnailUrl
       ? `https://tarottalks.app${talkData.thumbnailUrl}`
-      : null
-  );
+      : null;
+  const talkThumbnailUrl = getThumbnailPngUrl(absoluteThumbnailUrl);
 
   // Get primary card (first one, sorted by strength)
   const primaryCard = talkData.mappedCards[0]?.card;

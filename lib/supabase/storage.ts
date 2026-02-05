@@ -8,6 +8,7 @@
 
 import { createServiceClient, getStorageBucket, getPublicStorageUrl } from './server';
 import { processImage } from '@/lib/utils/image-processing';
+import sharp from 'sharp';
 
 // Allowed content types for image uploads
 const ALLOWED_CONTENT_TYPES = [
@@ -146,7 +147,22 @@ export async function downloadAndUploadImage(
 
     console.log(`📤 Uploading to Supabase Storage...`);
 
-    return uploadImageBuffer(bufferToUpload, talkId, contentTypeToUse, bucket);
+    const result = await uploadImageBuffer(bufferToUpload, talkId, contentTypeToUse, bucket);
+
+    // Also create a PNG copy for Satori compatibility (share image generators)
+    if (result.success && contentTypeToUse === 'image/webp') {
+      try {
+        const pngBuffer = await sharp(Buffer.isBuffer(bufferToUpload) ? bufferToUpload : Buffer.from(new Uint8Array(bufferToUpload)))
+          .png({ quality: 90, compressionLevel: 6 })
+          .toBuffer();
+        await uploadImageBuffer(pngBuffer, talkId, 'image/png', bucket);
+        console.log(`📋 PNG copy created for Satori compatibility`);
+      } catch (pngError) {
+        console.warn('⚠️  PNG copy creation failed (non-fatal):', pngError);
+      }
+    }
+
+    return result;
   } catch (err) {
     console.error('Download and upload failed:', err);
     return {

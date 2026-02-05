@@ -12,6 +12,7 @@ import { NextRequest } from 'next/server';
 import { getCardWithMappings } from '@/lib/db/queries/cards';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { getThumbnailPngUrl } from '@/lib/utils/og-image-helpers';
 
 export const runtime = 'nodejs';
 
@@ -95,11 +96,13 @@ export async function GET(
   const primaryMapping = cardData.mappings[0];
   const primaryTalk = primaryMapping?.talk;
 
-  const talkThumbnailUrl = primaryTalk?.thumbnailUrl?.startsWith('http')
-    ? primaryTalk.thumbnailUrl
-    : primaryTalk?.thumbnailUrl
-    ? `https://tarottalks.app${primaryTalk.thumbnailUrl}`
-    : null;
+  const talkThumbnailUrl = getThumbnailPngUrl(
+    primaryTalk?.thumbnailUrl?.startsWith('http')
+      ? primaryTalk.thumbnailUrl
+      : primaryTalk?.thumbnailUrl
+        ? `https://tarottalks.app${primaryTalk.thumbnailUrl}`
+        : null
+  );
 
   // Generate sparkles
   const sparkles: Array<{ x: number; y: number; s: number; o: number }> = [];

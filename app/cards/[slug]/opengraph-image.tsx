@@ -2,6 +2,7 @@ import { ImageResponse } from 'next/og';
 import { getCardWithMappings } from '@/lib/db/queries/cards';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { getThumbnailPngUrl } from '@/lib/utils/og-image-helpers';
 
 export const runtime = 'nodejs';
 export const size = { width: 1200, height: 630 };
@@ -83,11 +84,13 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const primaryMapping = cardData.mappings.find(m => m.mapping.isPrimary);
   const primaryTalk = primaryMapping?.talk;
 
-  const talkThumbnailUrl = primaryTalk?.thumbnailUrl?.startsWith('http')
-    ? primaryTalk.thumbnailUrl
-    : primaryTalk?.thumbnailUrl
-    ? `https://tarottalks.app${primaryTalk.thumbnailUrl}`
-    : null;
+  const talkThumbnailUrl = getThumbnailPngUrl(
+    primaryTalk?.thumbnailUrl?.startsWith('http')
+      ? primaryTalk.thumbnailUrl
+      : primaryTalk?.thumbnailUrl
+        ? `https://tarottalks.app${primaryTalk.thumbnailUrl}`
+        : null
+  );
 
   const fullSummary = cardData.summary || '';
 

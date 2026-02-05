@@ -36,6 +36,20 @@ export async function fetchImageAsDataUrl(url: string | null | undefined): Promi
 }
 
 /**
+ * Convert a Supabase talk-thumbnail URL from WebP to PNG.
+ * Satori (next/og ImageResponse) cannot decode WebP, so share image
+ * generators must reference the PNG copy stored alongside the WebP.
+ * Non-WebP URLs (YouTube JPEG fallbacks, etc.) pass through unchanged.
+ */
+export function getThumbnailPngUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.includes('talk-thumbnails/') && url.endsWith('.webp')) {
+    return url.replace(/\.webp$/, '.png');
+  }
+  return url;
+}
+
+/**
  * Normalize a thumbnail URL to be absolute.
  * Handles both relative paths and full URLs.
  */
