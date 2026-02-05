@@ -2,7 +2,6 @@ import { ImageResponse } from 'next/og';
 import { getCardWithMappings } from '@/lib/db/queries/cards';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { fetchImageAsDataUrl, normalizeImageUrl } from '@/lib/utils/og-image-helpers';
 
 export const runtime = 'nodejs';
 export const size = { width: 1200, height: 630 };
@@ -76,15 +75,19 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const keywords: string[] = cardData.keywords ? JSON.parse(cardData.keywords) : [];
   const displayKeywords = keywords.slice(0, 4);
 
+  const cardImageUrl = cardData.imageUrl.startsWith('http')
+    ? cardData.imageUrl
+    : `https://tarottalks.app${cardData.imageUrl}`;
+
   // Get primary talk
   const primaryMapping = cardData.mappings.find(m => m.mapping.isPrimary);
   const primaryTalk = primaryMapping?.talk;
 
-  // Fetch images as data URLs (required for cross-origin images in Satori)
-  const [cardImageUrl, talkThumbnailUrl] = await Promise.all([
-    fetchImageAsDataUrl(normalizeImageUrl(cardData.imageUrl)),
-    fetchImageAsDataUrl(normalizeImageUrl(primaryTalk?.thumbnailUrl)),
-  ]);
+  const talkThumbnailUrl = primaryTalk?.thumbnailUrl?.startsWith('http')
+    ? primaryTalk.thumbnailUrl
+    : primaryTalk?.thumbnailUrl
+    ? `https://tarottalks.app${primaryTalk.thumbnailUrl}`
+    : null;
 
   const fullSummary = cardData.summary || '';
 
@@ -277,34 +280,16 @@ export default async function Image({ params }: { params: Promise<{ slug: string
               justifyContent: 'center',
             }}
           >
-            {cardImageUrl ? (
-              <img
-                src={cardImageUrl}
-                alt={cardData.name}
-                width={260}
-                height={514}
-                style={{
-                  borderRadius: 14,
-                  objectFit: 'contain',
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: 260,
-                  height: 514,
-                  borderRadius: 14,
-                  background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#9ca3af',
-                  fontSize: 24,
-                }}
-              >
-                {cardData.name}
-              </div>
-            )}
+            <img
+              src={cardImageUrl}
+              alt={cardData.name}
+              width={260}
+              height={514}
+              style={{
+                borderRadius: 14,
+                objectFit: 'contain',
+              }}
+            />
           </div>
         </div>
       </div>

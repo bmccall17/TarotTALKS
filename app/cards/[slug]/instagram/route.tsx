@@ -12,7 +12,6 @@ import { NextRequest } from 'next/server';
 import { getCardWithMappings } from '@/lib/db/queries/cards';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { fetchImageAsDataUrl, normalizeImageUrl } from '@/lib/utils/og-image-helpers';
 
 export const runtime = 'nodejs';
 
@@ -87,15 +86,20 @@ export async function GET(
     );
   }
 
+  // Build URLs directly
+  const cardImageUrl = cardData.imageUrl.startsWith('http')
+    ? cardData.imageUrl
+    : `https://tarottalks.app${cardData.imageUrl}`;
+
   // Get primary talk
   const primaryMapping = cardData.mappings[0];
   const primaryTalk = primaryMapping?.talk;
 
-  // Fetch images as data URLs (required for cross-origin images in Satori)
-  const [cardImageUrl, talkThumbnailUrl] = await Promise.all([
-    fetchImageAsDataUrl(normalizeImageUrl(cardData.imageUrl)),
-    fetchImageAsDataUrl(normalizeImageUrl(primaryTalk?.thumbnailUrl)),
-  ]);
+  const talkThumbnailUrl = primaryTalk?.thumbnailUrl?.startsWith('http')
+    ? primaryTalk.thumbnailUrl
+    : primaryTalk?.thumbnailUrl
+    ? `https://tarottalks.app${primaryTalk.thumbnailUrl}`
+    : null;
 
   // Generate sparkles
   const sparkles: Array<{ x: number; y: number; s: number; o: number }> = [];
@@ -160,36 +164,17 @@ export async function GET(
           </div>
 
           {/* Card Image */}
-          {cardImageUrl ? (
-            <img
-              src={cardImageUrl}
-              alt=""
-              width={253}
-              height={500}
-              style={{
-                borderRadius: 14,
-                objectFit: 'contain',
-                marginBottom: 30,
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: 253,
-                height: 500,
-                borderRadius: 14,
-                background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#9ca3af',
-                fontSize: 24,
-                marginBottom: 30,
-              }}
-            >
-              {cardData.name}
-            </div>
-          )}
+          <img
+            src={cardImageUrl}
+            alt=""
+            width={253}
+            height={500}
+            style={{
+              borderRadius: 14,
+              objectFit: 'contain',
+              marginBottom: 30,
+            }}
+          />
 
           {/* Card Name */}
           <div
@@ -395,40 +380,19 @@ export async function GET(
           )}
 
           {/* Card Image - Overlays the Talk Image (rendered second = on top) */}
-          {cardImageUrl ? (
-            <img
-              src={cardImageUrl}
-              alt=""
-              width={cardWidth}
-              height={cardHeight}
-              style={{
-                borderRadius: 14,
-                objectFit: 'contain',
-                position: 'absolute',
-                left: cardLeft,
-                top: 20,
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: cardWidth,
-                height: cardHeight,
-                borderRadius: 14,
-                background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#9ca3af',
-                fontSize: 24,
-                position: 'absolute',
-                left: cardLeft,
-                top: 20,
-              }}
-            >
-              {cardData.name}
-            </div>
-          )}
+          <img
+            src={cardImageUrl}
+            alt=""
+            width={cardWidth}
+            height={cardHeight}
+            style={{
+              borderRadius: 14,
+              objectFit: 'contain',
+              position: 'absolute',
+              left: cardLeft,
+              top: 20,
+            }}
+          />
 
           {/* Speaker Name - Under card image, right-justified to card edge, 2x BIG */}
           {primaryTalk && (

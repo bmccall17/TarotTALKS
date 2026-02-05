@@ -3,7 +3,6 @@ import { getTalkWithMappedCards } from '@/lib/db/queries/talks';
 import { getThumbnailUrl } from '@/lib/utils/thumbnails';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { fetchImageAsDataUrl, normalizeImageUrl } from '@/lib/utils/og-image-helpers';
 
 export const runtime = 'nodejs';
 export const size = { width: 1200, height: 630 };
@@ -77,14 +76,20 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const primaryMapping = talkData.mappedCards[0];
   const primaryCard = primaryMapping?.card;
 
-  // Get thumbnail URL - fetch as data URL for Satori cross-origin support
+  // Get thumbnail URL
   const thumbnailUrl = getThumbnailUrl(talkData.thumbnailUrl, talkData.youtubeVideoId);
+  const fullThumbnailUrl = thumbnailUrl?.startsWith('http')
+    ? thumbnailUrl
+    : thumbnailUrl
+    ? `https://tarottalks.app${thumbnailUrl}`
+    : null;
 
-  // Fetch images as data URLs (required for cross-origin images in Satori)
-  const [fullThumbnailUrl, cardImageUrl] = await Promise.all([
-    fetchImageAsDataUrl(normalizeImageUrl(thumbnailUrl)),
-    fetchImageAsDataUrl(normalizeImageUrl(primaryCard?.imageUrl)),
-  ]);
+  // Get card image URL
+  const cardImageUrl = primaryCard?.imageUrl?.startsWith('http')
+    ? primaryCard.imageUrl
+    : primaryCard?.imageUrl
+    ? `https://tarottalks.app${primaryCard.imageUrl}`
+    : null;
 
   // Truncate title if too long
   const truncatedTitle =
