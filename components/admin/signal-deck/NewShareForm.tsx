@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Loader2, Link as LinkIcon, Check, AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import { X, Loader2, Link as LinkIcon, Check, AlertCircle, AlertTriangle, Info, Sparkles } from 'lucide-react';
+import { DraftGenerator } from './DraftGenerator';
 import {
   detectPlatformFromUrl,
   getPlatformMetricLabels,
@@ -129,6 +130,9 @@ export function NewShareForm({ share, preselectedCard, onSave, onClose }: Props)
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [autoPopulated, setAutoPopulated] = useState(false);
   const [lastFetchedUrl, setLastFetchedUrl] = useState<string | null>(null);
+
+  // Draft generator state
+  const [showDraftGenerator, setShowDraftGenerator] = useState(false);
 
   // Auto-detect platform from post URL
   useEffect(() => {
@@ -627,7 +631,17 @@ export function NewShareForm({ share, preselectedCard, onSave, onClose }: Props)
 
           {/* Notes */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-300">Notes</label>
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-gray-300">Notes</label>
+              <button
+                type="button"
+                onClick={() => setShowDraftGenerator(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-900/30 rounded-lg transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Suggest Draft
+              </button>
+            </div>
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
@@ -666,6 +680,19 @@ export function NewShareForm({ share, preselectedCard, onSave, onClose }: Props)
           </div>
         </form>
       </div>
+
+      {/* Draft Generator Modal */}
+      <DraftGenerator
+        isOpen={showDraftGenerator}
+        onClose={() => setShowDraftGenerator(false)}
+        onSelectDraft={(draft) => setFormData((prev) => ({ ...prev, notes: draft }))}
+        platform={formData.platform}
+        cardName={preselectedCard?.name || resolvedContent?.name}
+        cardSlug={preselectedCard?.slug}
+        talkTitle={undefined}
+        speakerName={formData.speakerName || preselectedCard?.speakerName}
+        speakerHandle={formData.speakerHandle || preselectedCard?.speakerHandle}
+      />
     </div>
   );
 }

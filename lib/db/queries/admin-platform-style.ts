@@ -262,3 +262,76 @@ export function parseStoredPattern(
     postsAnalyzed: stored.postsAnalyzed,
   };
 }
+
+/**
+ * Update AI insights cache for a platform
+ */
+export async function updatePlatformStyleAiCache(
+  platform: Platform,
+  cacheJson: string
+): Promise<void> {
+  await db
+    .update(platformStylePatterns)
+    .set({
+      aiInsightsCache: cacheJson,
+      aiAnalyzedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(platformStylePatterns.platform, platform));
+}
+
+/**
+ * Get AI insights cache for a platform
+ */
+export async function getAiInsightsCache(
+  platform: Platform
+): Promise<{ cache: string | null; analyzedAt: Date | null } | null> {
+  const [result] = await db
+    .select({
+      cache: platformStylePatterns.aiInsightsCache,
+      analyzedAt: platformStylePatterns.aiAnalyzedAt,
+    })
+    .from(platformStylePatterns)
+    .where(eq(platformStylePatterns.platform, platform))
+    .limit(1);
+
+  return result || null;
+}
+
+/**
+ * Get platforms that are stale (need re-analysis)
+ * Stale = 5+ new posts since last analysis OR 7+ days since analysis
+ */
+export async function getStalePlatforms(): Promise<Array<{
+  platform: Platform;
+  postsAnalyzed: number;
+  currentPostCount: number;
+  daysSinceAnalysis: number;
+}>> {
+  const patterns = await getAllPlatformStyles();
+  const result: Array<{
+    platform: Platform;
+    postsAnalyzed: number;
+    currentPostCount: number;
+    daysSinceAnalysis: number;
+  }> = [];
+
+  for (const pattern of patterns) {
+    const posts = await getPostsForAnalysis(pattern.platform as Platform);
+    const currentPostCount = posts.length;
+    const daysSinceAnalysis = pattern.lastAnalyzedAt
+      ? Math.floor((Date.now() - pattern.lastAnalyzedAt.getTime()) / (1000 * 60 * 60 * 24))
+      : Infinity;
+
+    if (currentPostCount - pattern.postsAnalyzed >= 5 || daysSinceAnalysis >= 7) {
+      result.push({
+        platform: pattern.platform as Platform,
+        postsAnalyzed: pattern.postsAnalyzed,
+        currentPostCount,
+        daysSinceAnalysis,
+      });
+    }
+  }
+
+  return result;
+}

@@ -277,6 +277,10 @@ export const platformStylePatterns = pgTable('platform_style_patterns', {
   postsAnalyzed: integer('posts_analyzed').default(0).notNull(),
   lastAnalyzedAt: timestamp('last_analyzed_at'),
 
+  // AI-Enhanced Insights (Phase 2)
+  aiInsightsCache: text('ai_insights_cache'), // JSON: CachedInsight type
+  aiAnalyzedAt: timestamp('ai_analyzed_at'),
+
   // Timestamps
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
