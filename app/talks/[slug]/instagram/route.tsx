@@ -84,14 +84,14 @@ export async function GET(
     );
   }
 
-  // Fetch talk thumbnail as data URL (required for cross-origin images in Satori)
-  const talkThumbnailUrl = await fetchImageAsDataUrl(
-    normalizeImageUrl(talkData.thumbnailUrl)
-  );
-
   // Get primary card (first one, sorted by strength)
   const primaryCard = talkData.mappedCards[0]?.card;
-  const cardImageUrl = normalizeImageUrl(primaryCard?.imageUrl);
+
+  // Fetch images as data URLs (required for cross-origin images in Satori)
+  const [talkThumbnailUrl, cardImageUrl] = await Promise.all([
+    fetchImageAsDataUrl(normalizeImageUrl(talkData.thumbnailUrl)),
+    fetchImageAsDataUrl(normalizeImageUrl(primaryCard?.imageUrl)),
+  ]);
 
   // Truncate title if too long
   const truncatedTitle =

@@ -79,10 +79,12 @@ export default async function Image({ params }: { params: Promise<{ slug: string
 
   // Get thumbnail URL - fetch as data URL for Satori cross-origin support
   const thumbnailUrl = getThumbnailUrl(talkData.thumbnailUrl, talkData.youtubeVideoId);
-  const fullThumbnailUrl = await fetchImageAsDataUrl(normalizeImageUrl(thumbnailUrl));
 
-  // Get card image URL
-  const cardImageUrl = normalizeImageUrl(primaryCard?.imageUrl);
+  // Fetch images as data URLs (required for cross-origin images in Satori)
+  const [fullThumbnailUrl, cardImageUrl] = await Promise.all([
+    fetchImageAsDataUrl(normalizeImageUrl(thumbnailUrl)),
+    fetchImageAsDataUrl(normalizeImageUrl(primaryCard?.imageUrl)),
+  ]);
 
   // Truncate title if too long
   const truncatedTitle =

@@ -87,17 +87,15 @@ export async function GET(
     );
   }
 
-  // Build URLs directly
-  const cardImageUrl = normalizeImageUrl(cardData.imageUrl) || cardData.imageUrl;
-
   // Get primary talk
   const primaryMapping = cardData.mappings[0];
   const primaryTalk = primaryMapping?.talk;
 
-  // Fetch talk thumbnail as data URL (required for cross-origin images in Satori)
-  const talkThumbnailUrl = await fetchImageAsDataUrl(
-    normalizeImageUrl(primaryTalk?.thumbnailUrl)
-  );
+  // Fetch images as data URLs (required for cross-origin images in Satori)
+  const [cardImageUrl, talkThumbnailUrl] = await Promise.all([
+    fetchImageAsDataUrl(normalizeImageUrl(cardData.imageUrl)),
+    fetchImageAsDataUrl(normalizeImageUrl(primaryTalk?.thumbnailUrl)),
+  ]);
 
   // Generate sparkles
   const sparkles: Array<{ x: number; y: number; s: number; o: number }> = [];
@@ -162,17 +160,36 @@ export async function GET(
           </div>
 
           {/* Card Image */}
-          <img
-            src={cardImageUrl}
-            alt=""
-            width={253}
-            height={500}
-            style={{
-              borderRadius: 14,
-              objectFit: 'contain',
-              marginBottom: 30,
-            }}
-          />
+          {cardImageUrl ? (
+            <img
+              src={cardImageUrl}
+              alt=""
+              width={253}
+              height={500}
+              style={{
+                borderRadius: 14,
+                objectFit: 'contain',
+                marginBottom: 30,
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 253,
+                height: 500,
+                borderRadius: 14,
+                background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#9ca3af',
+                fontSize: 24,
+                marginBottom: 30,
+              }}
+            >
+              {cardData.name}
+            </div>
+          )}
 
           {/* Card Name */}
           <div
@@ -378,19 +395,40 @@ export async function GET(
           )}
 
           {/* Card Image - Overlays the Talk Image (rendered second = on top) */}
-          <img
-            src={cardImageUrl}
-            alt=""
-            width={cardWidth}
-            height={cardHeight}
-            style={{
-              borderRadius: 14,
-              objectFit: 'contain',
-              position: 'absolute',
-              left: cardLeft,
-              top: 20,
-            }}
-          />
+          {cardImageUrl ? (
+            <img
+              src={cardImageUrl}
+              alt=""
+              width={cardWidth}
+              height={cardHeight}
+              style={{
+                borderRadius: 14,
+                objectFit: 'contain',
+                position: 'absolute',
+                left: cardLeft,
+                top: 20,
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: cardWidth,
+                height: cardHeight,
+                borderRadius: 14,
+                background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#9ca3af',
+                fontSize: 24,
+                position: 'absolute',
+                left: cardLeft,
+                top: 20,
+              }}
+            >
+              {cardData.name}
+            </div>
+          )}
 
           {/* Speaker Name - Under card image, right-justified to card edge, 2x BIG */}
           {primaryTalk && (

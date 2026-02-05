@@ -76,16 +76,15 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const keywords: string[] = cardData.keywords ? JSON.parse(cardData.keywords) : [];
   const displayKeywords = keywords.slice(0, 4);
 
-  const cardImageUrl = normalizeImageUrl(cardData.imageUrl) || cardData.imageUrl;
-
   // Get primary talk
   const primaryMapping = cardData.mappings.find(m => m.mapping.isPrimary);
   const primaryTalk = primaryMapping?.talk;
 
-  // Fetch talk thumbnail as data URL (required for cross-origin images in Satori)
-  const talkThumbnailUrl = await fetchImageAsDataUrl(
-    normalizeImageUrl(primaryTalk?.thumbnailUrl)
-  );
+  // Fetch images as data URLs (required for cross-origin images in Satori)
+  const [cardImageUrl, talkThumbnailUrl] = await Promise.all([
+    fetchImageAsDataUrl(normalizeImageUrl(cardData.imageUrl)),
+    fetchImageAsDataUrl(normalizeImageUrl(primaryTalk?.thumbnailUrl)),
+  ]);
 
   const fullSummary = cardData.summary || '';
 
@@ -278,16 +277,34 @@ export default async function Image({ params }: { params: Promise<{ slug: string
               justifyContent: 'center',
             }}
           >
-            <img
-              src={cardImageUrl}
-              alt={cardData.name}
-              width={260}
-              height={514}
-              style={{
-                borderRadius: 14,
-                objectFit: 'contain',
-              }}
-            />
+            {cardImageUrl ? (
+              <img
+                src={cardImageUrl}
+                alt={cardData.name}
+                width={260}
+                height={514}
+                style={{
+                  borderRadius: 14,
+                  objectFit: 'contain',
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 260,
+                  height: 514,
+                  borderRadius: 14,
+                  background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#9ca3af',
+                  fontSize: 24,
+                }}
+              >
+                {cardData.name}
+              </div>
+            )}
           </div>
         </div>
       </div>
