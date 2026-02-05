@@ -56,7 +56,7 @@ export default function RootLayout({
         <InstallBanner />
         <BottomNav />
         <AnalyticsProvider />
-        <SpeedInsights />
+        {/* <SpeedInsights /> */}
       </body>
     </html>
   );

@@ -6,7 +6,7 @@ import { join } from 'path';
 import { fetchImageAsDataUrl } from '@/lib/utils/og-image-helpers';
 
 export const runtime = 'nodejs';
-export const revalidate = 0; // Always fetch fresh data
+export const revalidate = 86400; // Cache for 24 hours
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 export const alt = 'TarotTALKS Talk';
@@ -43,11 +43,11 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const fontFamily = fonts ? 'OpenDyslexic' : 'system-ui, sans-serif';
   const fontOptions = fonts
     ? {
-        fonts: [
-          { name: 'OpenDyslexic', data: fonts.regular, weight: 400 as const },
-          { name: 'OpenDyslexic', data: fonts.bold, weight: 700 as const },
-        ],
-      }
+      fonts: [
+        { name: 'OpenDyslexic', data: fonts.regular, weight: 400 as const },
+        { name: 'OpenDyslexic', data: fonts.bold, weight: 700 as const },
+      ],
+    }
     : {};
 
   // Fallback for missing talk
@@ -84,16 +84,16 @@ export default async function Image({ params }: { params: Promise<{ slug: string
     thumbnailUrl?.startsWith('http')
       ? thumbnailUrl
       : thumbnailUrl
-      ? `https://tarottalks.app${thumbnailUrl}`
-      : null
+        ? `https://tarottalks.app${thumbnailUrl}`
+        : null
   );
 
   // Get card image URL (direct URL works for card-images bucket)
   const cardImageUrl = primaryCard?.imageUrl?.startsWith('http')
     ? primaryCard.imageUrl
     : primaryCard?.imageUrl
-    ? `https://tarottalks.app${primaryCard.imageUrl}`
-    : null;
+      ? `https://tarottalks.app${primaryCard.imageUrl}`
+      : null;
 
   // Truncate title if too long
   const truncatedTitle =
