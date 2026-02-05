@@ -10,6 +10,7 @@ import { NextRequest } from 'next/server';
 import { getTalkWithMappedCards } from '@/lib/db/queries/talks';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { fetchImageAsDataUrl } from '@/lib/utils/og-image-helpers';
 
 export const runtime = 'nodejs';
 
@@ -83,15 +84,18 @@ export async function GET(
     );
   }
 
-  // Build URLs
-  const talkThumbnailUrl = talkData.thumbnailUrl?.startsWith('http')
-    ? talkData.thumbnailUrl
-    : talkData.thumbnailUrl
-    ? `https://tarottalks.app${talkData.thumbnailUrl}`
-    : null;
+  // Build URLs - fetch talk thumbnail as data URL for Supabase cross-origin compatibility
+  const talkThumbnailUrl = await fetchImageAsDataUrl(
+    talkData.thumbnailUrl?.startsWith('http')
+      ? talkData.thumbnailUrl
+      : talkData.thumbnailUrl
+      ? `https://tarottalks.app${talkData.thumbnailUrl}`
+      : null
+  );
 
   // Get primary card (first one, sorted by strength)
   const primaryCard = talkData.mappedCards[0]?.card;
+  // Card images use direct URL (card-images bucket works fine)
   const cardImageUrl = primaryCard?.imageUrl?.startsWith('http')
     ? primaryCard.imageUrl
     : primaryCard?.imageUrl

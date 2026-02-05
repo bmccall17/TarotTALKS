@@ -3,6 +3,7 @@ import { getTalkWithMappedCards } from '@/lib/db/queries/talks';
 import { getThumbnailUrl } from '@/lib/utils/thumbnails';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { fetchImageAsDataUrl } from '@/lib/utils/og-image-helpers';
 
 export const runtime = 'nodejs';
 export const size = { width: 1200, height: 630 };
@@ -76,15 +77,17 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const primaryMapping = talkData.mappedCards[0];
   const primaryCard = primaryMapping?.card;
 
-  // Get thumbnail URL
+  // Get thumbnail URL - fetch as data URL for Supabase cross-origin compatibility
   const thumbnailUrl = getThumbnailUrl(talkData.thumbnailUrl, talkData.youtubeVideoId);
-  const fullThumbnailUrl = thumbnailUrl?.startsWith('http')
-    ? thumbnailUrl
-    : thumbnailUrl
-    ? `https://tarottalks.app${thumbnailUrl}`
-    : null;
+  const fullThumbnailUrl = await fetchImageAsDataUrl(
+    thumbnailUrl?.startsWith('http')
+      ? thumbnailUrl
+      : thumbnailUrl
+      ? `https://tarottalks.app${thumbnailUrl}`
+      : null
+  );
 
-  // Get card image URL
+  // Get card image URL (direct URL works for card-images bucket)
   const cardImageUrl = primaryCard?.imageUrl?.startsWith('http')
     ? primaryCard.imageUrl
     : primaryCard?.imageUrl
