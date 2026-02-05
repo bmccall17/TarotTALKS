@@ -8,7 +8,7 @@
 import { db } from '@/lib/db';
 import { apiUsageEvents } from '@/lib/db/schema';
 
-export type ApiName = 'gemini' | 'youtube';
+export type ApiName = 'gemini' | 'youtube' | 'replicate';
 export type ErrorType = 'rate_limit' | 'quota_exceeded' | 'network' | 'api_error' | 'circuit_breaker';
 
 // Gemini pricing per 1M tokens (as of Feb 2025)

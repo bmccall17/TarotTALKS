@@ -7,6 +7,8 @@
  * 2. Downloads each existing thumbnail from Supabase
  * 3. Archives the original to a dated folder (for future cleanup)
  * 4. Processes through the upscaler (1280x720 + WebP)
+ *    - With --ai: Uses Real-ESRGAN via Replicate for AI enhancement
+ *    - Without --ai: Uses Sharp interpolation only
  * 5. Uploads the new WebP version
  * 6. Updates the database thumbnailUrl
  *
@@ -17,10 +19,13 @@
  *   --dry-run    Preview what would be done without making changes
  *   --test       Run validation tests only
  *   --limit=N    Process only N thumbnails (for testing)
+ *   --ai         Use AI upscaling via Replicate (costs ~$0.002/image)
+ *   --force      Process even if already WebP (for AI re-enhancement)
  */
 
 import { createClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
+import { upscaleWithAI, isReplicateAvailable, REPLICATE_COST_PER_IMAGE } from '../lib/services/replicate-upscale';
 
 // ============================================================
 // CONFIGURATION
@@ -214,6 +219,39 @@ async function runTests(supabase: ReturnType<typeof createClient>): Promise<bool
   return failed === 0;
 }
 
+/**
+ * Test Replicate API availability (only when --ai flag is used)
+ */
+async function runAITests(): Promise<boolean> {
+  console.log('\n🤖 Running AI-specific tests...\n');
+
+  console.log('Test AI-1: Replicate API configured');
+  if (!process.env.REPLICATE_API_TOKEN) {
+    console.log('  ❌ REPLICATE_API_TOKEN not set\n');
+    return false;
+  }
+  console.log('  ✅ REPLICATE_API_TOKEN is set\n');
+
+  console.log('Test AI-2: Replicate API accessible');
+  try {
+    const available = await isReplicateAvailable();
+    if (!available) {
+      console.log('  ❌ Cannot connect to Replicate API\n');
+      return false;
+    }
+    console.log('  ✅ Replicate API is accessible\n');
+  } catch (err) {
+    console.log(`  ❌ Replicate check failed: ${err}\n`);
+    return false;
+  }
+
+  console.log('============================================================');
+  console.log('📊 AI TEST RESULTS: All passed');
+  console.log('============================================================\n');
+
+  return true;
+}
+
 // ============================================================
 // MIGRATION LOGIC
 // ============================================================
@@ -254,7 +292,9 @@ async function migrateThumbnail(
   supabase: ReturnType<typeof createClient>,
   talk: Talk,
   archivePath: string,
-  dryRun: boolean
+  dryRun: boolean,
+  useAI: boolean = false,
+  force: boolean = false
 ): Promise<MigrationResult> {
   const { id, title, thumbnail_url } = talk;
 
@@ -263,9 +303,9 @@ async function migrateThumbnail(
     return { talkId: id, title, status: 'skipped', reason: 'No thumbnail URL' };
   }
 
-  // Skip if already WebP in Supabase
+  // Skip if already WebP in Supabase (unless --force is used)
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  if (thumbnail_url.includes(supabaseUrl) && thumbnail_url.endsWith('.webp')) {
+  if (!force && thumbnail_url.includes(supabaseUrl) && thumbnail_url.endsWith('.webp')) {
     return { talkId: id, title, status: 'skipped', reason: 'Already WebP format' };
   }
 
@@ -305,10 +345,11 @@ async function migrateThumbnail(
 
       // Archive original from Supabase
       const archiveFilename = `${ARCHIVE_FOLDER}/${archivePath}/${filename}`;
+      const archiveContentType = filename!.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
       const { error: archiveError } = await supabase.storage
         .from(THUMBNAILS_BUCKET)
         .upload(archiveFilename, originalBuffer, {
-          contentType: 'image/jpeg',
+          contentType: archiveContentType,
           upsert: true,
         });
 
@@ -327,8 +368,48 @@ async function migrateThumbnail(
       // No archiving needed for external URLs - original still exists at source
     }
 
-    // Step 3: Process image
-    const processed = await processImage(originalBuffer);
+    // Step 3: Process image (with optional AI enhancement)
+    let bufferToProcess = originalBuffer;
+
+    if (useAI) {
+      // AI upscaling requires a public URL - upload temp file to Supabase first
+      const tempFilename = `_temp/${id}-${Date.now()}.jpg`;
+      const { error: tempUploadError } = await supabase.storage
+        .from(THUMBNAILS_BUCKET)
+        .upload(tempFilename, originalBuffer, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        });
+
+      if (tempUploadError) {
+        throw new Error(`Temp upload failed: ${tempUploadError.message}`);
+      }
+
+      const tempUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${THUMBNAILS_BUCKET}/${tempFilename}`;
+
+      try {
+        console.log(`   🤖 AI upscaling...`);
+        const aiResult = await upscaleWithAI(tempUrl, { talkId: id, source: 'bulk-migration' });
+
+        if (aiResult.success) {
+          // Download the AI-enhanced image
+          const aiResponse = await fetch(aiResult.outputUrl);
+          if (!aiResponse.ok) {
+            throw new Error(`Failed to download AI result: ${aiResponse.status}`);
+          }
+          bufferToProcess = Buffer.from(await aiResponse.arrayBuffer());
+          console.log(`   ✨ AI enhanced in ${aiResult.processingTimeMs}ms (cost: $${aiResult.costUsd})`);
+        } else {
+          console.log(`   ⚠️  AI failed: ${aiResult.error}, falling back to Sharp`);
+          // Continue with original buffer (fallback to Sharp-only)
+        }
+      } finally {
+        // Clean up temp file
+        await supabase.storage.from(THUMBNAILS_BUCKET).remove([tempFilename]);
+      }
+    }
+
+    const processed = await processImage(bufferToProcess);
 
     // Step 4: Upload new WebP (use talk ID for external URLs, existing filename for Supabase)
     const newFilename = isSupabaseUrl
@@ -389,6 +470,8 @@ async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
   const testOnly = args.includes('--test');
+  const useAI = args.includes('--ai');
+  const force = args.includes('--force');
   const limitArg = args.find(a => a.startsWith('--limit='));
   const limit = limitArg ? parseInt(limitArg.split('=')[1], 10) : undefined;
 
@@ -396,6 +479,13 @@ async function main() {
   console.log('🖼️  THUMBNAIL UPSCALE MIGRATION');
   console.log('============================================================\n');
 
+  if (useAI) {
+    console.log('🤖 AI MODE - Using Real-ESRGAN via Replicate\n');
+    console.log(`   Cost: ~$${REPLICATE_COST_PER_IMAGE}/image\n`);
+  }
+  if (force) {
+    console.log('💪 FORCE MODE - Will re-process even if already WebP\n');
+  }
   if (dryRun) {
     console.log('🔍 DRY RUN MODE - No changes will be made\n');
   }
@@ -415,6 +505,15 @@ async function main() {
   if (!testsPass) {
     console.log('❌ Tests failed. Please fix issues before running migration.\n');
     process.exit(1);
+  }
+
+  // Run AI-specific tests if --ai flag is used
+  if (useAI) {
+    const aiTestsPass = await runAITests();
+    if (!aiTestsPass) {
+      console.log('❌ AI tests failed. Please check REPLICATE_API_TOKEN.\n');
+      process.exit(1);
+    }
   }
 
   if (testOnly) {
@@ -458,7 +557,7 @@ async function main() {
 
     console.log(`${progress} Processing: ${talk.title.substring(0, 50)}...`);
 
-    const result = await migrateThumbnail(supabase, talk, archivePath, dryRun);
+    const result = await migrateThumbnail(supabase, talk, archivePath, dryRun, useAI, force);
     results.push(result);
 
     if (result.status === 'success' && result.originalSize && result.newSize) {
@@ -498,6 +597,10 @@ async function main() {
   if (totalOriginalSize > 0) {
     const totalSavings = ((totalOriginalSize - totalNewSize) / totalOriginalSize * 100).toFixed(1);
     console.log(`💾 Storage: ${formatBytes(totalOriginalSize)} → ${formatBytes(totalNewSize)} (${totalSavings}% reduction)`);
+  }
+  if (useAI && successful > 0) {
+    const estimatedCost = successful * REPLICATE_COST_PER_IMAGE;
+    console.log(`💰 AI Cost: ~$${estimatedCost.toFixed(3)} (${successful} images × $${REPLICATE_COST_PER_IMAGE})`);
   }
   console.log(`📁 Archives saved to: ${THUMBNAILS_BUCKET}/${ARCHIVE_FOLDER}/${archivePath}/`);
   console.log('============================================================\n');

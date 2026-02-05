@@ -10,6 +10,7 @@ import { NextRequest } from 'next/server';
 import { getTalkWithMappedCards } from '@/lib/db/queries/talks';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { fetchImageAsDataUrl, normalizeImageUrl } from '@/lib/utils/og-image-helpers';
 
 export const runtime = 'nodejs';
 
@@ -83,20 +84,14 @@ export async function GET(
     );
   }
 
-  // Build URLs
-  const talkThumbnailUrl = talkData.thumbnailUrl?.startsWith('http')
-    ? talkData.thumbnailUrl
-    : talkData.thumbnailUrl
-    ? `https://tarottalks.app${talkData.thumbnailUrl}`
-    : null;
+  // Fetch talk thumbnail as data URL (required for cross-origin images in Satori)
+  const talkThumbnailUrl = await fetchImageAsDataUrl(
+    normalizeImageUrl(talkData.thumbnailUrl)
+  );
 
   // Get primary card (first one, sorted by strength)
   const primaryCard = talkData.mappedCards[0]?.card;
-  const cardImageUrl = primaryCard?.imageUrl?.startsWith('http')
-    ? primaryCard.imageUrl
-    : primaryCard?.imageUrl
-    ? `https://tarottalks.app${primaryCard.imageUrl}`
-    : null;
+  const cardImageUrl = normalizeImageUrl(primaryCard?.imageUrl);
 
   // Truncate title if too long
   const truncatedTitle =

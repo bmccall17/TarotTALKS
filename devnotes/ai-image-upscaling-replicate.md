@@ -1,8 +1,9 @@
-# FUTURE: AI-Powered Image Upscaling via Replicate API
+# AI-Powered Image Upscaling via Replicate API
 
-**Status:** Parked for future development
+**Status:** IMPLEMENTED
 **Created:** 2026-02-05
-**Priority:** Low (nice-to-have enhancement)
+**Implemented:** 2026-02-05
+**Priority:** Complete
 
 ---
 
@@ -106,4 +107,16 @@ REPLICATE_API_TOKEN=r8_xxxxxxxxxxxxx
 
 ## Decision Log
 
-**2026-02-05:** Parked this feature. Current Sharp upscaler provides consistent sizing (1280×720) and WebP format for social previews, which is sufficient for now. AI enhancement is a nice-to-have but not essential for MVP.
+**2026-02-05 (AM):** Parked this feature. Current Sharp upscaler provides consistent sizing (1280×720) and WebP format for social previews, which is sufficient for now. AI enhancement is a nice-to-have but not essential for MVP.
+
+**2026-02-05 (PM):** IMPLEMENTED. User set up Replicate account and connected to Vercel. Implemented:
+- `lib/services/replicate-upscale.ts` - Core AI upscaling service
+- Extended `lib/db/queries/api-usage.ts` - Added 'replicate' to ApiName
+- Updated `scripts/upscale-existing-thumbnails.ts` - Added `--ai` flag
+
+Usage:
+```bash
+npx dotenv -e .env.local -- tsx scripts/upscale-existing-thumbnails.ts --ai --limit=3
+```
+
+Note: All 98 thumbnails were already converted to WebP in the previous migration, so AI enhancement will only apply to new talks going forward or if images are re-processed.

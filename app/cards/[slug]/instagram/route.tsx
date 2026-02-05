@@ -12,6 +12,7 @@ import { NextRequest } from 'next/server';
 import { getCardWithMappings } from '@/lib/db/queries/cards';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { fetchImageAsDataUrl, normalizeImageUrl } from '@/lib/utils/og-image-helpers';
 
 export const runtime = 'nodejs';
 
@@ -87,19 +88,16 @@ export async function GET(
   }
 
   // Build URLs directly
-  const cardImageUrl = cardData.imageUrl.startsWith('http')
-    ? cardData.imageUrl
-    : `https://tarottalks.app${cardData.imageUrl}`;
+  const cardImageUrl = normalizeImageUrl(cardData.imageUrl) || cardData.imageUrl;
 
   // Get primary talk
   const primaryMapping = cardData.mappings[0];
   const primaryTalk = primaryMapping?.talk;
 
-  const talkThumbnailUrl = primaryTalk?.thumbnailUrl?.startsWith('http')
-    ? primaryTalk.thumbnailUrl
-    : primaryTalk?.thumbnailUrl
-    ? `https://tarottalks.app${primaryTalk.thumbnailUrl}`
-    : null;
+  // Fetch talk thumbnail as data URL (required for cross-origin images in Satori)
+  const talkThumbnailUrl = await fetchImageAsDataUrl(
+    normalizeImageUrl(primaryTalk?.thumbnailUrl)
+  );
 
   // Generate sparkles
   const sparkles: Array<{ x: number; y: number; s: number; o: number }> = [];
