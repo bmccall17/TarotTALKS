@@ -139,7 +139,6 @@ async function main() {
 
     const specs = PLATFORM_RENDER_SPECS[item.platform] || [];
     const sourceBuffer = await readFile(sourcePath);
-    let itemRendered = false;
 
     for (const spec of specs) {
       const outName = `${spec.name}.${spec.format}`;
@@ -152,7 +151,6 @@ async function main() {
         try {
           const renderedBuffer = await renderImage(sourceBuffer, spec);
           await writeFile(outPath, renderedBuffer);
-          itemRendered = true;
           rendered++;
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -184,8 +182,8 @@ async function main() {
       await writeFile(captionPath, item.caption, 'utf-8');
     }
 
-    // Generate AI captions if enabled
-    if (generateCaptions && itemRendered) {
+    // Generate AI captions if enabled (idempotent - checks for existing files inside)
+    if (generateCaptions) {
       try {
         const captionSet = await generateCaptions(item);
         if (captionSet) {
