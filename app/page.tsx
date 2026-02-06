@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, ChevronDown } from 'lucide-react';
 import { CardCascadeV2, Invocation, SparkleBackground } from '@/components/ritual';
+import { SocialLinks } from '@/components/ui/SocialLinks';
 
 export default function HomePage() {
   const [showSearch, setShowSearch] = useState(false);
@@ -132,6 +133,11 @@ export default function HomePage() {
           >
             send me to TED2026!
           </a>
+        </div>
+
+        {/* Social Links */}
+        <div className="text-center mt-12 opacity-60 hover:opacity-100 transition-opacity duration-500">
+          <SocialLinks />
         </div>
 
       </div>
