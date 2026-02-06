@@ -191,6 +191,9 @@ async function main() {
           await writeFile(join(dir, 'caption_medium.txt'), captionSet.medium, 'utf-8');
           await writeFile(join(dir, 'caption_spicy.txt'), captionSet.spicy, 'utf-8');
           await writeFile(join(dir, 'hashtags.txt'), captionSet.hashtags.join(' '), 'utf-8');
+          log('✍️', `Captions written: ${item.slug}`);
+        } else {
+          log('⚠️', `Caption generation returned empty for ${item.slug}`);
         }
         // Rate limit protection
         await new Promise(resolve => setTimeout(resolve, 2000));
