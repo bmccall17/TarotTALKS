@@ -16,6 +16,7 @@ A chronological record of major releases and feature deployments for TarotTALKS.
 
 | Version | Title | Date |
 |---------|-------|------|
+| [v1.6.1](devnotes/releases/v1.6.1.md) | Social Presence Sprinkle & Mention Dedup Fix 📡✨ | Feb 6, 2026 |
 | [v1.6.0](devnotes/releases/v1.6.0.md) | Static Social Share Images via Supabase Storage 🖼️ | Feb 6, 2026 |
 | [v1.5.5](devnotes/releases/v1.5.5.md) | Bulk Thumbnail Migration to WebP 🖼️ | Feb 5, 2026 |
 | [v1.5.4](devnotes/releases/v1.5.4.md) | Platform Style AI Learning System 🤖 | Feb 5, 2026 |
@@ -53,6 +54,7 @@ A chronological record of major releases and feature deployments for TarotTALKS.
 
 | Version | Title | Date |
 |---------|-------|------|
+| [v1.6.1](devnotes/releases/v1.6.1.md) | Social Presence Sprinkle & Mention Dedup Fix 📡✨ | Feb 6, 2026 |
 | [v1.6.0](devnotes/releases/v1.6.0.md) | Static Social Share Images via Supabase Storage 🖼️ | Feb 6, 2026 |
 | [v1.5.5](devnotes/releases/v1.5.5.md) | Bulk Thumbnail Migration to WebP 🖼️ | Feb 5, 2026 |
 | [v1.5.4](devnotes/releases/v1.5.4.md) | Platform Style AI Learning System 🤖 | Feb 5, 2026 |
