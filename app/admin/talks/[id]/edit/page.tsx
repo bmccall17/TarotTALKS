@@ -14,6 +14,7 @@ export default async function EditTalkPage({ params }: { params: Promise<{ id: s
     <TalkForm
       mode="edit"
       talkId={talk.id}
+      talkSlug={talk.slug}
       initialData={{
         title: talk.title,
         speakerName: talk.speakerName,

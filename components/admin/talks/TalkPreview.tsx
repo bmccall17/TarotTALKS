@@ -17,6 +17,7 @@ type TalkFormData = {
 
 type Props = {
   data: TalkFormData;
+  slug?: string;
 };
 
 /**
@@ -35,7 +36,7 @@ function formatDuration(seconds: number | null): string {
   return `${minutes}:${secs.toString().padStart(2, '0')}`;
 }
 
-export function TalkPreview({ data }: Props) {
+export function TalkPreview({ data, slug }: Props) {
   const primaryUrl = data.tedUrl.trim() !== '' ? data.tedUrl : data.youtubeUrl;
   const hasContent = data.title || data.speakerName || primaryUrl;
 
@@ -51,22 +52,48 @@ export function TalkPreview({ data }: Props) {
     <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
       {/* Thumbnail */}
       {data.thumbnailUrl && (
-        <div className="w-full aspect-video bg-gray-900">
-          <img
-            src={data.thumbnailUrl}
-            alt={data.title || 'Talk thumbnail'}
-            className="w-full h-full object-cover"
-          />
-        </div>
+        slug ? (
+          <a
+            href={`https://tarottalks.app/talks/${slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full aspect-video bg-gray-900 hover:opacity-90 transition-opacity"
+          >
+            <img
+              src={data.thumbnailUrl}
+              alt={data.title || 'Talk thumbnail'}
+              className="w-full h-full object-cover"
+            />
+          </a>
+        ) : (
+          <div className="w-full aspect-video bg-gray-900">
+            <img
+              src={data.thumbnailUrl}
+              alt={data.title || 'Talk thumbnail'}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )
       )}
 
       {/* Content */}
       <div className="p-6 space-y-4">
         {/* Title */}
         {data.title && (
-          <h3 className="text-xl font-bold text-gray-100">
-            {data.title}
-          </h3>
+          slug ? (
+            <a
+              href={`https://tarottalks.app/talks/${slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-xl font-bold text-gray-100 hover:text-indigo-300 transition-colors"
+            >
+              {data.title}
+            </a>
+          ) : (
+            <h3 className="text-xl font-bold text-gray-100">
+              {data.title}
+            </h3>
+          )
         )}
 
         {/* Speaker */}

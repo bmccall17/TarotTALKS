@@ -41,11 +41,12 @@ type Mapping = {
 type Props = {
   initialData?: Partial<TalkFormData>;
   talkId?: string;
+  talkSlug?: string;
   mode: 'create' | 'edit';
   mappings?: Mapping[];
 };
 
-export function TalkForm({ initialData, talkId, mode, mappings = [] }: Props) {
+export function TalkForm({ initialData, talkId, talkSlug, mode, mappings = [] }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -528,7 +529,21 @@ export function TalkForm({ initialData, talkId, mode, mappings = [] }: Props) {
           <div className="lg:sticky lg:top-8 space-y-6">
             <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
               <h2 className="text-lg font-semibold text-gray-100 mb-4">Preview</h2>
-              <TalkPreview data={formData} />
+              {mode === 'edit' && talkSlug && (
+                <div className="mb-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://tarottalks.app/talks/${talkSlug}`);
+                    }}
+                    className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
+                    title="Click to copy URL"
+                  >
+                    https://tarottalks.app/talks/{talkSlug}
+                  </button>
+                </div>
+              )}
+              <TalkPreview data={formData} slug={talkSlug} />
             </div>
 
             {/* Mapped Cards */}

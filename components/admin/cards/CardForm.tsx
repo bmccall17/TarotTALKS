@@ -200,16 +200,28 @@ export function CardForm({ initialData }: Props) {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
-          <div className="w-24 h-32 relative bg-gray-900 rounded-lg overflow-hidden border border-gray-700 flex-shrink-0">
+          <a
+            href={`https://tarottalks.app/cards/${initialData.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-24 h-32 relative bg-gray-900 rounded-lg overflow-hidden border border-gray-700 flex-shrink-0 hover:border-indigo-500/50 transition-colors"
+          >
             <Image
               src={initialData.imageUrl}
               alt={initialData.name}
               fill
               className="object-cover"
             />
-          </div>
+          </a>
           <div>
-            <h2 className="text-2xl font-bold text-gray-100">{initialData.name}</h2>
+            <a
+              href={`https://tarottalks.app/cards/${initialData.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-2xl font-bold text-gray-100 hover:text-indigo-300 transition-colors"
+            >
+              {initialData.name}
+            </a>
             <p className="text-sm text-gray-400 mt-1">/{initialData.slug}</p>
             <p className="text-sm text-indigo-400 mt-1">{arcanaLabel}</p>
           </div>
@@ -387,6 +399,20 @@ export function CardForm({ initialData }: Props) {
         {/* Right Column - Mapped Talks Callout */}
         <div className="lg:col-span-1">
           <div className="lg:sticky lg:top-8">
+            {/* Live URL */}
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(`https://tarottalks.app/cards/${initialData.slug}`);
+                }}
+                className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
+                title="Click to copy URL"
+              >
+                https://tarottalks.app/cards/{initialData.slug}
+              </button>
+            </div>
+
             {/* Mapped Talks */}
             <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
         <h3 className="text-lg font-semibold text-gray-100 mb-4">
@@ -407,14 +433,28 @@ export function CardForm({ initialData }: Props) {
                 <div className="bg-gray-900/50 border border-yellow-500/30 rounded-lg p-4">
                   <div className="flex items-start gap-3">
                     {primaryMapping.talkThumbnailUrl && (
-                      <img
-                        src={primaryMapping.talkThumbnailUrl}
-                        alt=""
-                        className="w-20 h-12 object-cover rounded flex-shrink-0"
-                      />
+                      <a
+                        href={`https://tarottalks.app/talks/${primaryMapping.talkSlug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                      >
+                        <img
+                          src={primaryMapping.talkThumbnailUrl}
+                          alt=""
+                          className="w-20 h-12 object-cover rounded"
+                        />
+                      </a>
                     )}
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-gray-100">{primaryMapping.talkTitle}</h4>
+                      <a
+                        href={`https://tarottalks.app/talks/${primaryMapping.talkSlug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-gray-100 hover:text-indigo-300 transition-colors"
+                      >
+                        {primaryMapping.talkTitle}
+                      </a>
                       <p className="text-sm text-gray-400 mt-1">{primaryMapping.talkSpeakerName}</p>
                       <p className="text-sm text-gray-500 italic mt-2">
                         "{primaryMapping.rationaleShort}"
@@ -446,14 +486,28 @@ export function CardForm({ initialData }: Props) {
                     >
                       <div className="flex items-start gap-3">
                         {mapping.talkThumbnailUrl && (
-                          <img
-                            src={mapping.talkThumbnailUrl}
-                            alt=""
-                            className="w-16 h-10 object-cover rounded flex-shrink-0"
-                          />
+                          <a
+                            href={`https://tarottalks.app/talks/${mapping.talkSlug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                          >
+                            <img
+                              src={mapping.talkThumbnailUrl}
+                              alt=""
+                              className="w-16 h-10 object-cover rounded"
+                            />
+                          </a>
                         )}
                         <div className="flex-1 min-w-0">
-                          <h5 className="font-medium text-gray-100 text-sm">{mapping.talkTitle}</h5>
+                          <a
+                            href={`https://tarottalks.app/talks/${mapping.talkSlug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-gray-100 text-sm hover:text-indigo-300 transition-colors"
+                          >
+                            {mapping.talkTitle}
+                          </a>
                           <p className="text-xs text-gray-400 mt-0.5">{mapping.talkSpeakerName}</p>
                         </div>
                         <a
