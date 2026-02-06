@@ -76,6 +76,9 @@ deploymenterror.txt
 # manually added cause NTFS attaches this sometimes when copying to WSL
 *:Zone.Identifier
 
+# Campaign assets (local only)
+/campaigns/
+
 # Screenshots (often have long names)
 Screenshot*.png
 *.screenshot.png

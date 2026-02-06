@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { uploadShareImage } from '@/lib/supabase/share-image-storage';
 
 type Category = 'talks' | 'cards' | 'spreads';
-type ImageType = 'opengraph' | 'twitter' | 'instagram' | 'instagram-card-only';
+type ImageType = 'opengraph' | 'twitter' | 'instagram' | 'instagram-card-only' | 'instagram-feed' | 'linkedin';
 
 const BASE_URL = 'https://tarottalks.app';
 
@@ -23,6 +23,10 @@ function getSatoriUrl(category: Category, slug: string, type: ImageType): string
       return `${basePath}/instagram`;
     case 'instagram-card-only':
       return `${basePath}/instagram?v=card`;
+    case 'instagram-feed':
+      return `${basePath}/instagram-feed`;
+    case 'linkedin':
+      return `${basePath}/opengraph-image`;
   }
 }
 

@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Radio } from 'lucide-react';
+import { Plus, Radio, CheckSquare, Download } from 'lucide-react';
 import { ShareRow } from './ShareRow';
 import { ShareFilters } from './ShareFilters';
 import { NewShareForm } from './NewShareForm';
 import { TopSharesWidget } from './TopSharesWidget';
 import { NextCardWidget } from './NextCardWidget';
 import { MentionsInbox } from './MentionsInbox';
+import { ExportToCampaign } from './ExportToCampaign';
 import { Toast } from '../ui/Toast';
 import { type Platform } from '@/lib/utils/social-handles';
 
@@ -91,6 +92,11 @@ export function SharesList() {
     speakerHandle?: string;
   } | null>(null);
 
+  // Multi-select state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showExportModal, setShowExportModal] = useState(false);
+
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [platform, setPlatform] = useState('');
@@ -143,6 +149,20 @@ export function SharesList() {
     setStatus('');
     setDateFrom('');
     setDateTo('');
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleExportSelected = () => {
+    if (selectedIds.size === 0) return;
+    setShowExportModal(true);
   };
 
   const handleNewShare = () => {
@@ -204,13 +224,38 @@ export function SharesList() {
           </div>
         </div>
 
-        <button
-          onClick={handleNewShare}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Share</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {selectMode && selectedIds.size > 0 && (
+            <button
+              onClick={handleExportSelected}
+              className="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export {selectedIds.size}</span>
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setSelectMode(!selectMode);
+              if (selectMode) setSelectedIds(new Set());
+            }}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+              selectMode
+                ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+            }`}
+          >
+            <CheckSquare className="w-4 h-4" />
+            <span>{selectMode ? 'Cancel' : 'Select'}</span>
+          </button>
+          <button
+            onClick={handleNewShare}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Share</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats Bar + Widgets */}
@@ -293,6 +338,9 @@ export function SharesList() {
                       onEdit={handleEditShare}
                       onDeleted={handleShareDeleted}
                       onStatusChanged={fetchShares}
+                      selectable={selectMode}
+                      selected={selectedIds.has(share.id)}
+                      onToggleSelect={handleToggleSelect}
                     />
                   ))}
                 </div>
@@ -309,6 +357,18 @@ export function SharesList() {
           preselectedCard={preselectedCard}
           onSave={handleFormSave}
           onClose={handleFormClose}
+        />
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportToCampaign
+          shares={shares.filter((s) => selectedIds.has(s.id))}
+          onClose={() => {
+            setShowExportModal(false);
+            setSelectMode(false);
+            setSelectedIds(new Set());
+          }}
         />
       )}
 

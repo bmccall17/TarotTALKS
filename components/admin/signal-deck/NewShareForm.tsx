@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Loader2, Link as LinkIcon, Check, AlertCircle, AlertTriangle, Info, Sparkles } from 'lucide-react';
+import { X, Loader2, Link as LinkIcon, Check, AlertCircle, AlertTriangle, Info, Sparkles, Eye } from 'lucide-react';
 import { DraftGenerator } from './DraftGenerator';
+import { HashtagSuggester } from './HashtagSuggester';
+import { PostPreview } from './PostPreview';
 import {
   detectPlatformFromUrl,
   getPlatformMetricLabels,
@@ -135,6 +137,9 @@ export function NewShareForm({ share, preselectedCard, onSave, onClose }: Props)
 
   // Draft generator state
   const [showDraftGenerator, setShowDraftGenerator] = useState(false);
+
+  // Post preview toggle
+  const [showPreview, setShowPreview] = useState(false);
 
   // Auto-detect platform from post URL
   useEffect(() => {
@@ -674,6 +679,37 @@ export function NewShareForm({ share, preselectedCard, onSave, onClose }: Props)
               rows={3}
               className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
             />
+          </div>
+
+          {/* Hashtag Suggestions - Instagram and Threads */}
+          {(formData.platform === 'instagram' || formData.platform === 'threads') && (
+            <HashtagSuggester
+              cardName={preselectedCard?.name || resolvedContent?.name}
+              talkTitle={undefined}
+              speakerName={formData.speakerName || preselectedCard?.speakerName}
+            />
+          )}
+
+          {/* Post Preview Toggle */}
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setShowPreview(!showPreview)}
+              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-300 transition-colors"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              {showPreview ? 'Hide Preview' : 'Show Preview'}
+            </button>
+            {showPreview && (
+              <div className="p-3 bg-gray-900/50 rounded-lg border border-gray-700">
+                <PostPreview
+                  platform={formData.platform}
+                  caption={formData.notes}
+                  cardName={preselectedCard?.name || resolvedContent?.name}
+                  speakerHandle={formData.speakerHandle}
+                />
+              </div>
+            )}
           </div>
 
           {/* Error */}

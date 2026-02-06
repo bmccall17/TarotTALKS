@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ExternalLink, Edit2, Trash2, Check, Clock, FileText, MessageSquare, Eye, EyeOff, Radar, Loader2, RefreshCw } from 'lucide-react';
+import { ExternalLink, Edit2, Trash2, Check, Clock, FileText, MessageSquare, Eye, EyeOff, Radar, Loader2, RefreshCw, Download } from 'lucide-react';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { MetricsDisplay } from './MetricsDisplay';
 import { RelationshipBadge } from './RelationshipBadge';
@@ -36,6 +36,9 @@ type Props = {
   onEdit: (share: Share) => void;
   onDeleted: () => void;
   onStatusChanged?: () => void;
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 };
 
 const platformIcons: Record<string, string> = {
@@ -101,7 +104,7 @@ function truncateUrl(url: string, maxLength: number = 40): string {
   return url.slice(0, maxLength) + '...';
 }
 
-export function ShareRow({ share, onEdit, onDeleted, onStatusChanged }: Props) {
+export function ShareRow({ share, onEdit, onDeleted, onStatusChanged, selectable, selected, onToggleSelect }: Props) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -215,6 +218,18 @@ export function ShareRow({ share, onEdit, onDeleted, onStatusChanged }: Props) {
   return (
     <>
       <div className="flex items-start gap-4 p-4 bg-gray-800/30 border border-gray-700/50 rounded-lg hover:bg-gray-800/50 transition-colors">
+        {/* Selection Checkbox */}
+        {selectable && (
+          <div className="flex items-center pt-1">
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => onToggleSelect?.(share.id)}
+              className="w-4 h-4 bg-gray-900 border-gray-600 rounded focus:ring-indigo-500 cursor-pointer"
+            />
+          </div>
+        )}
+
         {/* Shared Content Image or Platform Icon */}
         {sharedImageUrl ? (
           <div className="relative flex-shrink-0">
@@ -403,6 +418,36 @@ export function ShareRow({ share, onEdit, onDeleted, onStatusChanged }: Props) {
               )}
             </button>
           )}
+          <button
+            onClick={() => {
+              const item = {
+                platform: share.platform,
+                slug: share.card?.slug || share.talk?.slug || '',
+                category: share.card ? 'cards' : 'talks',
+                image_url: '',
+                post_id: share.id,
+                caption: share.notes || '',
+                alt_text: share.card ? `${share.card.name} tarot card` : share.talk ? `${share.talk.title} by ${share.talk.speakerName}` : '',
+                tags: [],
+                card_name: share.card?.name,
+                talk_title: share.talk?.title,
+                speaker_name: share.talk?.speakerName || share.speakerName || undefined,
+                scheduled_date: new Date(share.postedAt).toISOString().slice(0, 10),
+              };
+              const json = JSON.stringify({ items: [item] }, null, 2);
+              const blob = new Blob([json], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `export-${share.card?.slug || share.talk?.slug || share.id}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="p-2 text-gray-400 hover:text-green-400 hover:bg-gray-700 rounded-lg transition-colors"
+            title="Export as campaign JSON"
+          >
+            <Download className="w-4 h-4" />
+          </button>
           <button
             onClick={() => onEdit(share)}
             className="p-2 text-gray-400 hover:text-indigo-400 hover:bg-gray-700 rounded-lg transition-colors"

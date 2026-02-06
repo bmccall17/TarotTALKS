@@ -11,7 +11,7 @@ import { createServiceClient } from './server';
 const BUCKET = 'share-images';
 
 type Category = 'talks' | 'cards' | 'spreads';
-type ImageType = 'opengraph' | 'twitter' | 'instagram' | 'instagram-card-only';
+type ImageType = 'opengraph' | 'twitter' | 'instagram' | 'instagram-card-only' | 'instagram-feed' | 'linkedin';
 
 /**
  * Build the deterministic path for a share image in the bucket.
