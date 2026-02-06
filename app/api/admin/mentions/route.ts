@@ -59,8 +59,9 @@ export async function POST(request: Request) {
     let skippedCount = 0;
 
     for (const mention of mentions) {
-      // Skip if we already have this mention
-      const exists = await mentionExistsByAtUri(mention.uri);
+      // Skip if we already have this mention (checks both atUri and postUrl
+      // to catch manually-logged shares that don't have atUri set)
+      const exists = await mentionExistsByAtUri(mention.uri, mention.postUrl);
       if (exists) {
         skippedCount++;
         continue;

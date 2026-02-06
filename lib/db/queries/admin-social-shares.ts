@@ -411,13 +411,20 @@ export async function createFromMention(data: MentionData): Promise<Share> {
 }
 
 /**
- * Check if a mention already exists by AT URI
+ * Check if a mention already exists by AT URI or post URL.
+ * Manually-logged shares may only have postUrl (no atUri),
+ * so we check both to prevent duplicates.
  */
-export async function mentionExistsByAtUri(atUri: string): Promise<boolean> {
+export async function mentionExistsByAtUri(atUri: string, postUrl?: string): Promise<boolean> {
+  const conditions = [eq(socialShares.atUri, atUri)];
+  if (postUrl) {
+    conditions.push(eq(socialShares.postUrl, postUrl));
+  }
+
   const [result] = await db
     .select({ id: socialShares.id })
     .from(socialShares)
-    .where(eq(socialShares.atUri, atUri))
+    .where(or(...conditions))
     .limit(1);
 
   return !!result;
