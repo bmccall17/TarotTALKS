@@ -198,24 +198,26 @@ async function render(campaign: string, manifest: CampaignManifest): Promise<voi
 
     for (const spec of specs) {
       const outPath = join(dir, `${spec.name}.${spec.format}`);
-      if (await fileExists(outPath)) continue;
 
-      const buf = await sharp(sourceBuffer)
-        .resize(spec.width, spec.height, { fit: 'cover', kernel: 'lanczos3' })
-        .jpeg({ quality: spec.quality })
-        .toBuffer();
-      await writeFile(outPath, buf);
+      // Render clean version if missing
+      if (!(await fileExists(outPath))) {
+        const buf = await sharp(sourceBuffer)
+          .resize(spec.width, spec.height, { fit: 'cover', kernel: 'lanczos3' })
+          .jpeg({ quality: spec.quality })
+          .toBuffer();
+        await writeFile(outPath, buf);
+        rendered++;
+      }
 
-      // UGC variant
+      // UGC variant - runs even if clean render already existed
       if (applyUgcStyle) {
         const ugcPath = join(dir, `ugc_${spec.name}.${spec.format}`);
         if (!(await fileExists(ugcPath))) {
-          const ugcBuf = await applyUgcStyle(buf, spec.width, spec.height);
+          const cleanBuf = await readFile(outPath);
+          const ugcBuf = await applyUgcStyle(cleanBuf, spec.width, spec.height);
           await writeFile(ugcPath, ugcBuf);
         }
       }
-
-      rendered++;
     }
 
     // Write caption.txt

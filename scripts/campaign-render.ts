@@ -145,31 +145,36 @@ async function main() {
       const outName = `${spec.name}.${spec.format}`;
       const outPath = join(dir, outName);
 
-      // Skip if already rendered
+      // Render clean version if it doesn't exist yet
       if (await fileExists(outPath)) {
         skipped++;
-        continue;
+      } else {
+        try {
+          const renderedBuffer = await renderImage(sourceBuffer, spec);
+          await writeFile(outPath, renderedBuffer);
+          itemRendered = true;
+          rendered++;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Unknown error';
+          log('❌', `Render failed for ${item.slug}/${outName}: ${msg}`);
+          errors++;
+          continue;
+        }
       }
 
-      try {
-        const renderedBuffer = await renderImage(sourceBuffer, spec);
-        await writeFile(outPath, renderedBuffer);
-        itemRendered = true;
-
-        // UGC variant
-        if (applyUgcStyle) {
-          const ugcPath = join(dir, `ugc_${spec.name}.${spec.format}`);
-          if (!(await fileExists(ugcPath))) {
-            const ugcBuffer = await applyUgcStyle(renderedBuffer, spec.width, spec.height);
+      // UGC variant - runs even if clean render already existed
+      if (applyUgcStyle) {
+        const ugcPath = join(dir, `ugc_${spec.name}.${spec.format}`);
+        if (!(await fileExists(ugcPath))) {
+          try {
+            const cleanBuffer = await readFile(outPath);
+            const ugcBuffer = await applyUgcStyle(cleanBuffer, spec.width, spec.height);
             await writeFile(ugcPath, ugcBuffer);
+            log('🎨', `UGC variant: ${item.slug}/${spec.name}`);
+          } catch (err) {
+            log('⚠️', `UGC failed for ${item.slug}/${spec.name}: ${err instanceof Error ? err.message : err}`);
           }
         }
-
-        rendered++;
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Unknown error';
-        log('❌', `Render failed for ${item.slug}/${outName}: ${msg}`);
-        errors++;
       }
     }
 
