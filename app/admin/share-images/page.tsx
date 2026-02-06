@@ -407,9 +407,13 @@ export default function ShareImagesPage() {
                 }`}
               >
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium text-gray-100 truncate" title={name}>
+                  <a
+                    href={isCard ? `/admin/cards/${item.id}/edit` : `/admin/talks/${item.id}/edit`}
+                    className="font-medium text-gray-100 truncate hover:text-indigo-300 transition-colors"
+                    title={name}
+                  >
                     {name.length > 35 ? name.slice(0, 32) + '...' : name}
-                  </h3>
+                  </a>
                   <div className="flex items-center gap-1">
                     {ogStored && (
                       <span className="text-xs px-1.5 py-0.5 bg-green-900/50 text-green-400 rounded" title="OpenGraph in Supabase">
@@ -595,9 +599,13 @@ export default function ShareImagesPage() {
                           </div>
                         )}
                         <div>
-                          <p className="font-medium text-gray-100" title={name}>
+                          <a
+                            href={isCard ? `/admin/cards/${item.id}/edit` : `/admin/talks/${item.id}/edit`}
+                            className="font-medium text-gray-100 hover:text-indigo-300 transition-colors"
+                            title={name}
+                          >
                             {name.length > 50 ? name.slice(0, 47) + '...' : name}
-                          </p>
+                          </a>
                           {!isCard && (
                             <p className="text-xs text-gray-500">{(item as Talk).speakerName}</p>
                           )}

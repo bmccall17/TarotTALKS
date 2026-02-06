@@ -5,7 +5,7 @@ We investigated a spike in Vercel paid service usage (specifically "Function Exe
 
 ## Identified Issues
 1.  **Dynamic OpenGraph Images**: The `opengraph-image.tsx` was configured with `revalidate = 0` (no caching). This meant every link share or bot crawl triggered a serverless function execution and image generation, leading to high usage.
-2.  **Speed Insights**: This was enabled globally in `layout.tsx`, contributing to usage limits without critical benefit.
+2.  ALREADY TURNED THIS OFF **Speed Insights**: This was enabled globally in `layout.tsx`, contributing to usage limits without critical benefit. 
 
 ## Applied Fixes
 
