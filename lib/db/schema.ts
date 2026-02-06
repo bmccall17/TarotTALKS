@@ -160,6 +160,9 @@ export const socialShares = pgTable('social_shares', {
   followingSpeaker: boolean('following_speaker'),
   relationshipUpdatedAt: timestamp('relationship_updated_at'),
 
+  // Public visibility (admin controls which shares appear on public site)
+  showPublicly: boolean('show_publicly').default(false).notNull(),
+
   // Phase 4: Mention discovery
   discoveredAt: timestamp('discovered_at'),
   atUri: varchar('at_uri', { length: 500 }),

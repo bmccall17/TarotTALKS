@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ExternalLink, Edit2, Trash2, Check, Clock, FileText, MessageSquare, Eye, Radar, Loader2, RefreshCw } from 'lucide-react';
+import { ExternalLink, Edit2, Trash2, Check, Clock, FileText, MessageSquare, Eye, EyeOff, Radar, Loader2, RefreshCw } from 'lucide-react';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { MetricsDisplay } from './MetricsDisplay';
 import { RelationshipBadge } from './RelationshipBadge';
@@ -28,6 +28,7 @@ type Share = {
   followingSpeaker?: boolean | null;
   authorHandle?: string | null;
   authorDisplayName?: string | null;
+  showPublicly?: boolean;
 };
 
 type Props = {
@@ -114,6 +115,8 @@ export function ShareRow({ share, onEdit, onDeleted, onStatusChanged }: Props) {
     replyCount: share.replyCount ?? 0,
   });
   const [followingSpeaker, setFollowingSpeaker] = useState(share.followingSpeaker ?? null);
+  const [isPublic, setIsPublic] = useState(share.showPublicly ?? false);
+  const [togglingPublic, setTogglingPublic] = useState(false);
 
   const handleVerify = async () => {
     if (currentStatus !== 'posted') return;
@@ -176,6 +179,23 @@ export function ShareRow({ share, onEdit, onDeleted, onStatusChanged }: Props) {
       console.error('Error rescanning share:', error);
     } finally {
       setRescanning(false);
+    }
+  };
+
+  const handleTogglePublic = async () => {
+    setTogglingPublic(true);
+    try {
+      const response = await fetch(`/api/admin/social-shares/${share.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ showPublicly: !isPublic }),
+      });
+      if (!response.ok) throw new Error('Failed to update');
+      setIsPublic(!isPublic);
+    } catch (error) {
+      console.error('Error toggling public visibility:', error);
+    } finally {
+      setTogglingPublic(false);
     }
   };
 
@@ -341,6 +361,26 @@ export function ShareRow({ share, onEdit, onDeleted, onStatusChanged }: Props) {
               {currentStatus}
             </span>
           )}
+
+          {/* Public visibility toggle */}
+          <button
+            onClick={handleTogglePublic}
+            disabled={togglingPublic}
+            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs transition-colors ${
+              isPublic
+                ? 'text-green-400 hover:bg-green-900/30'
+                : 'text-gray-600 hover:bg-gray-700/50'
+            }`}
+            title={isPublic ? 'Visible on public site' : 'Hidden from public site'}
+          >
+            {togglingPublic ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : isPublic ? (
+              <Eye className="w-3.5 h-3.5" />
+            ) : (
+              <EyeOff className="w-3.5 h-3.5" />
+            )}
+          </button>
 
           {/* Posted time */}
           <span className="text-xs text-gray-500">{formatRelativeTime(share.postedAt)}</span>

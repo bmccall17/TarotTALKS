@@ -5,6 +5,7 @@ import { getThemeWithCardsAndTalks, getAllThemes } from '@/lib/db/queries/themes
 import { getThumbnailUrl } from '@/lib/utils/thumbnails';
 import { ArrowLeft, Sparkles, Play, ExternalLink } from 'lucide-react';
 import { ShareButton } from '@/components/ui/ShareButton';
+import { SocialLinks } from '@/components/ui/SocialLinks';
 
 // Disable caching to immediately reflect admin changes
 export const revalidate = 0;
@@ -233,6 +234,11 @@ export default async function ThemeDetailPage({ params }: { params: Promise<{ sl
           >
             ← Back to all themes
           </Link>
+        </div>
+
+        {/* Social Links */}
+        <div className="text-center mt-8 opacity-60 hover:opacity-100 transition-opacity duration-500">
+          <SocialLinks />
         </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ExternalLink, Clock, Share2, Copy, Check } from 'lucide-react';
 import { POSITION_LABELS, FOCUS_TYPE_LABELS } from '@/lib/spread-reading/types';
 import type { SpreadCard, SpreadTalk, MatchReason, PrivacyLevel, FocusType } from '@/lib/spread-reading/types';
+import { SocialLinks } from '@/components/ui/SocialLinks';
 
 interface SpreadData {
   id: string;
@@ -239,6 +240,9 @@ export function SpreadPageContent({ spread }: SpreadPageContentProps) {
             TED and TED Talks are registered trademarks of TED Conferences LLC.
             This is an independent project not affiliated with TED.
           </p>
+          <div className="mt-4 opacity-60 hover:opacity-100 transition-opacity duration-500">
+            <SocialLinks />
+          </div>
         </div>
       </footer>
     </div>

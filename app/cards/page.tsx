@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getAllCards } from '@/lib/db/queries/cards';
 import { CardsGrid } from '@/components/cards/CardsGrid';
+import { SocialLinks } from '@/components/ui/SocialLinks';
 
 export const metadata = {
   title: 'Browse Tarot Cards | TarotTALKS',
@@ -26,6 +27,11 @@ export default async function CardsPage() {
 
         {/* Cards Grid with Filters */}
         <CardsGrid cards={cards} />
+
+        {/* Social Links */}
+        <div className="text-center mt-8 opacity-60 hover:opacity-100 transition-opacity duration-500">
+          <SocialLinks />
+        </div>
       </div>
     </div>
   );

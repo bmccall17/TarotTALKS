@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getAllTalks } from '@/lib/db/queries/talks';
 import { TalksGrid } from '@/components/talks/TalksGrid';
+import { SocialLinks } from '@/components/ui/SocialLinks';
 
 export const metadata = {
   title: 'Browse TED Talks | TarotTALKS',
@@ -26,6 +27,11 @@ export default async function TalksPage() {
 
         {/* Talks Grid with Filters */}
         <TalksGrid talks={talks} />
+
+        {/* Social Links */}
+        <div className="text-center mt-8 opacity-60 hover:opacity-100 transition-opacity duration-500">
+          <SocialLinks />
+        </div>
       </div>
     </div>
   );

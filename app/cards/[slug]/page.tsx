@@ -7,6 +7,9 @@ import { getThumbnailUrl } from '@/lib/utils/thumbnails';
 import { Play, ExternalLink, Clock, Calendar } from 'lucide-react';
 import { SmartBackButton } from '@/components/ui/SmartBackButton';
 import { ShareButton } from '@/components/ui/ShareButton';
+import { SocialLinks } from '@/components/ui/SocialLinks';
+import { SocialTrail } from '@/components/ui/SocialTrail';
+import { getPublicSharesForCard } from '@/lib/db/queries/public-social-shares';
 
 // Disable caching to immediately reflect admin changes
 export const revalidate = 0;
@@ -69,6 +72,8 @@ export default async function CardDetailPage({ params }: { params: Promise<{ slu
   if (!card) {
     notFound();
   }
+
+  const publicShares = await getPublicSharesForCard(card.id);
 
   const keywords = card.keywords ? JSON.parse(card.keywords) : [];
   const primaryMapping = card.mappings.find((m) => m.mapping.isPrimary);
@@ -282,6 +287,16 @@ export default async function CardDetailPage({ params }: { params: Promise<{ slu
         {/* Back Link */}
         <div className="text-center pt-4">
           <SmartBackButton defaultHref="/cards" showText text="Back to all cards" />
+        </div>
+
+        {/* Social Trail */}
+        <div className="opacity-50 hover:opacity-100 transition-opacity duration-500">
+          <SocialTrail shares={publicShares} />
+        </div>
+
+        {/* Social Links */}
+        <div className="text-center mt-8 opacity-60 hover:opacity-100 transition-opacity duration-500">
+          <SocialLinks />
         </div>
       </div>
     </div>

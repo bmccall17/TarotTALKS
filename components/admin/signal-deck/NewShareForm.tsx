@@ -97,6 +97,7 @@ export function NewShareForm({ share, preselectedCard, onSave, onClose }: Props)
     repostCount: number;
     replyCount: number;
     followingSpeaker: boolean | null;
+    showPublicly: boolean;
   }>({
     platform: share?.platform || 'x',
     postUrl: share?.postUrl || '',
@@ -114,6 +115,7 @@ export function NewShareForm({ share, preselectedCard, onSave, onClose }: Props)
     repostCount: share?.repostCount ?? 0,
     replyCount: share?.replyCount ?? 0,
     followingSpeaker: share?.followingSpeaker ?? null,
+    showPublicly: (share as any)?.showPublicly ?? false,
   });
 
   const [saving, setSaving] = useState(false);
@@ -196,6 +198,7 @@ export function NewShareForm({ share, preselectedCard, onSave, onClose }: Props)
             : prev.postedAt,
           notes: data.text || prev.notes,
           status: 'verified',
+          showPublicly: true,
           likeCount: data.metrics?.likeCount ?? prev.likeCount,
           repostCount: data.metrics?.repostCount ?? prev.repostCount,
           replyCount: data.metrics?.replyCount ?? prev.replyCount,
@@ -301,6 +304,7 @@ export function NewShareForm({ share, preselectedCard, onSave, onClose }: Props)
 
       const payload = {
         ...formData,
+        showPublicly: formData.showPublicly,
         postUrl: formData.postUrl || null,
         sharedUrl: formData.sharedUrl || null,
         speakerHandle: formData.speakerHandle || null,
@@ -480,7 +484,12 @@ export function NewShareForm({ share, preselectedCard, onSave, onClose }: Props)
                 <button
                   key={s.value}
                   type="button"
-                  onClick={() => setFormData((prev) => ({ ...prev, status: s.value }))}
+                  onClick={() => setFormData((prev) => ({
+                    ...prev,
+                    status: s.value,
+                    // Auto-check showPublicly for posted/verified
+                    showPublicly: (s.value === 'posted' || s.value === 'verified') ? true : prev.showPublicly,
+                  }))}
                   className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
                     formData.status === s.value
                       ? 'bg-indigo-600 border-indigo-500 text-white'
@@ -491,6 +500,22 @@ export function NewShareForm({ share, preselectedCard, onSave, onClose }: Props)
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Show on Public Site */}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="showPublicly"
+              checked={formData.showPublicly}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, showPublicly: e.target.checked }))
+              }
+              className="w-4 h-4 bg-gray-900 border-gray-600 rounded focus:ring-indigo-500"
+            />
+            <label htmlFor="showPublicly" className="text-sm text-gray-300">
+              Show on public site
+            </label>
           </div>
 
           {/* Posted At */}

@@ -32,6 +32,7 @@ type Share = {
   followingSpeaker?: boolean | null;
   authorHandle?: string | null;
   authorDisplayName?: string | null;
+  showPublicly?: boolean;
 };
 
 type Stats = {

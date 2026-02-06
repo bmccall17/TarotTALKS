@@ -6,6 +6,9 @@ import { getThumbnailUrl } from '@/lib/utils/thumbnails';
 import { ExternalLink, Clock, Calendar, Play, Mic2 } from 'lucide-react';
 import { SmartBackButton } from '@/components/ui/SmartBackButton';
 import { ShareButton } from '@/components/ui/ShareButton';
+import { SocialLinks } from '@/components/ui/SocialLinks';
+import { SocialTrail } from '@/components/ui/SocialTrail';
+import { getPublicSharesForTalk } from '@/lib/db/queries/public-social-shares';
 
 // Disable caching to immediately reflect admin changes
 export const revalidate = 0;
@@ -70,6 +73,8 @@ export default async function TalkDetailPage({ params }: { params: Promise<{ slu
   if (!talk) {
     notFound();
   }
+
+  const publicShares = await getPublicSharesForTalk(talk.id);
 
   const durationMinutes = talk.durationSeconds ? Math.floor(talk.durationSeconds / 60) : null;
   const thumbnailUrl = getThumbnailUrl(talk.thumbnailUrl, talk.youtubeVideoId);
@@ -299,6 +304,16 @@ export default async function TalkDetailPage({ params }: { params: Promise<{ slu
         {/* Back Link */}
         <div className="text-center pt-4">
           <SmartBackButton defaultHref="/talks" showText text="Back to all talks" />
+        </div>
+
+        {/* Social Trail */}
+        <div className="opacity-50 hover:opacity-100 transition-opacity duration-500">
+          <SocialTrail shares={publicShares} />
+        </div>
+
+        {/* Social Links */}
+        <div className="text-center mt-8 opacity-60 hover:opacity-100 transition-opacity duration-500">
+          <SocialLinks />
         </div>
       </div>
     </div>
