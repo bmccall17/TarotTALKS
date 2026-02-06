@@ -705,6 +705,20 @@ export function NewShareForm({ share, preselectedCard, onSave, onClose }: Props)
                 <PostPreview
                   platform={formData.platform}
                   caption={formData.notes}
+                  imageUrl={
+                    formData.sharedUrl?.includes('tarottalks.app')
+                      ? (() => {
+                          const match = formData.sharedUrl.match(/\/(cards|talks)\/([a-z0-9-]+)/);
+                          if (!match) return undefined;
+                          const [, type, slug] = match;
+                          // Use instagram image for IG/threads, OG for others
+                          if (formData.platform === 'instagram' || formData.platform === 'threads') {
+                            return `https://tarottalks.app/${type}/${slug}/instagram`;
+                          }
+                          return `https://tarottalks.app/${type}/${slug}/opengraph-image`;
+                        })()
+                      : undefined
+                  }
                   cardName={preselectedCard?.name || resolvedContent?.name}
                   speakerHandle={formData.speakerHandle}
                 />

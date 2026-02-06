@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Hash, Copy, Check } from 'lucide-react';
 
 type Props = {
@@ -58,7 +58,6 @@ const CARD_HASHTAGS: Record<string, string[]> = {
 };
 
 export function HashtagSuggester({ cardName, talkTitle, speakerName }: Props) {
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
 
   const suggestions = useMemo(() => {
@@ -85,6 +84,12 @@ export function HashtagSuggester({ cardName, talkTitle, speakerName }: Props) {
     // Deduplicate and cap at 20
     return [...new Set(tags)].slice(0, 20);
   }, [cardName]);
+
+  // Default all tags selected - user deselects what they don't want
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    setSelected(new Set(suggestions));
+  }, [suggestions]);
 
   const toggleTag = (tag: string) => {
     setSelected((prev) => {

@@ -57,7 +57,8 @@ export function ExportToCampaign({ shares, onClose }: Props) {
     a.click();
     URL.revokeObjectURL(url);
     setExported(true);
-    setTimeout(() => setExported(false), 3000);
+    // Auto-close modal after brief confirmation
+    setTimeout(() => onClose(), 1000);
   };
 
   return (
