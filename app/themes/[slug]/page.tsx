@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getThemeWithCardsAndTalks, getAllThemes } from '@/lib/db/queries/themes';
+import { getThemeWithCardsAndTalks } from '@/lib/db/queries/themes';
 import { getThumbnailUrl } from '@/lib/utils/thumbnails';
 import { ArrowLeft, Sparkles, Play, ExternalLink } from 'lucide-react';
 import { ShareButton } from '@/components/ui/ShareButton';
@@ -10,11 +10,9 @@ import { SocialLinks } from '@/components/ui/SocialLinks';
 // ISR: revalidate every 24 hours (themes change ~every 6 months)
 export const revalidate = 86400;
 
+// Return empty array: don't pre-render at build time, generate on-demand + ISR cache
 export async function generateStaticParams() {
-  const themes = await getAllThemes();
-  return themes.map((theme) => ({
-    slug: theme.slug,
-  }));
+  return [];
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {

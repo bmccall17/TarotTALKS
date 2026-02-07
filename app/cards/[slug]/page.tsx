@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getCardWithMappings, getAllCards } from '@/lib/db/queries/cards';
+import { getCardWithMappings } from '@/lib/db/queries/cards';
 import { CardDetailClient } from '@/components/cards/CardDetailClient';
 import { getThumbnailUrl } from '@/lib/utils/thumbnails';
 import { Play, ExternalLink, Clock, Calendar } from 'lucide-react';
@@ -14,11 +14,9 @@ import { getPublicSharesForCard } from '@/lib/db/queries/public-social-shares';
 // ISR: revalidate every 24 hours (cards rarely change)
 export const revalidate = 86400;
 
+// Return empty array: don't pre-render at build time, generate on-demand + ISR cache
 export async function generateStaticParams() {
-  const cards = await getAllCards();
-  return cards.map((card) => ({
-    slug: card.slug,
-  }));
+  return [];
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {

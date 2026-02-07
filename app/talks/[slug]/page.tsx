@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getTalkWithMappedCards, getAllTalks } from '@/lib/db/queries/talks';
+import { getTalkWithMappedCards } from '@/lib/db/queries/talks';
 import { getThumbnailUrl } from '@/lib/utils/thumbnails';
 import { ExternalLink, Clock, Calendar, Play, Mic2 } from 'lucide-react';
 import { SmartBackButton } from '@/components/ui/SmartBackButton';
@@ -13,11 +13,9 @@ import { getPublicSharesForTalk } from '@/lib/db/queries/public-social-shares';
 // ISR: revalidate every hour (talks updated more frequently)
 export const revalidate = 3600;
 
+// Return empty array: don't pre-render at build time, generate on-demand + ISR cache
 export async function generateStaticParams() {
-  const talks = await getAllTalks();
-  return talks.map((talk) => ({
-    slug: talk.slug,
-  }));
+  return [];
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
