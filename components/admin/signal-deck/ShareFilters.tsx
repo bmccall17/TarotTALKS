@@ -15,6 +15,7 @@ type Props = {
   onDateToChange: (date: string) => void;
   onClearFilters: () => void;
   hasActiveFilters: boolean;
+  leftActions?: React.ReactNode;
 };
 
 const platforms = [
@@ -49,6 +50,7 @@ export function ShareFilters({
   onDateToChange,
   onClearFilters,
   hasActiveFilters,
+  leftActions,
 }: Props) {
   return (
     <div className="space-y-4">
@@ -93,36 +95,39 @@ export function ShareFilters({
         </select>
       </div>
 
-      {/* Date Range */}
+      {/* Date Range + Actions Row */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-400">From:</label>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => onDateFromChange(e.target.value)}
-            className="px-3 py-1.5 bg-gray-900 border border-gray-600 rounded-lg text-gray-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-400">To:</label>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => onDateToChange(e.target.value)}
-            className="px-3 py-1.5 bg-gray-900 border border-gray-600 rounded-lg text-gray-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          />
-        </div>
+        {leftActions}
+        <div className="flex flex-wrap items-center gap-3 ml-auto">
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-400">From:</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => onDateFromChange(e.target.value)}
+              className="px-3 py-1.5 bg-gray-900 border border-gray-600 rounded-lg text-gray-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-400">To:</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => onDateToChange(e.target.value)}
+              className="px-3 py-1.5 bg-gray-900 border border-gray-600 rounded-lg text-gray-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
 
-        {hasActiveFilters && (
-          <button
-            onClick={onClearFilters}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            <X className="w-3 h-3" />
-            Clear filters
-          </button>
-        )}
+          {hasActiveFilters && (
+            <button
+              onClick={onClearFilters}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <X className="w-3 h-3" />
+              Clear filters
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
