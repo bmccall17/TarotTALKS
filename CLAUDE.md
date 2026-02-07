@@ -87,6 +87,14 @@ When beginning development, suggested order:
 - For code changes: After implementation, instruct to deploy and test on live site
 - Test URLs should point to `https://tarottalks.app/...`
 
+## Workflow Sync
+
+Workflows (slash commands) must exist in **both** agent platforms:
+- `.claude/commands/` — Claude Code slash commands
+- `.agent/workflows/` — Antigravity workflows
+
+When creating or modifying a workflow, **always update both locations**. The files should be identical. Current shared workflows: `ship.md`, `completion-drive.md`, `audit.md`.
+
 ## Useful External Tools
 
 - **X/Twitter Card Validator:** https://www.xcardvalidator.com/
