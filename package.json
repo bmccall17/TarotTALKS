@@ -15,7 +15,8 @@
     "campaign:download": "dotenv -e .env.local -- tsx scripts/campaign-download.ts",
     "campaign:render": "dotenv -e .env.local -- tsx scripts/campaign-render.ts",
     "campaign:index": "dotenv -e .env.local -- tsx scripts/campaign-index.ts",
-    "campaign:ugc": "dotenv -e .env.local -- tsx scripts/campaign-ugc.ts"
+    "campaign:ugc": "dotenv -e .env.local -- tsx scripts/campaign-ugc.ts",
+    "campaign:download-squares": "dotenv -e .env.local -- tsx scripts/campaign-download-ig-squares.ts"
   },
   "dependencies": {
     "@atproto/api": "^0.18.20",

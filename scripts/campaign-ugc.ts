@@ -15,7 +15,7 @@ import { readFile, writeFile, access } from 'fs/promises';
 import { join } from 'path';
 import sharp from 'sharp';
 import { db } from '@/lib/db';
-import { socialShares, cards, talks } from '@/lib/db/schema';
+import { socialShares, cards, talks, cardTalkMappings } from '@/lib/db/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import type { CampaignItem, CampaignManifest, CampaignPlatform } from '@/lib/campaign/types';
 import { PLATFORM_RENDER_SPECS } from '@/lib/campaign/types';
@@ -169,6 +169,24 @@ async function ingestAllCards(campaign: string, platform: CampaignPlatform, limi
 
   log('🃏', `Found ${cardList.length} cards`);
 
+  // Query primary talk slugs for all cards
+  const primaryMappings = await db
+    .select({
+      cardSlug: cards.slug,
+      talkSlug: talks.slug,
+    })
+    .from(cards)
+    .innerJoin(cardTalkMappings, and(
+      eq(cardTalkMappings.cardId, cards.id),
+      eq(cardTalkMappings.isPrimary, true)
+    ))
+    .innerJoin(talks, and(
+      eq(cardTalkMappings.talkId, talks.id),
+      eq(talks.isDeleted, false)
+    ));
+
+  const talkSlugMap = new Map(primaryMappings.map(m => [m.cardSlug, m.talkSlug]));
+
   const newItems: CampaignItem[] = cardList.map(card => ({
     platform,
     image_url: getLiveImageUrl('cards', platform, card.slug),
@@ -177,6 +195,7 @@ async function ingestAllCards(campaign: string, platform: CampaignPlatform, limi
     alt_text: `${card.name} tarot card`,
     tags: [],
     card_name: card.name,
+    talk_slug: talkSlugMap.get(card.slug),
     category: 'cards' as const,
     scheduled_date: new Date().toISOString().slice(0, 10),
   }));
@@ -229,6 +248,32 @@ async function download(campaign: string, manifest: CampaignManifest): Promise<v
       log('⚠️', `Download failed: ${item.slug} - ${err instanceof Error ? err.message : err}`);
       errors++;
     }
+
+    // Download square 1:1 source images
+    if (item.platform === 'instagram' || item.platform === 'threads') {
+      const base = 'https://tarottalks.app';
+      const squareSources = [
+        { file: 'source_square.png', url: `${base}/cards/${item.slug}/instagram` },
+        { file: 'source_square_card_only.png', url: `${base}/cards/${item.slug}/instagram?v=card` },
+      ];
+      if (item.talk_slug) {
+        squareSources.push({ file: 'source_square_talk.png', url: `${base}/talks/${item.talk_slug}/instagram` });
+      }
+
+      for (const sq of squareSources) {
+        const sqDest = join(dir, sq.file);
+        if (await fileExists(sqDest)) continue;
+        try {
+          const res = await fetch(sq.url, { headers: { 'Cache-Control': 'no-cache' } });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          await writeFile(sqDest, Buffer.from(await res.arrayBuffer()));
+          downloaded++;
+        } catch (err) {
+          log('⚠️', `Square download failed: ${item.slug}/${sq.file} - ${err instanceof Error ? err.message : err}`);
+          errors++;
+        }
+      }
+    }
   }
 
   log('📊', `Downloaded: ${downloaded}, Skipped: ${skipped}, Errors: ${errors}`);
@@ -263,6 +308,9 @@ async function render(campaign: string, manifest: CampaignManifest): Promise<voi
     const sourceBuffer = await readFile(sourcePath);
 
     for (const spec of specs) {
+      // Skip square_1x1 here — it has dedicated sources and rendering below
+      if (spec.name === 'square_1x1') continue;
+
       const outPath = join(dir, `${spec.name}.${spec.format}`);
 
       // Render clean version if missing
@@ -282,6 +330,40 @@ async function render(campaign: string, manifest: CampaignManifest): Promise<voi
           const cleanBuf = await readFile(outPath);
           const ugcBuf = await applyUgcStyle(cleanBuf, spec.width, spec.height);
           await writeFile(ugcPath, ugcBuf);
+        }
+      }
+    }
+
+    // Render square 1x1 variants (3 source files -> clean + UGC each)
+    if (item.platform === 'instagram' || item.platform === 'threads') {
+      const squareSpec = { width: 1080, height: 1080, quality: 95 };
+      const squareFiles = [
+        { source: 'source_square.png', clean: 'square_1x1.jpg', ugc: 'ugc_square_1x1.jpg' },
+        { source: 'source_square_card_only.png', clean: 'square_1x1_card_only.jpg', ugc: 'ugc_square_1x1_card_only.jpg' },
+        { source: 'source_square_talk.png', clean: 'square_1x1_talk.jpg', ugc: 'ugc_square_1x1_talk.jpg' },
+      ];
+
+      for (const sq of squareFiles) {
+        const srcPath = join(dir, sq.source);
+        if (!(await fileExists(srcPath))) continue;
+
+        const cleanPath = join(dir, sq.clean);
+        if (!(await fileExists(cleanPath))) {
+          const buf = await sharp(await readFile(srcPath))
+            .resize(squareSpec.width, squareSpec.height, { fit: 'cover', kernel: 'lanczos3' })
+            .jpeg({ quality: squareSpec.quality })
+            .toBuffer();
+          await writeFile(cleanPath, buf);
+          rendered++;
+        }
+
+        if (applyUgcStyle) {
+          const ugcPath = join(dir, sq.ugc);
+          if (!(await fileExists(ugcPath))) {
+            const cleanBuf = await readFile(cleanPath);
+            const ugcBuf = await applyUgcStyle(cleanBuf, squareSpec.width, squareSpec.height);
+            await writeFile(ugcPath, ugcBuf);
+          }
         }
       }
     }
