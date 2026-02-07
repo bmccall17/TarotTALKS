@@ -63,6 +63,8 @@ export const talks = pgTable('talks', {
   // Social Media Handles (Tag Pack)
   speakerTwitterHandle: varchar('speaker_twitter_handle', { length: 50 }),
   speakerBlueskyHandle: varchar('speaker_bluesky_handle', { length: 100 }),
+  speakerLinkedInHandle: varchar('speaker_linkedin_handle', { length: 100 }),
+  speakerInstagramHandle: varchar('speaker_instagram_handle', { length: 50 }),
   isDeleted: boolean('is_deleted').default(false).notNull(),
   deletedAt: timestamp('deleted_at'),
   // Spread reading enrichment (0008_spread_enrichment.sql)

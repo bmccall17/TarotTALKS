@@ -11,6 +11,12 @@ export const ORG_HANDLES = {
   bluesky: {
     ted: 'ted.com',
   },
+  linkedin: {
+    ted: 'TED',
+  },
+  instagram: {
+    ted: 'TED',
+  },
 } as const;
 
 /**
@@ -65,7 +71,7 @@ export function isValidBlueskyHandle(handle: string): boolean {
  * Includes speaker handle(s) and optionally org handle
  */
 export function formatTagPack(
-  platform: 'twitter' | 'bluesky',
+  platform: 'twitter' | 'bluesky' | 'linkedin' | 'instagram',
   speakerHandle: string | null | undefined,
   includeOrg: boolean = true
 ): string {
@@ -75,7 +81,12 @@ export function formatTagPack(
     const handles = speakerHandle.split(',').map((h) => h.trim());
     handles.forEach((h) => {
       if (h) {
-        parts.push(`@${h.replace(/^@/, '')}`);
+        if (platform === 'linkedin') {
+          // LinkedIn uses profile URLs, no @ prefix
+          parts.push(`linkedin.com/in/${h.replace(/^@/, '')}`);
+        } else {
+          parts.push(`@${h.replace(/^@/, '')}`);
+        }
       }
     });
   }
@@ -85,6 +96,10 @@ export function formatTagPack(
       parts.push(`@${ORG_HANDLES.twitter.ted}`);
     } else if (platform === 'bluesky') {
       parts.push(`@${ORG_HANDLES.bluesky.ted}`);
+    } else if (platform === 'linkedin') {
+      parts.push(`linkedin.com/in/${ORG_HANDLES.linkedin.ted}`);
+    } else if (platform === 'instagram') {
+      parts.push(`@${ORG_HANDLES.instagram.ted}`);
     }
   }
 
@@ -97,11 +112,15 @@ export function formatTagPack(
 export function formatAllTagPacks(
   twitterHandle: string | null | undefined,
   blueskyHandle: string | null | undefined,
+  linkedInHandle?: string | null | undefined,
+  instagramHandle?: string | null | undefined,
   includeOrg: boolean = true
-): { twitter: string; bluesky: string } {
+): { twitter: string; bluesky: string; linkedin: string; instagram: string } {
   return {
     twitter: formatTagPack('twitter', twitterHandle, includeOrg),
     bluesky: formatTagPack('bluesky', blueskyHandle, includeOrg),
+    linkedin: formatTagPack('linkedin', linkedInHandle, includeOrg),
+    instagram: formatTagPack('instagram', instagramHandle, includeOrg),
   };
 }
 

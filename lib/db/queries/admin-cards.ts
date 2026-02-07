@@ -151,6 +151,8 @@ export async function getCardTagPackData(cardId: string): Promise<{
       speakerName: talks.speakerName,
       speakerTwitterHandle: talks.speakerTwitterHandle,
       speakerBlueskyHandle: talks.speakerBlueskyHandle,
+      speakerLinkedInHandle: talks.speakerLinkedInHandle,
+      speakerInstagramHandle: talks.speakerInstagramHandle,
       rationaleShort: cardTalkMappings.rationaleShort,
       isPrimary: cardTalkMappings.isPrimary,
     })
@@ -189,6 +191,18 @@ export async function getCardTagPackData(cardId: string): Promise<{
     const platform = mapping.speakerBlueskyHandle ? 'bluesky' : 'twitter';
     const tagPack = formatTagPack(platform, speakerHandle, true);
     lines.push(tagPack);
+  }
+
+  // LinkedIn handle
+  if (mapping.speakerLinkedInHandle) {
+    const linkedInTag = formatTagPack('linkedin', mapping.speakerLinkedInHandle, false);
+    lines.push(`🔗 ${linkedInTag}`);
+  }
+
+  // Instagram handle
+  if (mapping.speakerInstagramHandle) {
+    const instagramTag = formatTagPack('instagram', mapping.speakerInstagramHandle, false);
+    lines.push(`📷 ${instagramTag}`);
   }
 
   return {

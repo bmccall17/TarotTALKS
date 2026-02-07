@@ -27,6 +27,8 @@ type MappingInfo = {
 type Props = {
   twitterHandle: string;
   blueskyHandle: string;
+  linkedInHandle: string;
+  instagramHandle: string;
   speakerName: string;
   talkTitle: string;
   year: number | null;
@@ -37,6 +39,8 @@ type Props = {
 export function TagPackCopyButton({
   twitterHandle,
   blueskyHandle,
+  linkedInHandle,
+  instagramHandle,
   speakerName,
   talkTitle,
   year,
@@ -52,6 +56,8 @@ export function TagPackCopyButton({
 
   const hasTwitter = !!twitterHandle?.trim();
   const hasBluesky = !!blueskyHandle?.trim();
+  const hasLinkedIn = !!linkedInHandle?.trim();
+  const hasInstagram = !!instagramHandle?.trim();
 
   // Get primary mapping (or first one if none is primary)
   const primaryMapping = mappings.find((m) => m.isPrimary) || mappings[0];
@@ -158,6 +164,22 @@ export function TagPackCopyButton({
           <div className="flex items-center gap-2 text-sm">
             <BlueskyIcon className="w-4 h-4 text-gray-400" />
             <code className="text-sky-300 bg-sky-900/20 px-2 py-0.5 rounded">{blueskyTagPack}</code>
+          </div>
+        )}
+        {hasLinkedIn && (
+          <div className="flex items-center gap-2 text-sm">
+            <Link2 className="w-4 h-4 text-gray-400" />
+            <code className="text-blue-200 bg-blue-900/20 px-2 py-0.5 rounded">
+              linkedin.com/in/{linkedInHandle.trim().replace(/^@/, '')}
+            </code>
+          </div>
+        )}
+        {hasInstagram && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="w-4 h-4 text-gray-400 text-center text-xs leading-4">IG</span>
+            <code className="text-pink-300 bg-pink-900/20 px-2 py-0.5 rounded">
+              @{instagramHandle.trim().replace(/^@/, '')}
+            </code>
           </div>
         )}
       </div>

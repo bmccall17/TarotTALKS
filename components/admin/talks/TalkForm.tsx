@@ -25,6 +25,8 @@ type TalkFormData = {
   language: string;
   speakerTwitterHandle: string;
   speakerBlueskyHandle: string;
+  speakerLinkedInHandle: string;
+  speakerInstagramHandle: string;
 };
 
 type Mapping = {
@@ -66,6 +68,8 @@ export function TalkForm({ initialData, talkId, talkSlug, mode, mappings = [] }:
     language: initialData?.language || 'en',
     speakerTwitterHandle: initialData?.speakerTwitterHandle || '',
     speakerBlueskyHandle: initialData?.speakerBlueskyHandle || '',
+    speakerLinkedInHandle: initialData?.speakerLinkedInHandle || '',
+    speakerInstagramHandle: initialData?.speakerInstagramHandle || '',
   });
 
   const updateField = <K extends keyof TalkFormData>(field: K, value: TalkFormData[K]) => {
@@ -150,6 +154,8 @@ export function TalkForm({ initialData, talkId, talkSlug, mode, mappings = [] }:
         language: formData.language,
         speakerTwitterHandle: normalizeHandle(formData.speakerTwitterHandle) || null,
         speakerBlueskyHandle: normalizeHandle(formData.speakerBlueskyHandle) || null,
+        speakerLinkedInHandle: normalizeHandle(formData.speakerLinkedInHandle) || null,
+        speakerInstagramHandle: normalizeHandle(formData.speakerInstagramHandle) || null,
       };
 
       const response = await fetch(endpoint, {
@@ -501,6 +507,45 @@ export function TalkForm({ initialData, talkId, talkSlug, mode, mappings = [] }:
                     Full handle (e.g., user.bsky.social)
                   </p>
                 </div>
+
+                {/* LinkedIn Handle */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    LinkedIn Handle
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formData.speakerLinkedInHandle}
+                      onChange={(e) => updateField('speakerLinkedInHandle', e.target.value)}
+                      className="w-full px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-blue-700 focus:border-transparent"
+                      placeholder="in/speaker-name"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Profile slug (e.g., in/speaker-name)
+                  </p>
+                </div>
+
+                {/* Instagram Handle */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Instagram Handle
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">@</span>
+                    <input
+                      type="text"
+                      value={formData.speakerInstagramHandle}
+                      onChange={(e) => updateField('speakerInstagramHandle', e.target.value)}
+                      className="w-full pl-8 pr-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                      placeholder="speaker_handle"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Without @ prefix.
+                  </p>
+                </div>
               </div>
 
               {/* Copy Buttons */}
@@ -508,6 +553,8 @@ export function TalkForm({ initialData, talkId, talkSlug, mode, mappings = [] }:
                 <TagPackCopyButton
                   twitterHandle={formData.speakerTwitterHandle}
                   blueskyHandle={formData.speakerBlueskyHandle}
+                  linkedInHandle={formData.speakerLinkedInHandle}
+                  instagramHandle={formData.speakerInstagramHandle}
                   speakerName={formData.speakerName}
                   talkTitle={formData.title}
                   year={formData.year}
