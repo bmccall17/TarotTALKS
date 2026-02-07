@@ -8,8 +8,8 @@ export const metadata = {
   description: 'Explore curated TED talks mapped to Tarot archetypes',
 };
 
-// Disable caching to immediately reflect admin changes
-export const revalidate = 0;
+// ISR: revalidate every hour (talk listing changes with new talks)
+export const revalidate = 3600;
 
 export default async function TalksPage() {
   const talks = await getAllTalks();

@@ -11,8 +11,8 @@ import { SocialLinks } from '@/components/ui/SocialLinks';
 import { SocialTrail } from '@/components/ui/SocialTrail';
 import { getPublicSharesForCard } from '@/lib/db/queries/public-social-shares';
 
-// Disable caching to immediately reflect admin changes
-export const revalidate = 0;
+// ISR: revalidate every 24 hours (cards rarely change)
+export const revalidate = 86400;
 
 export async function generateStaticParams() {
   const cards = await getAllCards();

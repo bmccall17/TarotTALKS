@@ -10,8 +10,8 @@ import { SocialLinks } from '@/components/ui/SocialLinks';
 import { SocialTrail } from '@/components/ui/SocialTrail';
 import { getPublicSharesForTalk } from '@/lib/db/queries/public-social-shares';
 
-// Disable caching to immediately reflect admin changes
-export const revalidate = 0;
+// ISR: revalidate every hour (talks updated more frequently)
+export const revalidate = 3600;
 
 export async function generateStaticParams() {
   const talks = await getAllTalks();

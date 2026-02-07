@@ -8,8 +8,8 @@ export const metadata = {
   description: 'Explore all 78 Tarot cards and discover their meanings',
 };
 
-// Disable caching to immediately reflect admin changes
-export const revalidate = 0;
+// ISR: revalidate every 24 hours (card listing rarely changes)
+export const revalidate = 86400;
 
 export default async function CardsPage() {
   const cards = await getAllCards();

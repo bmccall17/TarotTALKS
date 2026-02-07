@@ -7,8 +7,8 @@ import { ArrowLeft, Sparkles, Play, ExternalLink } from 'lucide-react';
 import { ShareButton } from '@/components/ui/ShareButton';
 import { SocialLinks } from '@/components/ui/SocialLinks';
 
-// Disable caching to immediately reflect admin changes
-export const revalidate = 0;
+// ISR: revalidate every 24 hours (themes change ~every 6 months)
+export const revalidate = 86400;
 
 export async function generateStaticParams() {
   const themes = await getAllThemes();

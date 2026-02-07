@@ -110,10 +110,10 @@ export async function GET(request: NextRequest) {
       suggestions = await getSearchSuggestions(query);
     }
 
-    // No caching to immediately reflect admin changes
+    // CDN cache for 60s, serve stale up to 5min while revalidating
     return NextResponse.json({ ...results, suggestions }, {
       headers: {
-        'Cache-Control': 'no-store, max-age=0',
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
       },
     });
   } catch (error) {

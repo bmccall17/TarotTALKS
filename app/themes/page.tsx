@@ -7,8 +7,8 @@ export const metadata = {
   description: 'Curated collections of cards and talks for life\'s journeys',
 };
 
-// Disable caching to immediately reflect admin changes
-export const revalidate = 0;
+// ISR: revalidate every 24 hours (theme listing rarely changes)
+export const revalidate = 86400;
 
 const themeColors: Record<string, string> = {
   'new-beginnings': 'bg-green-500',
