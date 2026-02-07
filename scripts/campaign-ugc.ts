@@ -118,15 +118,22 @@ async function ingest(campaign: string, platform?: CampaignPlatform, limit?: num
     });
   }
 
-  // Merge with existing manifest
+  // Merge with existing manifest (new items overwrite stale data for same key)
   const existing = await readManifest(campaign);
+  const newItemsByKey = new Map(newItems.map(i => [itemKey(i), i]));
   const existingKeys = new Set(existing?.items.map(itemKey) || []);
   const unique = newItems.filter(i => !existingKeys.has(itemKey(i)));
+
+  // Update existing items with fresh data (e.g. corrected URLs)
+  const updatedExisting = (existing?.items || []).map(item => {
+    const fresh = newItemsByKey.get(itemKey(item));
+    return fresh || item;
+  });
 
   const manifest: CampaignManifest = {
     campaign_slug: campaign,
     created_at: existing?.created_at || new Date().toISOString(),
-    items: [...(existing?.items || []), ...unique],
+    items: [...updatedExisting, ...unique],
     source: 'signal-deck',
   };
 

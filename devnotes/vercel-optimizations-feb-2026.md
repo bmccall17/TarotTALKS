@@ -1,7 +1,8 @@
 # Vercel Usage Reduction & Optimization (Feb 2026)
 
 ## Context
-We investigated a spike in Vercel paid service usage (specifically "Function Execution" and "Source Image" optimization) that began around Jan 29th.
+We investigated a spike in Vercel paid service usage (specifically "Function Execution", "Source Image" optimization, and "Fast Origin Transfer") that began around Jan 29th.
+We need to investigate the issue, identify all the locations where these functions are called and then make a plan for alternatives so they are called minimally and within the monthly limits!
 
 ## Identified Issues
 1.  **Dynamic OpenGraph Images**: The `opengraph-image.tsx` was configured with `revalidate = 0` (no caching). This meant every link share or bot crawl triggered a serverless function execution and image generation, leading to high usage.

@@ -177,16 +177,23 @@ async function main() {
   // Load existing manifest for merge
   const existing = await readManifest(opts.campaign);
   const existingKeys = new Set(existing?.items.map(itemKey) || []);
+  const newItemsByKey = new Map(newItems.map(i => [itemKey(i), i]));
 
   // Filter out duplicates
   const uniqueNewItems = newItems.filter(item => !existingKeys.has(itemKey(item)));
-  log('✨', `${uniqueNewItems.length} new items (${newItems.length - uniqueNewItems.length} duplicates skipped)`);
+  log('✨', `${uniqueNewItems.length} new items (${newItems.length - uniqueNewItems.length} duplicates updated)`);
+
+  // Update existing items with fresh data (e.g. corrected URLs), then append truly new items
+  const updatedExisting = (existing?.items || []).map(item => {
+    const fresh = newItemsByKey.get(itemKey(item));
+    return fresh || item;
+  });
 
   // Build manifest
   const manifest: CampaignManifest = {
     campaign_slug: opts.campaign,
     created_at: existing?.created_at || new Date().toISOString(),
-    items: [...(existing?.items || []), ...uniqueNewItems],
+    items: [...updatedExisting, ...uniqueNewItems],
     source: opts.source,
   };
 
