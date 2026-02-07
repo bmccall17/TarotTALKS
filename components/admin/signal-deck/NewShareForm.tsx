@@ -382,8 +382,8 @@ export function NewShareForm({ share, preselectedCard, onSave, onClose }: Props)
                   type="button"
                   onClick={() => setFormData((prev) => ({ ...prev, platform: p.value }))}
                   className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.platform === p.value
-                      ? platformColorsSelected[p.value]
-                      : platformColors[p.value]
+                    ? platformColorsSelected[p.value]
+                    : platformColors[p.value]
                     }`}
                 >
                   {p.shortLabel}
@@ -491,12 +491,10 @@ export function NewShareForm({ share, preselectedCard, onSave, onClose }: Props)
                   onClick={() => setFormData((prev) => ({
                     ...prev,
                     status: s.value,
-                    // Auto-check showPublicly for posted/verified
-                    showPublicly: (s.value === 'posted' || s.value === 'verified') ? true : prev.showPublicly,
                   }))}
                   className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.status === s.value
-                      ? 'bg-indigo-600 border-indigo-500 text-white'
-                      : 'bg-gray-900 border-gray-600 text-gray-300 hover:bg-gray-700'
+                    ? 'bg-indigo-600 border-indigo-500 text-white'
+                    : 'bg-gray-900 border-gray-600 text-gray-300 hover:bg-gray-700'
                     }`}
                 >
                   {s.label}
