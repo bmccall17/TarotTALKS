@@ -15,7 +15,6 @@ import sharp from 'sharp';
 import { db } from '@/lib/db';
 import { socialShares, cards, talks } from '@/lib/db/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
-import { getShareImagePublicUrl } from '@/lib/supabase/share-image-storage';
 import type { CampaignItem, CampaignManifest, CampaignPlatform } from '@/lib/campaign/types';
 import { PLATFORM_RENDER_SPECS } from '@/lib/campaign/types';
 import {
@@ -27,6 +26,7 @@ import {
   fileExists,
   itemKey,
   log,
+  getLiveImageUrl,
 } from '@/lib/campaign/utils';
 
 function parseArgs(): {
@@ -99,13 +99,10 @@ async function ingest(campaign: string, platform?: CampaignPlatform, limit?: num
     if (!category || !slug) continue;
 
     const sharePlatform = share.platform as CampaignPlatform;
-    let imageType: 'opengraph' | 'twitter' | 'instagram' | 'instagram-feed' = 'opengraph';
-    if (sharePlatform === 'instagram') imageType = 'instagram-feed';
-    else if (sharePlatform === 'x') imageType = 'twitter';
 
     newItems.push({
       platform: sharePlatform,
-      image_url: getShareImagePublicUrl(category as 'cards' | 'talks', imageType, slug),
+      image_url: getLiveImageUrl(category as 'cards' | 'talks', sharePlatform, slug),
       slug,
       post_id: share.id,
       caption: share.notes || '',

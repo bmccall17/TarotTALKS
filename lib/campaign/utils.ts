@@ -123,3 +123,20 @@ export function itemKey(item: CampaignItem): string {
 export function log(emoji: string, message: string): void {
   console.log(`${emoji}  ${message}`);
 }
+
+/**
+ * Build a live Satori route URL that generates images on-the-fly.
+ * More reliable than Supabase storage URLs (which require pre-generation).
+ */
+export function getLiveImageUrl(
+  category: 'cards' | 'talks',
+  platform: CampaignPlatform,
+  slug: string
+): string {
+  const base = 'https://tarottalks.app';
+  if (platform === 'instagram' || platform === 'threads') {
+    return `${base}/${category}/${slug}/instagram-feed`;
+  }
+  // X, Bluesky, LinkedIn all use OG image
+  return `${base}/${category}/${slug}/opengraph-image`;
+}

@@ -14,7 +14,6 @@ import { readFile } from 'fs/promises';
 import { db } from '@/lib/db';
 import { socialShares, cards, talks } from '@/lib/db/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
-import { getShareImagePublicUrl } from '@/lib/supabase/share-image-storage';
 import type { CampaignItem, CampaignManifest, CampaignPlatform } from '@/lib/campaign/types';
 import {
   parseCsvInput,
@@ -25,6 +24,7 @@ import {
   ensureDirectory,
   itemKey,
   log,
+  getLiveImageUrl,
 } from '@/lib/campaign/utils';
 
 function parseArgs(): {
@@ -117,17 +117,9 @@ async function ingestFromSignalDeck(
     const slug = card?.slug || talk?.slug;
     if (!category || !slug) continue;
 
-    // Determine the best image URL from Supabase storage
+    // Build live Satori route URL (generates on-the-fly, always available)
     const sharePlatform = share.platform as CampaignPlatform;
-    let imageType: 'opengraph' | 'twitter' | 'instagram' | 'instagram-feed' = 'opengraph';
-    if (sharePlatform === 'instagram') imageType = 'instagram-feed';
-    else if (sharePlatform === 'x') imageType = 'twitter';
-
-    const imageUrl = getShareImagePublicUrl(
-      category as 'cards' | 'talks',
-      imageType,
-      slug
-    );
+    const imageUrl = getLiveImageUrl(category as 'cards' | 'talks', sharePlatform, slug);
 
     items.push({
       platform: sharePlatform,
