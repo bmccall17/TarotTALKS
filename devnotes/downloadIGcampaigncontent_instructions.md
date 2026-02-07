@@ -97,6 +97,9 @@ npm run campaign:ugc -- --campaign all-cards-li --source all-cards --platform li
 
 ### Test with a small batch first
 ```bash
+npm run campaign:ugc -- --campaign test-5 --source all-cards --platform instagram --limit 2
+```
+```bash
 npm run campaign:ugc -- --campaign test-5 --source all-cards --platform instagram --limit 5
 ```
 
