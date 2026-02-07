@@ -3,8 +3,10 @@
  *
  * Usage:
  *   npm run campaign:ugc -- --campaign ugc-feb-2026 --platform instagram --limit 10
+ *   npm run campaign:ugc -- --campaign all-cards-ig --source all-cards --platform instagram
  *
- * Combines: ingest (from Signal Deck) -> download -> render (--ugc --captions) -> index
+ * Combines: ingest (from Signal Deck or all-cards) -> download -> render (--ugc --captions) -> index
+ * --source all-cards: bypasses Signal Deck, ingests every card in the DB for the given platform.
  * Single command for the most common workflow.
  * Same idempotency guarantees as individual scripts.
  */
@@ -33,6 +35,7 @@ function parseArgs(): {
   campaign: string;
   platform?: CampaignPlatform;
   limit?: number;
+  source: 'signal-deck' | 'all-cards';
 } {
   const args = process.argv.slice(2);
   const opts: Record<string, string> = {};
@@ -46,10 +49,16 @@ function parseArgs(): {
     console.error('❌  Missing --campaign flag');
     process.exit(1);
   }
+  const source = opts.source === 'all-cards' ? 'all-cards' : 'signal-deck';
+  if (source === 'all-cards' && !opts.platform) {
+    console.error('❌  --platform required with --source all-cards');
+    process.exit(1);
+  }
   return {
     campaign: opts.campaign,
     platform: opts.platform as CampaignPlatform | undefined,
     limit: opts.limit ? parseInt(opts.limit) : undefined,
+    source,
   };
 }
 
@@ -138,6 +147,59 @@ async function ingest(campaign: string, platform?: CampaignPlatform, limit?: num
   };
 
   for (const item of unique) {
+    await ensureDirectory(getPostDirectory(campaign, item.platform, item));
+  }
+  await writeManifest(campaign, manifest);
+
+  log('📋', `${manifest.items.length} items in manifest (${unique.length} new)`);
+  return manifest;
+}
+
+// ── Step 1b: Ingest All Cards ──────────────────────────────────
+async function ingestAllCards(campaign: string, platform: CampaignPlatform, limit?: number): Promise<CampaignManifest> {
+  log('🃏', 'Step 1/4: Ingesting ALL cards from database...');
+
+  let query = db
+    .select({ id: cards.id, name: cards.name, slug: cards.slug, imageUrl: cards.imageUrl })
+    .from(cards)
+    .orderBy(cards.sequenceIndex);
+
+  const allCards = await query;
+  const cardList = limit ? allCards.slice(0, limit) : allCards;
+
+  log('🃏', `Found ${cardList.length} cards`);
+
+  const newItems: CampaignItem[] = cardList.map(card => ({
+    platform,
+    image_url: getLiveImageUrl('cards', platform, card.slug),
+    slug: card.slug,
+    caption: '',
+    alt_text: `${card.name} tarot card`,
+    tags: [],
+    card_name: card.name,
+    category: 'cards' as const,
+    scheduled_date: new Date().toISOString().slice(0, 10),
+  }));
+
+  // Merge with existing manifest (new items overwrite stale data for same key)
+  const existing = await readManifest(campaign);
+  const newItemsByKey = new Map(newItems.map(i => [itemKey(i), i]));
+  const existingKeys = new Set(existing?.items.map(itemKey) || []);
+  const unique = newItems.filter(i => !existingKeys.has(itemKey(i)));
+
+  const updatedExisting = (existing?.items || []).map(item => {
+    const fresh = newItemsByKey.get(itemKey(item));
+    return fresh || item;
+  });
+
+  const manifest: CampaignManifest = {
+    campaign_slug: campaign,
+    created_at: existing?.created_at || new Date().toISOString(),
+    items: [...updatedExisting, ...unique],
+    source: 'signal-deck',
+  };
+
+  for (const item of manifest.items) {
     await ensureDirectory(getPostDirectory(campaign, item.platform, item));
   }
   await writeManifest(campaign, manifest);
@@ -314,10 +376,12 @@ async function index(campaign: string, manifest: CampaignManifest): Promise<void
 // ── Main ────────────────────────────────────────────────────────
 async function main() {
   const opts = parseArgs();
-  log('🚀', `UGC Pipeline: ${opts.campaign}`);
+  log('🚀', `UGC Pipeline: ${opts.campaign} (source: ${opts.source})`);
   console.log('');
 
-  const manifest = await ingest(opts.campaign, opts.platform, opts.limit);
+  const manifest = opts.source === 'all-cards'
+    ? await ingestAllCards(opts.campaign, opts.platform!, opts.limit)
+    : await ingest(opts.campaign, opts.platform, opts.limit);
   console.log('');
 
   await download(opts.campaign, manifest);
