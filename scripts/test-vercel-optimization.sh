@@ -137,8 +137,8 @@ check_revalidate \
 
 check_revalidate \
   "app/cards/page.tsx" \
-  "86400" \
-  "cards/page (24h)"
+  "0" \
+  "cards/page (SSR — listing can't ISR due to build timeout)"
 
 check_revalidate \
   "app/talks/[slug]/page.tsx" \
@@ -147,8 +147,8 @@ check_revalidate \
 
 check_revalidate \
   "app/talks/page.tsx" \
-  "3600" \
-  "talks/page (1h)"
+  "0" \
+  "talks/page (SSR — listing can't ISR due to build timeout)"
 
 check_revalidate \
   "app/themes/[slug]/page.tsx" \
@@ -157,8 +157,8 @@ check_revalidate \
 
 check_revalidate \
   "app/themes/page.tsx" \
-  "86400" \
-  "themes/page (24h)"
+  "0" \
+  "themes/page (SSR — listing can't ISR due to build timeout)"
 
 echo ""
 

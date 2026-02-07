@@ -8,8 +8,8 @@ export const metadata = {
   description: 'Explore all 78 Tarot cards and discover their meanings',
 };
 
-// ISR: revalidate every 24 hours (card listing rarely changes)
-export const revalidate = 86400;
+// SSR: listing pages can't use ISR (Supabase queries timeout during Vercel build)
+export const revalidate = 0;
 
 export default async function CardsPage() {
   const cards = await getAllCards();
