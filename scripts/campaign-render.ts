@@ -190,7 +190,7 @@ async function main() {
           await writeFile(join(dir, 'caption_short.txt'), captionSet.short, 'utf-8');
           await writeFile(join(dir, 'caption_medium.txt'), captionSet.medium, 'utf-8');
           await writeFile(join(dir, 'caption_spicy.txt'), captionSet.spicy, 'utf-8');
-          await writeFile(join(dir, 'hashtags.txt'), captionSet.hashtags.join(' '), 'utf-8');
+          await writeFile(join(dir, 'hashtags.txt'), captionSet.hashtags.map((t: string) => `#${t}`).join(' '), 'utf-8');
           log('✍️', `Captions written: ${item.slug}`);
         } else {
           log('⚠️', `Caption generation returned empty for ${item.slug}`);

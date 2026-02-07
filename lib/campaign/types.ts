@@ -44,12 +44,14 @@ export interface RenderSpec {
 export const PLATFORM_RENDER_SPECS: Record<CampaignPlatform, RenderSpec[]> = {
   instagram: [
     { name: 'feed_4x5', width: 1080, height: 1350, format: 'jpg', quality: 95 },
-    { name: 'square_1x1', width: 1080, height: 1080, format: 'jpg', quality: 95 },
+    // square_1x1 parked for future sprint (crops talk info at bottom)
   ],
   x: [{ name: 'og_card', width: 1200, height: 630, format: 'jpg', quality: 90 }],
   bluesky: [{ name: 'og_card', width: 1200, height: 630, format: 'jpg', quality: 90 }],
   linkedin: [{ name: 'og_card', width: 1200, height: 627, format: 'jpg', quality: 90 }],
-  threads: [{ name: 'square_1x1', width: 1080, height: 1080, format: 'jpg', quality: 95 }],
+  threads: [
+    // square_1x1 parked for future sprint (crops talk info at bottom)
+  ],
 };
 
 export interface DownloadError {

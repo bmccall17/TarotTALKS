@@ -237,7 +237,7 @@ async function render(campaign: string, manifest: CampaignManifest): Promise<voi
           await writeFile(join(dir, 'caption_short.txt'), captionSet.short, 'utf-8');
           await writeFile(join(dir, 'caption_medium.txt'), captionSet.medium, 'utf-8');
           await writeFile(join(dir, 'caption_spicy.txt'), captionSet.spicy, 'utf-8');
-          await writeFile(join(dir, 'hashtags.txt'), captionSet.hashtags.join(' '), 'utf-8');
+          await writeFile(join(dir, 'hashtags.txt'), captionSet.hashtags.map((t: string) => `#${t}`).join(' '), 'utf-8');
         }
         await new Promise(r => setTimeout(r, 2000)); // rate limit
       } catch (err) {
