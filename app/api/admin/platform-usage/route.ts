@@ -8,7 +8,10 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching platform usage:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch platform usage' },
+      {
+        error: 'Failed to fetch platform usage',
+        detail: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     );
   }

@@ -64,7 +64,10 @@ export function PlatformQuotasSection() {
     async function fetchData() {
       try {
         const response = await fetch('/api/admin/platform-usage');
-        if (!response.ok) throw new Error('Failed to fetch platform usage');
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.detail || `HTTP ${response.status}`);
+        }
         const result = await response.json();
         setData(result);
       } catch (err) {
@@ -104,6 +107,9 @@ export function PlatformQuotasSection() {
           <h2 className="text-lg font-semibold text-gray-100">Platform Quotas</h2>
         </div>
         <p className="text-gray-500 text-sm">Unable to load platform usage data</p>
+        {error && (
+          <p className="text-gray-600 text-xs mt-1 font-mono">{error}</p>
+        )}
       </div>
     );
   }

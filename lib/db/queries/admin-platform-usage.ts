@@ -59,15 +59,35 @@ export type DatabaseSize = {
 export async function getDatabaseSize(): Promise<DatabaseSize> {
   const LIMIT_MB = 500;
 
-  const result = await db.execute(
-    sql`SELECT pg_database_size(current_database()) as size_bytes`
-  );
+  try {
+    // Try pg_database_size first (may fail on Supabase pooled connections)
+    const result = await db.execute(
+      sql`SELECT pg_database_size(current_database()) as size_bytes`
+    );
+    const bytes = Number(result[0]?.size_bytes ?? 0);
+    if (bytes > 0) {
+      const mb = Math.round((bytes / (1024 * 1024)) * 10) / 10;
+      const percent = Math.round((mb / LIMIT_MB) * 1000) / 10;
+      return { bytes, mb, limitMb: LIMIT_MB, percent };
+    }
+  } catch (e) {
+    console.warn('pg_database_size() failed, falling back to table size sum:', e);
+  }
 
-  const bytes = Number(result[0]?.size_bytes ?? 0);
-  const mb = Math.round((bytes / (1024 * 1024)) * 10) / 10;
-  const percent = Math.round((mb / LIMIT_MB) * 1000) / 10;
-
-  return { bytes, mb, limitMb: LIMIT_MB, percent };
+  // Fallback: sum sizes of all tables in public schema
+  try {
+    const result = await db.execute(
+      sql`SELECT COALESCE(SUM(pg_total_relation_size(quote_ident(tablename))), 0) as size_bytes
+          FROM pg_tables WHERE schemaname = 'public'`
+    );
+    const bytes = Number(result[0]?.size_bytes ?? 0);
+    const mb = Math.round((bytes / (1024 * 1024)) * 10) / 10;
+    const percent = Math.round((mb / LIMIT_MB) * 1000) / 10;
+    return { bytes, mb, limitMb: LIMIT_MB, percent };
+  } catch (e) {
+    console.warn('Table size sum also failed:', e);
+    return { bytes: 0, mb: 0, limitMb: LIMIT_MB, percent: 0 };
+  }
 }
 
 // --- Image Source Count (Vercel Image Optimization) ---
@@ -186,13 +206,22 @@ export type PlatformUsageData = {
   sessionTrend: SessionTrend;
 };
 
+async function safeQuery<T>(fn: () => Promise<T>, fallback: T, label: string): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    console.error(`Platform usage query failed [${label}]:`, e);
+    return fallback;
+  }
+}
+
 export async function getAllPlatformUsage(): Promise<PlatformUsageData> {
   const billingCycle = getBillingCycleInfo();
 
   const [dbSize, imageSources, sessionTrend] = await Promise.all([
-    getDatabaseSize(),
-    getImageSourceCount(),
-    getSessionTrend(),
+    safeQuery(getDatabaseSize, { bytes: 0, mb: 0, limitMb: 500, percent: 0 }, 'dbSize'),
+    safeQuery(getImageSourceCount, { cards: 0, talks: 0, total: 0, limit: 1000, percent: 0 }, 'imageSources'),
+    safeQuery(getSessionTrend, { today: 0, avgDaily: 0, trend: 'stable' as const }, 'sessionTrend'),
   ]);
 
   return { billingCycle, dbSize, imageSources, sessionTrend };
