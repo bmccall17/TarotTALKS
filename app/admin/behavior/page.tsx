@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Users, BarChart3, Target, Clock, Smartphone, Monitor, Activity } from 'lucide-react';
+import { AlertTriangle, Users, BarChart3, Target, Clock, Smartphone, Monitor, Activity, TrendingUp } from 'lucide-react';
 import { ApiStatusPair, type ApiHealthData } from '@/components/admin/ui/ApiStatusIndicator';
 
 type FlipDistribution = {
@@ -15,6 +15,11 @@ type FunnelStep = {
   sessions: number;
   percentage: number;
   dropoff: number;
+};
+
+type DailySession = {
+  date: string;
+  count: number;
 };
 
 type BehaviorStats = {
@@ -40,6 +45,7 @@ type BehaviorStats = {
     mobilePercentage: number;
     desktopPercentage: number;
   };
+  dailySessions: DailySession[];
 };
 
 type ApiUsageStats = {
@@ -162,6 +168,11 @@ export default function BehaviorPage() {
             Low sample size ({stats.sessionStats.totalSessions} sessions) - metrics may not be reliable
           </p>
         </div>
+      )}
+
+      {/* Daily Sessions Chart */}
+      {stats.dailySessions && stats.dailySessions.length > 0 && (
+        <DailySessionsChart data={stats.dailySessions} />
       )}
 
       {/* API Health Status */}
@@ -360,6 +371,96 @@ export default function BehaviorPage() {
           <p className="text-gray-500 text-xs pt-2">
             Add to any page URL to toggle. Persists in localStorage until changed.
           </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DailySessionsChart({ data }: { data: DailySession[] }) {
+  const maxCount = Math.max(...data.map(d => d.count), 1);
+  const avg = data.length > 0
+    ? Math.round(data.reduce((sum, d) => sum + d.count, 0) / data.length)
+    : 0;
+  const avgPercent = maxCount > 0 ? (avg / maxCount) * 100 : 0;
+
+  // Today's date string for highlighting
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  return (
+    <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-lg font-semibold text-gray-100 flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-indigo-400" />
+          Daily Sessions
+        </h2>
+        <span className="text-xs text-gray-500">
+          avg: {avg}/day
+        </span>
+      </div>
+      <p className="text-xs text-gray-500 mb-4">Higher volume = more egress</p>
+
+      <div className="relative">
+        {/* Average line */}
+        <div
+          className="absolute left-0 right-0 border-t border-dashed border-gray-500/50 pointer-events-none"
+          style={{ bottom: `${avgPercent}%` }}
+        >
+          <span className="absolute -top-3 right-0 text-[10px] text-gray-500">avg</span>
+        </div>
+
+        {/* Bars */}
+        <div className="flex items-end gap-1" style={{ height: '120px' }}>
+          {data.map((day) => {
+            const heightPercent = maxCount > 0 ? (day.count / maxCount) * 100 : 0;
+            const isToday = day.date === todayStr;
+            return (
+              <div
+                key={day.date}
+                className="flex-1 flex flex-col items-center gap-1 group relative"
+              >
+                {/* Tooltip */}
+                <div className="absolute bottom-full mb-1 hidden group-hover:block z-10">
+                  <div className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[10px] text-gray-300 whitespace-nowrap">
+                    {formatDate(day.date)}: {day.count} sessions
+                  </div>
+                </div>
+                {/* Bar */}
+                <div
+                  className={`w-full rounded-t transition-all ${
+                    isToday ? 'bg-indigo-400' : 'bg-indigo-500/60'
+                  } hover:bg-indigo-400`}
+                  style={{
+                    height: `${Math.max(heightPercent, 2)}%`,
+                    minHeight: '2px',
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        {/* X-axis labels (show first, middle, last) */}
+        <div className="flex justify-between mt-1.5">
+          {data.length > 0 && (
+            <span className="text-[10px] text-gray-500">{formatDate(data[0].date)}</span>
+          )}
+          {data.length > 2 && (
+            <span className="text-[10px] text-gray-500">
+              {formatDate(data[Math.floor(data.length / 2)].date)}
+            </span>
+          )}
+          {data.length > 1 && (
+            <span className="text-[10px] text-indigo-400 font-medium">
+              {formatDate(data[data.length - 1].date)}
+              {data[data.length - 1].date === todayStr && ' (today)'}
+            </span>
+          )}
         </div>
       </div>
     </div>

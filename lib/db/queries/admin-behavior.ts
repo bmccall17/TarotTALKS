@@ -385,6 +385,37 @@ export async function getDeviceBreakdown(days: number = DEFAULT_DAYS): Promise<D
   };
 }
 
+// Daily session counts for traffic chart
+export type DailySessionCount = {
+  date: string;
+  count: number;
+};
+
+export async function getDailySessionCounts(days: number = DEFAULT_DAYS): Promise<DailySessionCount[]> {
+  const cutoff = getDateCutoff(days);
+
+  const result = await db
+    .select({
+      date: sql<string>`DATE(${behaviorEvents.createdAt})`.as('date'),
+      count: countDistinct(behaviorEvents.sessionId),
+    })
+    .from(behaviorEvents)
+    .where(
+      and(
+        eq(behaviorEvents.eventName, 'session_start'),
+        gte(behaviorEvents.createdAt, cutoff),
+        excludeTestEvents()
+      )
+    )
+    .groupBy(sql`DATE(${behaviorEvents.createdAt})`)
+    .orderBy(sql`DATE(${behaviorEvents.createdAt})`);
+
+  return result.map(row => ({
+    date: String(row.date),
+    count: row.count,
+  }));
+}
+
 // Combined function to get all behavior stats in one call
 export type BehaviorStats = {
   sessionStats: SessionStats;
@@ -393,6 +424,7 @@ export type BehaviorStats = {
   readSpreadCTR: ReadSpreadCTR;
   timeToFirstFlip: TimeToFirstFlip;
   deviceBreakdown: DeviceBreakdown;
+  dailySessions: DailySessionCount[];
 };
 
 export async function getAllBehaviorStats(days: number = DEFAULT_DAYS): Promise<BehaviorStats> {
@@ -403,6 +435,7 @@ export async function getAllBehaviorStats(days: number = DEFAULT_DAYS): Promise<
     readSpreadCTR,
     timeToFirstFlip,
     deviceBreakdown,
+    dailySessions,
   ] = await Promise.all([
     getSessionStats(days),
     getFlipDistribution(days),
@@ -410,6 +443,7 @@ export async function getAllBehaviorStats(days: number = DEFAULT_DAYS): Promise<
     getReadSpreadCTR(days),
     getTimeToFirstFlip(days),
     getDeviceBreakdown(days),
+    getDailySessionCounts(days),
   ]);
 
   return {
@@ -419,5 +453,6 @@ export async function getAllBehaviorStats(days: number = DEFAULT_DAYS): Promise<
     readSpreadCTR,
     timeToFirstFlip,
     deviceBreakdown,
+    dailySessions,
   };
 }

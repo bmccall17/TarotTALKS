@@ -6,6 +6,7 @@ import { getShareStats, getUnpostedCardsStats } from '@/lib/db/queries/admin-soc
 import Link from 'next/link';
 import { Video, Link as LinkIcon, AlertTriangle, LayoutGrid, Sparkles, CheckCircle, AlertCircle, XCircle, Radio, Share2 } from 'lucide-react';
 import { ApiHealthSection } from '@/components/admin/dashboard/ApiHealthSection';
+import { PlatformQuotasSection } from '@/components/admin/dashboard/PlatformQuotasSection';
 
 // Force dynamic rendering - admin page should not be statically generated
 export const dynamic = 'force-dynamic';
@@ -187,6 +188,11 @@ export default async function AdminDashboard() {
         {/* API Health Section */}
         <div className="mb-8">
           <ApiHealthSection />
+        </div>
+
+        {/* Platform Quotas Section */}
+        <div className="mb-8">
+          <PlatformQuotasSection />
         </div>
 
         {/* Quick Actions + Validation Summary */}
