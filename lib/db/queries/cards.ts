@@ -1,8 +1,9 @@
 import { db } from '../index';
 import { cards, cardTalkMappings, talks } from '../schema';
 import { eq, desc, sql, and, or, isNull } from 'drizzle-orm';
+import { unstable_cache } from 'next/cache';
 
-export async function getAllCards() {
+async function _getAllCards() {
   return db
     .select({
       id: cards.id,
@@ -19,6 +20,11 @@ export async function getAllCards() {
     .from(cards)
     .orderBy(cards.sequenceIndex);
 }
+
+export const getAllCards = unstable_cache(_getAllCards, ['all-cards'], {
+  revalidate: 3600,
+  tags: ['cards'],
+});
 
 export async function getCardBySlug(slug: string) {
   const [card] = await db

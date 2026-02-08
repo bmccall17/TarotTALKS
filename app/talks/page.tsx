@@ -8,8 +8,8 @@ export const metadata = {
   description: 'Explore curated TED talks mapped to Tarot archetypes',
 };
 
-// SSR: listing pages can't use ISR (Supabase queries timeout during Vercel build)
-export const revalidate = 0;
+// ISR: revalidate every hour (generated on first visit, not at build time)
+export const revalidate = 3600;
 
 export default async function TalksPage() {
   const talks = await getAllTalks();

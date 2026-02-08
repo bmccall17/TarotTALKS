@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import {
   getAllMappingsForAdmin,
   getMappingsByCardId,
@@ -124,6 +124,8 @@ export async function POST(request: NextRequest) {
     if (cardData.length > 0) {
       revalidatePath(`/cards/${cardData[0].slug}`);
     }
+    revalidateTag('cards', 'max');
+    revalidateTag('talks', 'max');
 
     return NextResponse.json({ mapping });
   } catch (error) {

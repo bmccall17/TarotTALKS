@@ -1,41 +1,33 @@
 import { db } from '../index';
 import { themes, cardThemes, talkThemes, cards, talks } from '../schema';
 import { eq, sql } from 'drizzle-orm';
+import { unstable_cache } from 'next/cache';
 
-export async function getAllThemes() {
+async function _getAllThemes() {
+  // Single query with correlated subqueries for counts (eliminates N+1)
   const allThemes = await db
     .select({
       id: themes.id,
       slug: themes.slug,
       name: themes.name,
       description: themes.shortDescription,
+      cardsCount: sql<number>`(SELECT count(*) FROM card_themes WHERE card_themes.theme_id = ${themes.id})`,
+      talksCount: sql<number>`(SELECT count(*) FROM talk_themes WHERE talk_themes.theme_id = ${themes.id})`,
     })
     .from(themes)
     .orderBy(themes.name);
 
-  // Get counts for each theme
-  const themesWithCounts = await Promise.all(
-    allThemes.map(async (theme) => {
-      const [cardCount] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(cardThemes)
-        .where(eq(cardThemes.themeId, theme.id));
-
-      const [talkCount] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(talkThemes)
-        .where(eq(talkThemes.themeId, theme.id));
-
-      return {
-        ...theme,
-        cardsCount: Number(cardCount.count),
-        talksCount: Number(talkCount.count),
-      };
-    })
-  );
-
-  return themesWithCounts;
+  return allThemes.map((theme) => ({
+    ...theme,
+    cardsCount: Number(theme.cardsCount),
+    talksCount: Number(theme.talksCount),
+  }));
 }
+
+export const getAllThemes = unstable_cache(_getAllThemes, ['all-themes'], {
+  revalidate: 86400,
+  tags: ['themes'],
+});
 
 export async function getThemeBySlug(slug: string) {
   const [theme] = await db

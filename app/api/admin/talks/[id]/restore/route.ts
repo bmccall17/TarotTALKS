@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { restoreTalk } from '@/lib/db/queries/admin-talks';
 
 /**
@@ -20,6 +21,7 @@ export async function POST(
       );
     }
 
+    revalidateTag('talks', 'max');
     return NextResponse.json({ talk });
   } catch (error) {
     console.error('Error restoring talk:', error);

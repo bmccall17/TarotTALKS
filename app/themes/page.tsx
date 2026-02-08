@@ -7,8 +7,8 @@ export const metadata = {
   description: 'Curated collections of cards and talks for life\'s journeys',
 };
 
-// SSR: listing pages can't use ISR (Supabase queries timeout during Vercel build)
-export const revalidate = 0;
+// ISR: revalidate every 24 hours (themes rarely change)
+export const revalidate = 86400;
 
 const themeColors: Record<string, string> = {
   'new-beginnings': 'bg-green-500',

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { deleteMapping, setMappingAsPrimary } from '@/lib/db/queries/admin-mappings';
 import { db } from '@/lib/db';
 import { cards, cardTalkMappings } from '@/lib/db/schema';
@@ -39,6 +39,8 @@ export async function DELETE(
     if (cardData.length > 0) {
       revalidatePath(`/cards/${cardData[0].slug}`);
     }
+    revalidateTag('cards', 'max');
+    revalidateTag('talks', 'max');
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -84,6 +86,8 @@ export async function PATCH(
       if (cardData.length > 0) {
         revalidatePath(`/cards/${cardData[0].slug}`);
       }
+      revalidateTag('cards', 'max');
+      revalidateTag('talks', 'max');
 
       return NextResponse.json({ mapping });
     }

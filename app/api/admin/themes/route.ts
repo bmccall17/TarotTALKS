@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import {
   getAllThemesForAdmin,
   searchThemesForAdmin,
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
 
     const theme = await createTheme(body);
 
+    revalidateTag('themes', 'max');
     return NextResponse.json({ theme }, { status: 201 });
   } catch (error) {
     console.error('Error creating theme:', error);

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { getCardForAdmin, updateCard } from '@/lib/db/queries/admin-cards';
 
 export async function GET(
@@ -43,6 +44,7 @@ export async function PUT(
       );
     }
 
+    revalidateTag('cards', 'max');
     return NextResponse.json({ card: updated });
   } catch (error) {
     console.error('Error updating card:', error);

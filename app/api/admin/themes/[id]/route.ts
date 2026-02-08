@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import {
   getThemeByIdForAdmin,
   updateTheme,
@@ -54,6 +55,7 @@ export async function PATCH(
       );
     }
 
+    revalidateTag('themes', 'max');
     return NextResponse.json({ theme });
   } catch (error) {
     console.error('Error updating theme:', error);
@@ -76,6 +78,7 @@ export async function DELETE(
     const { id } = await params;
     await deleteTheme(id);
 
+    revalidateTag('themes', 'max');
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting theme:', error);

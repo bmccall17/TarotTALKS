@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import {
   getTalkByIdForAdmin,
   updateTalk,
@@ -75,6 +76,7 @@ export async function PUT(
       );
     }
 
+    revalidateTag('talks', 'max');
     return NextResponse.json({ talk });
   } catch (error) {
     console.error('Error updating talk:', error);
@@ -104,6 +106,7 @@ export async function DELETE(
       );
     }
 
+    revalidateTag('talks', 'max');
     return NextResponse.json({ talk });
   } catch (error) {
     console.error('Error deleting talk:', error);

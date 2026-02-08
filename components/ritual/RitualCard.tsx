@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Play, ChevronUp } from 'lucide-react';
 
 type RitualCardProps = {
@@ -373,10 +374,12 @@ export function RitualCard({ card, primaryTalk, index, layoutMode, isRevealed, r
             pointerEvents: isRevealed && !isFlipping ? 'none' : 'auto',
           }}
         >
-          <img
+          <Image
             src="/deck-back.webp"
             alt="Tarot card back"
-            className="w-full h-full object-cover"
+            fill
+            sizes="220px"
+            className="object-cover"
           />
           {/* Mystical glow on hover */}
           <div
@@ -401,10 +404,12 @@ export function RitualCard({ card, primaryTalk, index, layoutMode, isRevealed, r
           }}
         >
           {/* Card Image */}
-          <img
+          <Image
             src={card.imageUrl || '/deck-back.webp'}
             alt={card.name}
-            className="w-full h-full object-cover"
+            fill
+            sizes="220px"
+            className="object-cover"
           />
 
           {/* Card Info Overlay (shown on hover when dock not expanded - DESKTOP ONLY) */}
