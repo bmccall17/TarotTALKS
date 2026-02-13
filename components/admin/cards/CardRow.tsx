@@ -97,7 +97,7 @@ export function CardRow({ card }: Props) {
           {arcanaLabel}
         </p>
       </td>
-      <td className="px-6 py-0">
+      <td className="px-2 py-0">
         <div className="flex items-center gap-1">
           {card.mappings.length === 0 ? (
             <span className="text-gray-500 text-sm">None</span>
@@ -114,10 +114,10 @@ export function CardRow({ card }: Props) {
                     <img
                       src={mapping.talkThumbnailUrl}
                       alt={mapping.talkTitle}
-                      className="w-16 h-14 object-cover rounded border border-gray-600"
+                      className="w-28 h-20 object-cover rounded border border-gray-600"
                     />
                   ) : (
-                    <div className="w-16 h-14 bg-gray-700 rounded border border-gray-600 flex items-center justify-center">
+                    <div className="w-28 h-20 bg-gray-700 rounded border border-gray-600 flex items-center justify-center">
                       <span className="text-[8px] text-gray-500">No img</span>
                     </div>
                   )}
