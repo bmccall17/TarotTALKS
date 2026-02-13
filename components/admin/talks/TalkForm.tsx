@@ -460,114 +460,6 @@ export function TalkForm({ initialData, talkId, talkSlug, mode, mappings = [] }:
               </div>
             </div>
 
-            {/* Social / Tag Pack */}
-            <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6 space-y-4">
-              <h2 className="text-lg font-semibold text-gray-100 mb-4">Social / Tag Pack</h2>
-              <p className="text-sm text-gray-400 -mt-2 mb-4">
-                Add speaker social handles for quick copy-to-clipboard when sharing on social media.
-              </p>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* Twitter/X Handle */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    X (Twitter) Handle
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">@</span>
-                    <input
-                      type="text"
-                      value={formData.speakerTwitterHandle}
-                      onChange={(e) => updateField('speakerTwitterHandle', e.target.value)}
-                      className="w-full pl-8 pr-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="speaker_handle"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Without @ prefix. Use comma for multiple.
-                  </p>
-                </div>
-
-                {/* Bluesky Handle */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Bluesky Handle
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">@</span>
-                    <input
-                      type="text"
-                      value={formData.speakerBlueskyHandle}
-                      onChange={(e) => updateField('speakerBlueskyHandle', e.target.value)}
-                      className="w-full pl-8 pr-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-                      placeholder="speaker.bsky.social"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Full handle (e.g., user.bsky.social)
-                  </p>
-                </div>
-
-                {/* LinkedIn Handle */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    LinkedIn Handle
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={formData.speakerLinkedInHandle}
-                      onChange={(e) => updateField('speakerLinkedInHandle', e.target.value)}
-                      className="w-full px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-blue-700 focus:border-transparent"
-                      placeholder="in/speaker-name"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Profile slug (e.g., in/speaker-name)
-                  </p>
-                </div>
-
-                {/* Instagram Handle */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Instagram Handle
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">@</span>
-                    <input
-                      type="text"
-                      value={formData.speakerInstagramHandle}
-                      onChange={(e) => updateField('speakerInstagramHandle', e.target.value)}
-                      className="w-full pl-8 pr-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                      placeholder="speaker_handle"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Without @ prefix.
-                  </p>
-                </div>
-              </div>
-
-              {/* Copy Buttons */}
-              <div className="pt-2">
-                <TagPackCopyButton
-                  twitterHandle={formData.speakerTwitterHandle}
-                  blueskyHandle={formData.speakerBlueskyHandle}
-                  linkedInHandle={formData.speakerLinkedInHandle}
-                  instagramHandle={formData.speakerInstagramHandle}
-                  speakerName={formData.speakerName}
-                  talkTitle={formData.title}
-                  year={formData.year}
-                  eventName={formData.eventName}
-                  mappings={mappings.map((m) => ({
-                    cardName: m.cardName,
-                    cardSlug: m.cardSlug,
-                    isPrimary: m.isPrimary,
-                    rationaleShort: m.rationaleShort,
-                  }))}
-                />
-              </div>
-            </div>
           </form>
         </div>
 
@@ -677,6 +569,115 @@ export function TalkForm({ initialData, talkId, talkSlug, mode, mappings = [] }:
                   <Save className="w-4 h-4" />
                   {loading ? 'Saving...' : mode === 'create' ? 'Create Talk' : 'Update Talk'}
                 </button>
+              </div>
+            </div>
+
+            {/* Social / Tag Pack */}
+            <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6 space-y-4">
+              <h2 className="text-lg font-semibold text-gray-100 mb-4">Social / Tag Pack</h2>
+              <p className="text-sm text-gray-400 -mt-2 mb-4">
+                Add speaker social handles for quick copy-to-clipboard when sharing on social media.
+              </p>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Twitter/X Handle */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    X (Twitter) Handle
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">@</span>
+                    <input
+                      type="text"
+                      value={formData.speakerTwitterHandle}
+                      onChange={(e) => updateField('speakerTwitterHandle', e.target.value)}
+                      className="w-full pl-8 pr-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="speaker_handle"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Without @ prefix. Use comma for multiple.
+                  </p>
+                </div>
+
+                {/* Bluesky Handle */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Bluesky Handle
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">@</span>
+                    <input
+                      type="text"
+                      value={formData.speakerBlueskyHandle}
+                      onChange={(e) => updateField('speakerBlueskyHandle', e.target.value)}
+                      className="w-full pl-8 pr-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                      placeholder="speaker.bsky.social"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Full handle (e.g., user.bsky.social)
+                  </p>
+                </div>
+
+                {/* LinkedIn Handle */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    LinkedIn Handle
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formData.speakerLinkedInHandle}
+                      onChange={(e) => updateField('speakerLinkedInHandle', e.target.value)}
+                      className="w-full px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-blue-700 focus:border-transparent"
+                      placeholder="in/speaker-name"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Profile slug (e.g., in/speaker-name)
+                  </p>
+                </div>
+
+                {/* Instagram Handle */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Instagram Handle
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">@</span>
+                    <input
+                      type="text"
+                      value={formData.speakerInstagramHandle}
+                      onChange={(e) => updateField('speakerInstagramHandle', e.target.value)}
+                      className="w-full pl-8 pr-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                      placeholder="speaker_handle"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Without @ prefix.
+                  </p>
+                </div>
+              </div>
+
+              {/* Copy Buttons */}
+              <div className="pt-2">
+                <TagPackCopyButton
+                  twitterHandle={formData.speakerTwitterHandle}
+                  blueskyHandle={formData.speakerBlueskyHandle}
+                  linkedInHandle={formData.speakerLinkedInHandle}
+                  instagramHandle={formData.speakerInstagramHandle}
+                  speakerName={formData.speakerName}
+                  talkTitle={formData.title}
+                  year={formData.year}
+                  eventName={formData.eventName}
+                  mappings={mappings.map((m) => ({
+                    cardName: m.cardName,
+                    cardSlug: m.cardSlug,
+                    isPrimary: m.isPrimary,
+                    rationaleShort: m.rationaleShort,
+                  }))}
+                />
               </div>
             </div>
           </div>
