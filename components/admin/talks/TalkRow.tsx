@@ -145,7 +145,7 @@ export function TalkRow({ talk, onDeleted, onRestored, onHardDeleted }: Props) {
         title={talk.title}
       >
         <td className="px-6 py-0">
-          <div className="flex items-stretch gap-3 h-full">
+          <div className="flex items-start gap-3">
             <button
               onClick={() => router.push(`/admin/talks/${talk.id}/edit`)}
               className="flex-shrink-0 hover:ring-2 hover:ring-indigo-400 rounded transition-all"
@@ -154,10 +154,10 @@ export function TalkRow({ talk, onDeleted, onRestored, onHardDeleted }: Props) {
                 <img
                   src={talk.thumbnailUrl}
                   alt={talk.title}
-                  className="w-24 h-full object-cover rounded"
+                  className="w-28 h-16 object-cover rounded"
                 />
               ) : (
-                <div className="w-24 h-full bg-gray-700 rounded flex items-center justify-center">
+                <div className="w-28 h-16 bg-gray-700 rounded flex items-center justify-center">
                   <span className="text-xs text-gray-500">No img</span>
                 </div>
               )}
@@ -216,7 +216,7 @@ export function TalkRow({ talk, onDeleted, onRestored, onHardDeleted }: Props) {
           )}
         </td>
         <td className="px-6 py-0">
-          <div className="flex items-stretch gap-1">
+          <div className="flex items-center gap-1">
             {talk.mappings.length === 0 ? (
               <span className="text-gray-500 text-sm">None</span>
             ) : (
@@ -231,7 +231,7 @@ export function TalkRow({ talk, onDeleted, onRestored, onHardDeleted }: Props) {
                     <img
                       src={mapping.cardImageUrl}
                       alt={mapping.cardName}
-                      className="w-12 h-full object-cover rounded border border-gray-600"
+                      className="w-12 h-20 object-cover rounded border border-gray-600"
                     />
                   </a>
                 ))}

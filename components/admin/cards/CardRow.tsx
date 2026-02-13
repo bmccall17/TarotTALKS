@@ -72,10 +72,10 @@ export function CardRow({ card }: Props) {
   return (
     <tr className="hover:bg-gray-800/50">
       <td className="px-6 py-0">
-        <div className="flex items-stretch gap-3 h-full">
+        <div className="flex items-start gap-3">
           <button
             onClick={() => router.push(`/admin/cards/${card.id}/edit`)}
-            className="w-14 h-full relative flex-shrink-0 bg-gray-900 rounded overflow-hidden hover:ring-2 hover:ring-indigo-400 transition-all"
+            className="w-20 h-28 relative flex-shrink-0 bg-gray-900 rounded overflow-hidden hover:ring-2 hover:ring-indigo-400 transition-all"
           >
             <Image
               src={card.imageUrl}
@@ -98,7 +98,7 @@ export function CardRow({ card }: Props) {
         </p>
       </td>
       <td className="px-6 py-0">
-        <div className="flex items-stretch gap-1">
+        <div className="flex items-center gap-1">
           {card.mappings.length === 0 ? (
             <span className="text-gray-500 text-sm">None</span>
           ) : (
@@ -114,10 +114,10 @@ export function CardRow({ card }: Props) {
                     <img
                       src={mapping.talkThumbnailUrl}
                       alt={mapping.talkTitle}
-                      className="w-16 h-full object-cover rounded border border-gray-600"
+                      className="w-16 h-14 object-cover rounded border border-gray-600"
                     />
                   ) : (
-                    <div className="w-16 h-full bg-gray-700 rounded border border-gray-600 flex items-center justify-center">
+                    <div className="w-16 h-14 bg-gray-700 rounded border border-gray-600 flex items-center justify-center">
                       <span className="text-[8px] text-gray-500">No img</span>
                     </div>
                   )}
