@@ -60,10 +60,10 @@ export function MappingsList({ mappings, onEdit, onDelete, onSetPrimary }: Props
             <img
               src={mapping.talkThumbnailUrl}
               alt=""
-              className="w-32 h-20 object-cover rounded flex-shrink-0"
+              className="w-36 h-24 object-cover rounded flex-shrink-0"
             />
           ) : (
-            <div className="w-32 h-20 bg-gray-800 rounded flex-shrink-0 flex items-center justify-center">
+            <div className="w-36 h-24 bg-gray-800 rounded flex-shrink-0 flex items-center justify-center">
               <span className="text-xs text-gray-500">No image</span>
             </div>
           )}
