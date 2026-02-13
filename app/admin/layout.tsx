@@ -1,6 +1,7 @@
 'use client';
 
 import { AdminNav } from '@/components/admin/ui/AdminNav';
+import { ClickDebugger } from '@/components/admin/ui/ClickDebugger';
 import { Monitor } from 'lucide-react';
 
 export default function AdminLayout({
@@ -11,6 +12,7 @@ export default function AdminLayout({
   return (
     <div className="admin-dyslexic-font flex min-h-screen bg-gradient-to-br from-gray-900 via-indigo-900 to-purple-900">
       <AdminNav />
+      <ClickDebugger />
       <main className="flex-1 overflow-auto">
         {/* Mobile Notice - shown only on small screens */}
         <div className="lg:hidden bg-amber-500/20 border-b border-amber-500/30 px-4 py-3">

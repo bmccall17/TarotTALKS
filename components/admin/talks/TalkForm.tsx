@@ -572,8 +572,8 @@ export function TalkForm({ initialData, talkId, talkSlug, mode, mappings = [] }:
         </div>
 
         {/* Preview Column */}
-        <div>
-          <div className="lg:sticky lg:top-8 space-y-6">
+        <div className="pointer-events-none">
+          <div className="lg:sticky lg:top-8 space-y-6 pointer-events-auto">
             <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
               <h2 className="text-lg font-semibold text-gray-100 mb-4">Preview</h2>
               {mode === 'edit' && talkSlug && (

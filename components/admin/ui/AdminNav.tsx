@@ -23,7 +23,7 @@ export function AdminNav() {
   };
 
   return (
-    <nav className="w-64 bg-gray-900 border-r border-gray-800 flex flex-col h-screen">
+    <nav className="w-64 bg-gray-900 border-r border-gray-800 flex flex-col h-screen relative z-10">
       {/* Header */}
       <div className="p-6 border-b border-gray-800">
         <h1 className="text-xl font-bold text-gray-100">TarotTALKS Admin</h1>
