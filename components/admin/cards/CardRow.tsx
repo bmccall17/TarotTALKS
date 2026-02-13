@@ -75,7 +75,7 @@ export function CardRow({ card }: Props) {
         <div className="flex items-start gap-3">
           <button
             onClick={() => router.push(`/admin/cards/${card.id}/edit`)}
-            className="w-12 h-16 relative flex-shrink-0 bg-gray-900 rounded overflow-hidden hover:ring-2 hover:ring-indigo-400 transition-all"
+            className="w-16 h-24 relative flex-shrink-0 bg-gray-900 rounded overflow-hidden hover:ring-2 hover:ring-indigo-400 transition-all"
           >
             <Image
               src={card.imageUrl}
@@ -114,10 +114,10 @@ export function CardRow({ card }: Props) {
                     <img
                       src={mapping.talkThumbnailUrl}
                       alt={mapping.talkTitle}
-                      className="w-12 h-8 object-cover rounded border border-gray-600"
+                      className="w-16 h-10 object-cover rounded border border-gray-600"
                     />
                   ) : (
-                    <div className="w-12 h-8 bg-gray-700 rounded border border-gray-600 flex items-center justify-center">
+                    <div className="w-16 h-10 bg-gray-700 rounded border border-gray-600 flex items-center justify-center">
                       <span className="text-[8px] text-gray-500">No img</span>
                     </div>
                   )}
