@@ -138,18 +138,26 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// Optional generation config overrides
+export interface GeminiGenerationOptions {
+  maxOutputTokens?: number;
+  temperature?: number;
+}
+
 /**
  * Generate content using Gemini API with retry logic for rate limiting
  *
  * @param prompt - The prompt to send to Gemini
  * @param maxRetries - Maximum number of retries on rate limit (default: 3)
  * @param context - Optional context for API call logging (sessionId, source)
+ * @param options - Optional generation config overrides (maxOutputTokens, temperature)
  * @returns Generated text or error
  */
 export async function generateWithGemini(
   prompt: string,
   maxRetries: number = 3,
-  context?: ApiCallContext
+  context?: ApiCallContext,
+  options?: GeminiGenerationOptions
 ): Promise<GeminiResponse> {
   // CHECK CIRCUIT BREAKER FIRST - skip API call if quota exhausted
   if (isCircuitBreakerOpen()) {
@@ -220,8 +228,8 @@ export async function generateWithGemini(
               parts: [{ text: prompt }]
             }],
             generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 1024,
+              temperature: options?.temperature ?? 0.7,
+              maxOutputTokens: options?.maxOutputTokens ?? 1024,
               topP: 0.8,
               topK: 40,
             },

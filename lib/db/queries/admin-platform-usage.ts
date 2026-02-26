@@ -197,6 +197,41 @@ export async function getSessionTrend(): Promise<SessionTrend> {
   return { today, avgDaily, trend };
 }
 
+// --- Row Counts (Supabase 500K limit) ---
+
+export type RowCountInfo = {
+  tables: Array<{ name: string; count: number }>;
+  total: number;
+  limit: number;
+  percent: number;
+};
+
+export async function getRowCounts(): Promise<RowCountInfo> {
+  const LIMIT = 500_000;
+
+  try {
+    const result = await db.execute(
+      sql`SELECT relname as name, n_live_tup as count
+          FROM pg_stat_user_tables
+          WHERE schemaname = 'public'
+          ORDER BY n_live_tup DESC`
+    );
+
+    const tables = (result as unknown as Array<{ name: string; count: number | string }>).map(r => ({
+      name: String(r.name),
+      count: Number(r.count),
+    }));
+
+    const total = tables.reduce((sum, t) => sum + t.count, 0);
+    const percent = Math.round((total / LIMIT) * 1000) / 10;
+
+    return { tables, total, limit: LIMIT, percent };
+  } catch (e) {
+    console.warn('Row count query failed:', e);
+    return { tables: [], total: 0, limit: LIMIT, percent: 0 };
+  }
+}
+
 // --- Combined fetch ---
 
 export type PlatformUsageData = {
@@ -204,6 +239,7 @@ export type PlatformUsageData = {
   dbSize: DatabaseSize;
   imageSources: ImageSourceCount;
   sessionTrend: SessionTrend;
+  rowCounts: RowCountInfo;
 };
 
 async function safeQuery<T>(fn: () => Promise<T>, fallback: T, label: string): Promise<T> {
@@ -218,11 +254,12 @@ async function safeQuery<T>(fn: () => Promise<T>, fallback: T, label: string): P
 export async function getAllPlatformUsage(): Promise<PlatformUsageData> {
   const billingCycle = getBillingCycleInfo();
 
-  const [dbSize, imageSources, sessionTrend] = await Promise.all([
+  const [dbSize, imageSources, sessionTrend, rowCounts] = await Promise.all([
     safeQuery(getDatabaseSize, { bytes: 0, mb: 0, limitMb: 500, percent: 0 }, 'dbSize'),
     safeQuery(getImageSourceCount, { cards: 0, talks: 0, total: 0, limit: 1000, percent: 0 }, 'imageSources'),
     safeQuery(getSessionTrend, { today: 0, avgDaily: 0, trend: 'stable' as const }, 'sessionTrend'),
+    safeQuery(getRowCounts, { tables: [], total: 0, limit: 500_000, percent: 0 }, 'rowCounts'),
   ]);
 
-  return { billingCycle, dbSize, imageSources, sessionTrend };
+  return { billingCycle, dbSize, imageSources, sessionTrend, rowCounts };
 }

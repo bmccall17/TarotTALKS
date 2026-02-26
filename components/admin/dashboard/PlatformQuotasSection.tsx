@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Database, Image, Users, ExternalLink, Gauge, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Database, Image, Users, ExternalLink, Gauge, TrendingUp, TrendingDown, Minus, Rows3 } from 'lucide-react';
 
 type BillingCycleInfo = {
   start: string;
@@ -32,11 +32,19 @@ type SessionTrend = {
   trend: 'up' | 'down' | 'stable';
 };
 
+type RowCountInfo = {
+  tables: Array<{ name: string; count: number }>;
+  total: number;
+  limit: number;
+  percent: number;
+};
+
 type PlatformUsageData = {
   billingCycle: BillingCycleInfo;
   dbSize: DatabaseSize;
   imageSources: ImageSourceCount;
   sessionTrend: SessionTrend;
+  rowCounts: RowCountInfo;
 };
 
 function getProgressColor(percent: number): string {
@@ -114,7 +122,7 @@ export function PlatformQuotasSection() {
     );
   }
 
-  const { billingCycle, dbSize, imageSources, sessionTrend } = data;
+  const { billingCycle, dbSize, imageSources, sessionTrend, rowCounts } = data;
 
   const cyclePercent = billingCycle.daysTotal > 0
     ? Math.round((billingCycle.daysPassed / billingCycle.daysTotal) * 100)
@@ -162,7 +170,7 @@ export function PlatformQuotasSection() {
       </div>
 
       {/* Quota Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5">
         {/* DB Size */}
         <div className="bg-gray-800/60 border border-gray-700/50 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
@@ -228,6 +236,36 @@ export function PlatformQuotasSection() {
             {sessionTrend.trend === 'stable' && 'Stable'}
           </div>
         </div>
+
+        {/* Row Count */}
+        {rowCounts && (
+          <div className="bg-gray-800/60 border border-gray-700/50 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Rows3 className="w-4 h-4 text-cyan-400" />
+              <span className="text-sm text-gray-300">DB Rows</span>
+            </div>
+            <div className="flex items-baseline gap-1 mb-2">
+              <span className="text-2xl font-bold text-gray-100">
+                {rowCounts.total >= 1000 ? `${(rowCounts.total / 1000).toFixed(1)}K` : rowCounts.total}
+              </span>
+              <span className="text-sm text-gray-500">/ {(rowCounts.limit / 1000).toFixed(0)}K</span>
+            </div>
+            <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden mb-1">
+              <div
+                className={`h-full ${getProgressColor(rowCounts.percent)} transition-all`}
+                style={{ width: `${Math.min(100, rowCounts.percent)}%` }}
+              />
+            </div>
+            <span className={`text-xs ${getProgressTextColor(rowCounts.percent)}`}>
+              {rowCounts.percent}%
+            </span>
+            {rowCounts.tables.length > 0 && (
+              <div className="text-[10px] text-gray-500 mt-1">
+                Top: {rowCounts.tables.slice(0, 3).map(t => `${t.name} (${t.count})`).join(', ')}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Dashboard Links */}

@@ -249,6 +249,52 @@ export const spreads = pgTable('spreads', {
   idxTalk: index('idx_spreads_talk').on(table.talkId),
 }));
 
+// Content Brand Config table (Content Lab - singleton)
+export const contentBrandConfig = pgTable('content_brand_config', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  offerDescription: text('offer_description'),
+  audiencePersona: text('audience_persona'),
+  keyMessagingPillars: text('key_messaging_pillars'), // JSON array
+  brandToneDescription: text('brand_tone_description'),
+  contentFrameworks: text('content_frameworks'), // JSON array
+  ctaOptions: text('cta_options'), // JSON array
+  dmOpenerTemplate: text('dm_opener_template'),
+  dmSequenceSteps: text('dm_sequence_steps'), // JSON array
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Content Calendar Items table (Content Lab - generated posts)
+export const contentCalendarItems = pgTable('content_calendar_items', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  weekStartDate: text('week_start_date').notNull(), // date as string (YYYY-MM-DD)
+  dayOfWeek: integer('day_of_week').notNull(), // 0=Mon through 6=Sun
+  contentType: varchar('content_type', { length: 30 }).notNull(),
+  platform: platformEnum('platform').notNull(),
+  hook: text('hook'),
+  body: text('body'),
+  cta: text('cta'),
+  hashtags: text('hashtags'), // JSON array
+  cardId: uuid('card_id').references(() => cards.id, { onDelete: 'set null' }),
+  talkId: uuid('talk_id').references(() => talks.id, { onDelete: 'set null' }),
+  dmTriggerComment: text('dm_trigger_comment'),
+  dmSteps: text('dm_steps'), // JSON array
+  leadMagnetTitle: text('lead_magnet_title'),
+  leadMagnetDescription: text('lead_magnet_description'),
+  status: varchar('status', { length: 20 }).default('generated').notNull(),
+  pushedShareId: uuid('pushed_share_id').references(() => socialShares.id, { onDelete: 'set null' }),
+  frameworkUsed: varchar('framework_used', { length: 50 }),
+  aiGenerationCost: real('ai_generation_cost'),
+  generationBatchId: varchar('generation_batch_id', { length: 50 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  idxWeek: index('idx_calendar_items_week').on(table.weekStartDate),
+  idxPlatform: index('idx_calendar_items_platform').on(table.platform),
+  idxStatus: index('idx_calendar_items_status').on(table.status),
+  idxBatch: index('idx_calendar_items_batch').on(table.generationBatchId),
+}));
+
 // Platform Style Patterns table (Platform Style Learning System)
 export const platformStylePatterns = pgTable('platform_style_patterns', {
   id: uuid('id').defaultRandom().primaryKey(),
