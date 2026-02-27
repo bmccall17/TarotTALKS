@@ -9,6 +9,7 @@ import { TopSharesWidget } from './TopSharesWidget';
 import { NextCardWidget } from './NextCardWidget';
 import { MentionsInbox } from './MentionsInbox';
 import { ExportToCampaign } from './ExportToCampaign';
+import { AutoRefreshStatus } from './AutoRefreshStatus';
 import { Toast } from '../ui/Toast';
 import { type Platform } from '@/lib/utils/social-handles';
 
@@ -225,6 +226,7 @@ export function SharesList() {
         </div>
 
         <div className="flex items-center gap-2">
+          <AutoRefreshStatus onRefreshComplete={fetchShares} />
           <button
             onClick={handleNewShare}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"

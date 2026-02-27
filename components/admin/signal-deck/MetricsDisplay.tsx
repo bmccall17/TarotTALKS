@@ -54,6 +54,15 @@ export function MetricsDisplay({
   const labels = getPlatformMetricLabels(platform);
   const totalEngagement = (likeCount ?? 0) + (repostCount ?? 0) + (replyCount ?? 0);
 
+  // Staleness: green = updated within 7 days, amber = older or never
+  const isFresh = (() => {
+    if (!metricsUpdatedAt) return false;
+    const updated = typeof metricsUpdatedAt === 'string' ? new Date(metricsUpdatedAt) : metricsUpdatedAt;
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    return updated > sevenDaysAgo;
+  })();
+
   const handleRefresh = async () => {
     setLoading(true);
     setError(null);
@@ -203,6 +212,14 @@ export function MetricsDisplay({
         <span className="px-1.5 py-0.5 text-[10px] bg-gray-700 text-gray-400 rounded" title="Manually entered metrics">
           Manual
         </span>
+      )}
+
+      {/* Staleness indicator */}
+      {supportsAutoMetrics && (
+        <span
+          className={`inline-block w-2 h-2 rounded-full ${isFresh ? 'bg-green-400' : 'bg-amber-400'}`}
+          title={isFresh ? `Fresh (updated ${formatRelativeTime(metricsUpdatedAt)})` : `Stale (updated ${formatRelativeTime(metricsUpdatedAt)})`}
+        />
       )}
 
       {/* Action button */}

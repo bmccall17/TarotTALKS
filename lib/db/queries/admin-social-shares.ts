@@ -463,6 +463,41 @@ export async function convertMentionToShare(id: string): Promise<Share | null> {
 }
 
 // ==========================================
+// Auto-Refresh: Stale Bluesky Shares
+// ==========================================
+
+export type StaleShare = {
+  id: string;
+  postUrl: string | null;
+  atUri: string | null;
+};
+
+/**
+ * Get Bluesky shares that need metrics refreshed.
+ * Returns posted/verified shares with a postUrl, ordered stale-first
+ * (never-refreshed first, then oldest metricsUpdatedAt).
+ * Limited to 18 to stay within Vercel's 10s function timeout.
+ */
+export async function getStaleBlueskyShares(limit: number = 18): Promise<StaleShare[]> {
+  return db
+    .select({
+      id: socialShares.id,
+      postUrl: socialShares.postUrl,
+      atUri: socialShares.atUri,
+    })
+    .from(socialShares)
+    .where(
+      and(
+        eq(socialShares.platform, 'bluesky'),
+        sql`${socialShares.status} IN ('posted', 'verified')`,
+        sql`${socialShares.postUrl} IS NOT NULL`
+      )
+    )
+    .orderBy(sql`${socialShares.metricsUpdatedAt} ASC NULLS FIRST`)
+    .limit(limit);
+}
+
+// ==========================================
 // Unposted Cards Tracking
 // ==========================================
 
