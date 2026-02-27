@@ -214,12 +214,14 @@ export function MetricsDisplay({
         </span>
       )}
 
-      {/* Staleness indicator */}
+      {/* Staleness indicator: colored dot + relative timestamp */}
       {supportsAutoMetrics && (
-        <span
-          className={`inline-block w-2 h-2 rounded-full ${isFresh ? 'bg-green-400' : 'bg-amber-400'}`}
-          title={isFresh ? `Fresh (updated ${formatRelativeTime(metricsUpdatedAt)})` : `Stale (updated ${formatRelativeTime(metricsUpdatedAt)})`}
-        />
+        <span className="flex items-center gap-1" title={metricsUpdatedAt ? new Date(metricsUpdatedAt).toLocaleString() : 'Never refreshed'}>
+          <span className={`inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 ${isFresh ? 'bg-green-400' : 'bg-amber-400'}`} />
+          <span className={`text-[10px] ${isFresh ? 'text-gray-500' : 'text-amber-400/80'}`}>
+            {formatRelativeTime(metricsUpdatedAt)}
+          </span>
+        </span>
       )}
 
       {/* Action button */}
