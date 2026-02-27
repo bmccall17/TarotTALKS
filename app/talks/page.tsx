@@ -8,7 +8,8 @@ export const metadata = {
   description: 'Explore curated TED talks mapped to Tarot archetypes',
 };
 
-// ISR: revalidate every hour (generated on first visit, not at build time)
+// Dynamic rendering — skip build-time static generation to avoid DB timeout
+export const dynamic = 'force-dynamic';
 export const revalidate = 3600;
 
 export default async function TalksPage() {
