@@ -27,11 +27,8 @@ export function AutoRefreshStatus({ onRefreshComplete }: Props) {
     setResult(null);
 
     try {
-      const res = await fetch('/api/cron/refresh-bluesky-metrics', {
-        headers: {
-          Authorization: `Bearer ${getAdminToken()}`,
-        },
-      });
+      // Cookie is HttpOnly — browser sends it automatically on same-origin requests
+      const res = await fetch('/api/cron/refresh-bluesky-metrics');
 
       if (!res.ok) {
         const data = await res.json();
@@ -78,8 +75,3 @@ export function AutoRefreshStatus({ onRefreshComplete }: Props) {
   );
 }
 
-/** Read admin_token from cookie */
-function getAdminToken(): string {
-  const match = document.cookie.match(/(?:^|;\s*)admin_token=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : '';
-}

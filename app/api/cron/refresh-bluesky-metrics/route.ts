@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { getStaleBlueskyShares } from '@/lib/db/queries/admin-social-shares';
 import { getMetricsFromUrl, extractAtUriFromPostUrl } from '@/lib/services/bluesky';
 import { updateMetrics, updateShare } from '@/lib/db/queries/admin-social-shares';
@@ -9,17 +10,20 @@ const TIME_LIMIT_MS = 8500; // Stop processing at 8.5s to stay within Vercel's 1
  * Refresh Bluesky engagement metrics for stale shares.
  * Called by:
  *  - Vercel Cron (weekly, Authorization: Bearer <CRON_SECRET>)
- *  - Admin UI "Refresh All" button (Authorization: Bearer <ADMIN_TOKEN>)
+ *  - Admin UI "Refresh All" button (via HttpOnly admin_token cookie)
  */
 export async function GET(request: Request) {
-  // Auth: accept either CRON_SECRET or ADMIN_TOKEN
+  // Auth: accept CRON_SECRET via header, or ADMIN_TOKEN via header or cookie
   const authHeader = request.headers.get('Authorization');
-  const token = authHeader?.replace('Bearer ', '');
+  const bearerToken = authHeader?.replace('Bearer ', '');
+  const cookieStore = await cookies();
+  const cookieToken = cookieStore.get('admin_token')?.value;
+
   const cronSecret = process.env.CRON_SECRET;
   const adminToken = process.env.ADMIN_TOKEN;
 
-  const isValidCron = cronSecret && token === cronSecret;
-  const isValidAdmin = adminToken && token === adminToken;
+  const isValidCron = cronSecret && bearerToken === cronSecret;
+  const isValidAdmin = adminToken && (bearerToken === adminToken || cookieToken === adminToken);
 
   if (!isValidCron && !isValidAdmin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
