@@ -31,6 +31,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate slug to prevent path traversal (only allow alphanumeric, hyphens, underscores)
+    if (!/^[a-z0-9_-]+$/i.test(slug)) {
+      return NextResponse.json(
+        { error: 'Invalid slug. Only alphanumeric characters, hyphens, and underscores are allowed.' },
+        { status: 400 }
+      );
+    }
+
+    // Use path.basename as defense-in-depth against path traversal
+    const safeSlug = path.basename(slug, path.extname(slug));
+
     // Create directory path based on category
     const dir = category === 'talks'
       ? path.join(process.cwd(), 'public', 'images', 'share', type, 'talks')
@@ -42,14 +53,14 @@ export async function POST(request: NextRequest) {
 
     // Decode base64 and save
     const buffer = Buffer.from(imageData, 'base64');
-    const filePath = path.join(dir, `${slug}.png`);
+    const filePath = path.join(dir, `${safeSlug}.png`);
     await writeFile(filePath, buffer);
 
     const publicPath = category === 'talks'
-      ? `/images/share/${type}/talks/${slug}.png`
-      : `/images/share/${type}/${slug}.png`;
+      ? `/images/share/${type}/talks/${safeSlug}.png`
+      : `/images/share/${type}/${safeSlug}.png`;
 
-    console.log(`[SHARE-IMAGE] Saved ${type} image for ${category}/${slug} to ${publicPath}`);
+    console.log(`[SHARE-IMAGE] Saved ${type} image for ${category}/${safeSlug} to ${publicPath}`);
 
     return NextResponse.json({
       success: true,

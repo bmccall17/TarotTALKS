@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 
-// Session storage key
-const SESSION_KEY = 'tarot_session_id';
+// Session storage key name
+const SESSION_STORAGE_NAME = 'tarot_session_id';
 const SESSION_START_KEY = 'tarot_session_start';
 const TEST_MODE_KEY = 'tarot_analytics_test_mode';
 
@@ -46,10 +46,10 @@ function generateSessionId(): string {
 function getSessionId(): string {
   if (typeof window === 'undefined') return '';
 
-  let sessionId = sessionStorage.getItem(SESSION_KEY);
+  let sessionId = sessionStorage.getItem(SESSION_STORAGE_NAME);
   if (!sessionId) {
     sessionId = generateSessionId();
-    sessionStorage.setItem(SESSION_KEY, sessionId);
+    sessionStorage.setItem(SESSION_STORAGE_NAME, sessionId);
   }
   return sessionId;
 }
@@ -174,7 +174,7 @@ export function useAnalytics() {
     isInitialized = true;
 
     // Check if this is a restored session
-    const existingSessionId = sessionStorage.getItem(SESSION_KEY);
+    const existingSessionId = sessionStorage.getItem(SESSION_STORAGE_NAME);
     const isRestoredSession = !!existingSessionId;
 
     // Ensure session ID exists

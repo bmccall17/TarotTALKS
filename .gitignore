@@ -82,3 +82,6 @@ deploymenterror.txt
 # Screenshots (often have long names)
 Screenshot*.png
 *.screenshot.png
+
+# manually added snyk security reports
+*snyk*
