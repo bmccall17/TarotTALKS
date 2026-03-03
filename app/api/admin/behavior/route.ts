@@ -11,7 +11,9 @@ export async function GET(request: NextRequest) {
 
     const stats = await getAllBehaviorStats(validDays);
 
-    return NextResponse.json(stats);
+    return NextResponse.json(stats, {
+      headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=60' },
+    });
   } catch (error) {
     console.error('Error fetching behavior stats:', error);
     return NextResponse.json(

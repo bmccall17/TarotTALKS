@@ -123,7 +123,7 @@ export const behaviorEvents = pgTable('behavior_events', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({
   idxEventsSession: index('idx_events_session').on(table.sessionId),
-  idxEventsNameTime: index('idx_events_name_time').on(table.eventName, table.timestamp),
+  idxEventsNameCreated: index('idx_events_name_created').on(table.eventName, table.createdAt),
   idxEventsCreated: index('idx_events_created').on(table.createdAt),
 }));
 

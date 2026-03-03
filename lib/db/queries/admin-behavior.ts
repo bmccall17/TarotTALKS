@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { behaviorEvents } from '@/lib/db/schema';
-import { sql, count, countDistinct, max, and, gte, eq, not, like } from 'drizzle-orm';
+import { sql, count, countDistinct, and, gte, eq } from 'drizzle-orm';
 
 // Default time range: 7 days
 const DEFAULT_DAYS = 7;
@@ -11,9 +11,9 @@ function getDateCutoff(days: number = DEFAULT_DAYS): Date {
   return cutoff;
 }
 
-// Filter condition to exclude test events (where properties contains "is_test":true)
+// Filter condition to exclude test events using JSON extraction (avoids leading-wildcard LIKE scan)
 function excludeTestEvents() {
-  return not(like(behaviorEvents.properties, '%"is_test":true%'));
+  return sql`(${behaviorEvents.properties})::jsonb ->> 'is_test' IS DISTINCT FROM 'true'`;
 }
 
 export type SessionStats = {
@@ -74,36 +74,20 @@ export type FlipDistribution = {
 export async function getFlipDistribution(days: number = DEFAULT_DAYS): Promise<FlipDistribution[]> {
   const cutoff = getDateCutoff(days);
 
-  // Get all sessions that started on the home page in the time range (excluding test events)
-  // We only count home page sessions because only they have the card flip ritual
-  const allSessionsResult = await db
-    .select({
-      sessionId: behaviorEvents.sessionId,
-      properties: behaviorEvents.properties,
-    })
+  // Get home page session IDs in SQL (filter landing_page via JSON extraction)
+  const homeSessionsResult = await db
+    .select({ count: countDistinct(behaviorEvents.sessionId) })
     .from(behaviorEvents)
     .where(
       and(
         eq(behaviorEvents.eventName, 'session_start'),
         gte(behaviorEvents.createdAt, cutoff),
-        excludeTestEvents()
+        excludeTestEvents(),
+        sql`((${behaviorEvents.properties})::jsonb ->> 'landing_page' = '/' OR (${behaviorEvents.properties})::jsonb ->> 'landing_page' IS NULL)`
       )
-    )
-    .groupBy(behaviorEvents.sessionId, behaviorEvents.properties);
+    );
 
-  // Filter to only home page landings
-  const homePageSessions = allSessionsResult.filter(row => {
-    try {
-      const props = JSON.parse(row.properties ?? '{}');
-      // Home page is "/" - exclude direct landings on /cards/*, /talks/*, etc.
-      return props.landing_page === '/' || props.landing_page === undefined;
-    } catch {
-      // Include sessions without valid JSON (legacy data before landing_page was added)
-      return true;
-    }
-  });
-
-  const totalSessions = homePageSessions.length;
+  const totalSessions = homeSessionsResult[0]?.count ?? 0;
 
   if (totalSessions === 0) {
     return [
@@ -114,35 +98,39 @@ export async function getFlipDistribution(days: number = DEFAULT_DAYS): Promise<
     ];
   }
 
-  // Get max flips per session (excluding test events)
-  const flipCountsResult = await db
-    .select({
-      sessionId: behaviorEvents.sessionId,
-      flipCount: count(behaviorEvents.id),
-    })
-    .from(behaviorEvents)
-    .where(
-      and(
-        eq(behaviorEvents.eventName, 'card_flip'),
-        gte(behaviorEvents.createdAt, cutoff),
-        excludeTestEvents()
-      )
+  // Count flips per home-page session in SQL, capped at 3
+  const flipCountsResult = await db.execute<{ flip_bucket: number; session_count: number }>(sql`
+    WITH home_sessions AS (
+      SELECT DISTINCT session_id
+      FROM behavior_events
+      WHERE event_name = 'session_start'
+        AND created_at >= ${cutoff}
+        AND (properties::jsonb ->> 'is_test' IS DISTINCT FROM 'true')
+        AND (properties::jsonb ->> 'landing_page' = '/' OR properties::jsonb ->> 'landing_page' IS NULL)
+    ),
+    flip_counts AS (
+      SELECT hs.session_id, LEAST(COUNT(be.id), 3) AS flips
+      FROM home_sessions hs
+      LEFT JOIN behavior_events be
+        ON be.session_id = hs.session_id
+        AND be.event_name = 'card_flip'
+        AND be.created_at >= ${cutoff}
+        AND (be.properties::jsonb ->> 'is_test' IS DISTINCT FROM 'true')
+      GROUP BY hs.session_id
     )
-    .groupBy(behaviorEvents.sessionId);
+    SELECT flips AS flip_bucket, COUNT(*)::int AS session_count
+    FROM flip_counts
+    GROUP BY flips
+    ORDER BY flips
+  `);
 
-  // Build map of session -> flip count
-  const sessionFlips = new Map<string, number>();
+  // Build distribution array from SQL results
+  const distribution = [0, 0, 0, 0];
   for (const row of flipCountsResult) {
-    // Cap at 3 since we only have 3 cards
-    sessionFlips.set(row.sessionId, Math.min(row.flipCount, 3));
-  }
-
-  // Count sessions by flip count (only home page sessions)
-  const distribution = [0, 0, 0, 0]; // indices 0, 1, 2, 3
-
-  for (const session of homePageSessions) {
-    const flips = sessionFlips.get(session.sessionId) ?? 0;
-    distribution[flips]++;
+    const bucket = Number(row.flip_bucket);
+    if (bucket >= 0 && bucket <= 3) {
+      distribution[bucket] = Number(row.session_count);
+    }
   }
 
   return distribution.map((sessions, flipCount) => ({
@@ -283,39 +271,23 @@ export type TimeToFirstFlip = {
 export async function getTimeToFirstFlip(days: number = DEFAULT_DAYS): Promise<TimeToFirstFlip> {
   const cutoff = getDateCutoff(days);
 
-  // Get first flip elapsed_ms for each session (excluding test events)
-  const result = await db
-    .select({
-      sessionId: behaviorEvents.sessionId,
-      properties: behaviorEvents.properties,
-    })
-    .from(behaviorEvents)
-    .where(
-      and(
-        eq(behaviorEvents.eventName, 'card_flip'),
-        gte(behaviorEvents.createdAt, cutoff),
-        excludeTestEvents()
-      )
-    )
-    .orderBy(behaviorEvents.timestamp);
+  // Extract elapsed_ms for first flips directly in SQL using DISTINCT ON
+  const result = await db.execute<{ elapsed_ms: number }>(sql`
+    SELECT elapsed_ms FROM (
+      SELECT DISTINCT ON (session_id)
+        ((properties::jsonb ->> 'elapsed_ms')::int) AS elapsed_ms
+      FROM behavior_events
+      WHERE event_name = 'card_flip'
+        AND created_at >= ${cutoff}
+        AND (properties::jsonb ->> 'is_test' IS DISTINCT FROM 'true')
+        AND (properties::jsonb ->> 'cards_revealed_count') = '1'
+        AND (properties::jsonb ->> 'elapsed_ms') IS NOT NULL
+      ORDER BY session_id, timestamp ASC
+    ) first_flips
+    WHERE elapsed_ms > 0
+  `);
 
-  // Extract elapsed_ms from first flip per session
-  const sessionFirstFlip = new Map<string, number>();
-
-  for (const row of result) {
-    if (sessionFirstFlip.has(row.sessionId)) continue; // Already have first flip
-
-    try {
-      const props = JSON.parse(row.properties ?? '{}');
-      if (props.cards_revealed_count === 1 && typeof props.elapsed_ms === 'number') {
-        sessionFirstFlip.set(row.sessionId, props.elapsed_ms);
-      }
-    } catch {
-      // Skip invalid JSON
-    }
-  }
-
-  const times = Array.from(sessionFirstFlip.values()).filter(t => t > 0);
+  const times: number[] = result.map(r => Number(r.elapsed_ms));
 
   if (times.length === 0) {
     return { averageMs: 0, medianMs: 0 };
@@ -344,37 +316,19 @@ export type DeviceBreakdown = {
 export async function getDeviceBreakdown(days: number = DEFAULT_DAYS): Promise<DeviceBreakdown> {
   const cutoff = getDateCutoff(days);
 
-  // Get session_start events with device_class (excluding test events)
-  const result = await db
-    .select({
-      sessionId: behaviorEvents.sessionId,
-      properties: behaviorEvents.properties,
-    })
-    .from(behaviorEvents)
-    .where(
-      and(
-        eq(behaviorEvents.eventName, 'session_start'),
-        gte(behaviorEvents.createdAt, cutoff),
-        excludeTestEvents()
-      )
-    );
+  // Count device classes directly in SQL using FILTER
+  const result = await db.execute<{ mobile: number; desktop: number }>(sql`
+    SELECT
+      COUNT(*) FILTER (WHERE properties::jsonb ->> 'device_class' = 'mobile')::int AS mobile,
+      COUNT(*) FILTER (WHERE properties::jsonb ->> 'device_class' IS DISTINCT FROM 'mobile')::int AS desktop
+    FROM behavior_events
+    WHERE event_name = 'session_start'
+      AND created_at >= ${cutoff}
+      AND (properties::jsonb ->> 'is_test' IS DISTINCT FROM 'true')
+  `);
 
-  let mobile = 0;
-  let desktop = 0;
-
-  for (const row of result) {
-    try {
-      const props = JSON.parse(row.properties ?? '{}');
-      if (props.device_class === 'mobile') {
-        mobile++;
-      } else {
-        desktop++;
-      }
-    } catch {
-      desktop++; // Default to desktop on parse error
-    }
-  }
-
+  const mobile = Number(result[0]?.mobile ?? 0);
+  const desktop = Number(result[0]?.desktop ?? 0);
   const total = mobile + desktop;
 
   return {
