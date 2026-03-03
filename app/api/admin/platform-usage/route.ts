@@ -4,7 +4,9 @@ import { getAllPlatformUsage } from '@/lib/db/queries/admin-platform-usage';
 export async function GET() {
   try {
     const data = await getAllPlatformUsage();
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=60' },
+    });
   } catch (error) {
     console.error('Error fetching platform usage:', error);
     return NextResponse.json(

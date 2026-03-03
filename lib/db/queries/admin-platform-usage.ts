@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { cards, talks, behaviorEvents } from '@/lib/db/schema';
-import { sql, countDistinct, eq, not, like, and, gte } from 'drizzle-orm';
+import { sql, countDistinct, eq, and, gte } from 'drizzle-orm';
 
 // --- Billing Cycle (16th to 16th) ---
 
@@ -135,9 +135,9 @@ export async function getImageSourceCount(): Promise<ImageSourceCount> {
 
 // --- Session Trend (today vs 7-day average) ---
 
-// Filter condition to exclude test events
+// Filter condition to exclude test events using JSON extraction (avoids leading-wildcard LIKE scan)
 function excludeTestEvents() {
-  return not(like(behaviorEvents.properties, '%"is_test":true%'));
+  return sql`(${behaviorEvents.properties})::jsonb ->> 'is_test' IS DISTINCT FROM 'true'`;
 }
 
 export type SessionTrend = {

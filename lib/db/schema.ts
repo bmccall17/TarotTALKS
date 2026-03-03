@@ -198,9 +198,7 @@ export const apiUsageEvents = pgTable('api_usage_events', {
   modelId: varchar('model_id', { length: 50 }), // e.g., 'gemini-1.5-pro'
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({
-  idxApiName: index('idx_api_usage_api_name').on(table.apiName),
-  idxCreated: index('idx_api_usage_created').on(table.createdAt),
-  idxSuccess: index('idx_api_usage_success').on(table.success),
+  idxApiNameCreated: index('idx_api_usage_name_created').on(table.apiName, table.createdAt),
   idxSession: index('idx_api_usage_session').on(table.sessionId),
 }));
 

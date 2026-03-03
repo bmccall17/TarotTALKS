@@ -64,6 +64,8 @@ export async function GET(request: NextRequest) {
         // Hourly usage for graph
         hourlyUsage: geminiHourly,
       },
+    }, {
+      headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=60' },
     });
   } catch (error) {
     console.error('Error fetching API usage stats:', error);

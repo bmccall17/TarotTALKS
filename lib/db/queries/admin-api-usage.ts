@@ -35,7 +35,7 @@ export type ApiHealthStatus = {
 };
 
 /**
- * Get health status for a specific API
+ * Get health status for a specific API — single consolidated query
  */
 export async function getApiHealthStatus(
   apiName: 'gemini' | 'youtube',
@@ -44,99 +44,57 @@ export async function getApiHealthStatus(
   const cutoff = getDateCutoff(days);
   const oneHourAgo = getOneHourAgo();
 
-  // Total calls in time range
-  const totalResult = await db
-    .select({ count: count() })
-    .from(apiUsageEvents)
-    .where(
-      and(
-        eq(apiUsageEvents.apiName, apiName),
-        gte(apiUsageEvents.createdAt, cutoff)
+  // Single query with FILTER clauses instead of 6 separate queries
+  const [statsResult, lastErrorResult] = await Promise.all([
+    db.execute<{
+      total_calls: number;
+      successful_calls: number;
+      rate_limit_hits: number;
+      quota_exceeded_hits: number;
+      recent_errors: number;
+    }>(sql`
+      SELECT
+        COUNT(*)::int AS total_calls,
+        COUNT(*) FILTER (WHERE success = true)::int AS successful_calls,
+        COUNT(*) FILTER (WHERE error_type = 'rate_limit')::int AS rate_limit_hits,
+        COUNT(*) FILTER (WHERE error_type = 'quota_exceeded')::int AS quota_exceeded_hits,
+        COUNT(*) FILTER (WHERE success = false AND created_at >= ${oneHourAgo})::int AS recent_errors
+      FROM api_usage_events
+      WHERE api_name = ${apiName}
+        AND created_at >= ${cutoff}
+    `),
+    db
+      .select({
+        createdAt: apiUsageEvents.createdAt,
+        errorType: apiUsageEvents.errorType,
+      })
+      .from(apiUsageEvents)
+      .where(
+        and(
+          eq(apiUsageEvents.apiName, apiName),
+          eq(apiUsageEvents.success, false),
+          gte(apiUsageEvents.createdAt, cutoff)
+        )
       )
-    );
-  const totalCalls = totalResult[0]?.count ?? 0;
+      .orderBy(desc(apiUsageEvents.createdAt))
+      .limit(1),
+  ]);
 
-  // Successful calls
-  const successResult = await db
-    .select({ count: count() })
-    .from(apiUsageEvents)
-    .where(
-      and(
-        eq(apiUsageEvents.apiName, apiName),
-        eq(apiUsageEvents.success, true),
-        gte(apiUsageEvents.createdAt, cutoff)
-      )
-    );
-  const successfulCalls = successResult[0]?.count ?? 0;
-
-  // Rate limit hits
-  const rateLimitResult = await db
-    .select({ count: count() })
-    .from(apiUsageEvents)
-    .where(
-      and(
-        eq(apiUsageEvents.apiName, apiName),
-        eq(apiUsageEvents.errorType, 'rate_limit'),
-        gte(apiUsageEvents.createdAt, cutoff)
-      )
-    );
-  const rateLimitHits = rateLimitResult[0]?.count ?? 0;
-
-  // Quota exceeded hits (mainly YouTube)
-  const quotaResult = await db
-    .select({ count: count() })
-    .from(apiUsageEvents)
-    .where(
-      and(
-        eq(apiUsageEvents.apiName, apiName),
-        eq(apiUsageEvents.errorType, 'quota_exceeded'),
-        gte(apiUsageEvents.createdAt, cutoff)
-      )
-    );
-  const quotaExceededHits = quotaResult[0]?.count ?? 0;
-
-  // Check for errors in the last hour (determines health)
-  const recentErrorsResult = await db
-    .select({ count: count() })
-    .from(apiUsageEvents)
-    .where(
-      and(
-        eq(apiUsageEvents.apiName, apiName),
-        eq(apiUsageEvents.success, false),
-        gte(apiUsageEvents.createdAt, oneHourAgo)
-      )
-    );
-  const recentErrors = recentErrorsResult[0]?.count ?? 0;
-
-  // Get most recent error
-  const lastErrorResult = await db
-    .select({
-      createdAt: apiUsageEvents.createdAt,
-      errorType: apiUsageEvents.errorType,
-    })
-    .from(apiUsageEvents)
-    .where(
-      and(
-        eq(apiUsageEvents.apiName, apiName),
-        eq(apiUsageEvents.success, false),
-        gte(apiUsageEvents.createdAt, cutoff)
-      )
-    )
-    .orderBy(desc(apiUsageEvents.createdAt))
-    .limit(1);
+  const stats = statsResult[0];
+  const totalCalls = Number(stats?.total_calls ?? 0);
+  const successfulCalls = Number(stats?.successful_calls ?? 0);
+  const rateLimitHits = Number(stats?.rate_limit_hits ?? 0);
+  const quotaExceededHits = Number(stats?.quota_exceeded_hits ?? 0);
+  const recentErrors = Number(stats?.recent_errors ?? 0);
 
   const lastError = lastErrorResult[0];
   const lastErrorAt = lastError?.createdAt?.toISOString() ?? null;
   const lastErrorType = lastError?.errorType ?? null;
 
-  // Estimate reset time based on API type and error type
-  // Both Gemini and YouTube free tiers reset at midnight Pacific Time
+  // Estimate reset time based on error type
   let estimatedResetTime: string | null = null;
   if (lastError && lastErrorType) {
     if (lastErrorType === 'rate_limit' || lastErrorType === 'quota_exceeded') {
-      // Free tier quotas reset at midnight Pacific Time (PT)
-      // PT is UTC-8 (standard) or UTC-7 (daylight saving)
-      // Using UTC-8 as a conservative estimate
       const now = new Date();
       const midnight = new Date(now);
       midnight.setUTCHours(8, 0, 0, 0); // Midnight Pacific = 8 AM UTC
@@ -168,70 +126,33 @@ export type ReadSpreadAttribution = {
 };
 
 /**
- * Get attribution - API calls from Read My Spread clicks
+ * Get attribution - API calls from Read My Spread clicks (single consolidated query)
  */
 export async function getReadSpreadAttribution(days: number = DEFAULT_DAYS): Promise<ReadSpreadAttribution> {
   const cutoff = getDateCutoff(days);
 
-  // Gemini calls from spread_reading
-  const geminiResult = await db
-    .select({ count: count() })
-    .from(apiUsageEvents)
-    .where(
-      and(
-        eq(apiUsageEvents.apiName, 'gemini'),
-        eq(apiUsageEvents.source, 'spread_reading'),
-        gte(apiUsageEvents.createdAt, cutoff)
-      )
-    );
-  const geminiCalls = geminiResult[0]?.count ?? 0;
+  const result = await db.execute<{
+    gemini_calls: number;
+    gemini_successful: number;
+    youtube_calls: number;
+    youtube_successful: number;
+  }>(sql`
+    SELECT
+      COUNT(*) FILTER (WHERE api_name = 'gemini')::int AS gemini_calls,
+      COUNT(*) FILTER (WHERE api_name = 'gemini' AND success = true)::int AS gemini_successful,
+      COUNT(*) FILTER (WHERE api_name = 'youtube')::int AS youtube_calls,
+      COUNT(*) FILTER (WHERE api_name = 'youtube' AND success = true)::int AS youtube_successful
+    FROM api_usage_events
+    WHERE source = 'spread_reading'
+      AND created_at >= ${cutoff}
+  `);
 
-  // Gemini successful calls
-  const geminiSuccessResult = await db
-    .select({ count: count() })
-    .from(apiUsageEvents)
-    .where(
-      and(
-        eq(apiUsageEvents.apiName, 'gemini'),
-        eq(apiUsageEvents.source, 'spread_reading'),
-        eq(apiUsageEvents.success, true),
-        gte(apiUsageEvents.createdAt, cutoff)
-      )
-    );
-  const geminiSuccessful = geminiSuccessResult[0]?.count ?? 0;
-
-  // YouTube calls from spread_reading
-  const youtubeResult = await db
-    .select({ count: count() })
-    .from(apiUsageEvents)
-    .where(
-      and(
-        eq(apiUsageEvents.apiName, 'youtube'),
-        eq(apiUsageEvents.source, 'spread_reading'),
-        gte(apiUsageEvents.createdAt, cutoff)
-      )
-    );
-  const youtubeCalls = youtubeResult[0]?.count ?? 0;
-
-  // YouTube successful calls
-  const youtubeSuccessResult = await db
-    .select({ count: count() })
-    .from(apiUsageEvents)
-    .where(
-      and(
-        eq(apiUsageEvents.apiName, 'youtube'),
-        eq(apiUsageEvents.source, 'spread_reading'),
-        eq(apiUsageEvents.success, true),
-        gte(apiUsageEvents.createdAt, cutoff)
-      )
-    );
-  const youtubeSuccessful = youtubeSuccessResult[0]?.count ?? 0;
-
+  const row = result[0];
   return {
-    geminiCalls,
-    youtubeCalls,
-    geminiSuccessful,
-    youtubeSuccessful,
+    geminiCalls: Number(row?.gemini_calls ?? 0),
+    youtubeCalls: Number(row?.youtube_calls ?? 0),
+    geminiSuccessful: Number(row?.gemini_successful ?? 0),
+    youtubeSuccessful: Number(row?.youtube_successful ?? 0),
   };
 }
 
@@ -330,7 +251,7 @@ export async function getApiCallLogs(
 }
 
 /**
- * Get today's API call count for quota tracking
+ * Get today's API call count for quota tracking (single consolidated query)
  * "Today" is defined as since midnight Pacific Time (when Google resets quotas)
  */
 export async function getTodayApiCallCount(apiName: 'gemini' | 'youtube'): Promise<{
@@ -347,43 +268,24 @@ export async function getTodayApiCallCount(apiName: 'gemini' | 'youtube'): Promi
     midnightPT.setDate(midnightPT.getDate() - 1);
   }
 
-  // Total calls today
-  const totalResult = await db
-    .select({ count: count() })
-    .from(apiUsageEvents)
-    .where(
-      and(
-        eq(apiUsageEvents.apiName, apiName),
-        gte(apiUsageEvents.createdAt, midnightPT)
-      )
-    );
-  const total = totalResult[0]?.count ?? 0;
+  const result = await db.execute<{
+    total: number;
+    successful: number;
+    circuit_breaker_blocked: number;
+  }>(sql`
+    SELECT
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE success = true)::int AS successful,
+      COUNT(*) FILTER (WHERE error_type = 'circuit_breaker')::int AS circuit_breaker_blocked
+    FROM api_usage_events
+    WHERE api_name = ${apiName}
+      AND created_at >= ${midnightPT}
+  `);
 
-  // Successful calls
-  const successResult = await db
-    .select({ count: count() })
-    .from(apiUsageEvents)
-    .where(
-      and(
-        eq(apiUsageEvents.apiName, apiName),
-        eq(apiUsageEvents.success, true),
-        gte(apiUsageEvents.createdAt, midnightPT)
-      )
-    );
-  const successful = successResult[0]?.count ?? 0;
-
-  // Circuit breaker blocked calls (these don't count against API quota)
-  const blockedResult = await db
-    .select({ count: count() })
-    .from(apiUsageEvents)
-    .where(
-      and(
-        eq(apiUsageEvents.apiName, apiName),
-        eq(apiUsageEvents.errorType, 'circuit_breaker'),
-        gte(apiUsageEvents.createdAt, midnightPT)
-      )
-    );
-  const circuitBreakerBlocked = blockedResult[0]?.count ?? 0;
+  const row = result[0];
+  const total = Number(row?.total ?? 0);
+  const successful = Number(row?.successful ?? 0);
+  const circuitBreakerBlocked = Number(row?.circuit_breaker_blocked ?? 0);
 
   return {
     total,
@@ -401,63 +303,59 @@ export type HourlyUsageStat = {
 };
 
 /**
- * Get hourly API usage stats for the past 24 hours
+ * Get hourly API usage stats for the past 24 hours (SQL-grouped)
  */
 export async function getHourlyApiUsage(apiName: 'gemini' | 'youtube'): Promise<HourlyUsageStat[]> {
   const now = new Date();
   const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-  // Get all events from the past 24 hours
-  const events = await db
-    .select({
-      success: apiUsageEvents.success,
-      createdAt: apiUsageEvents.createdAt,
-    })
-    .from(apiUsageEvents)
-    .where(
-      and(
-        eq(apiUsageEvents.apiName, apiName),
-        gte(apiUsageEvents.createdAt, twentyFourHoursAgo)
-      )
-    )
-    .orderBy(apiUsageEvents.createdAt);
+  // Group by hour in SQL instead of fetching all events
+  const result = await db.execute<{
+    hour: string;
+    total: number;
+    successful: number;
+    failed: number;
+  }>(sql`
+    SELECT
+      date_trunc('hour', created_at)::text AS hour,
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE success = true)::int AS successful,
+      COUNT(*) FILTER (WHERE success = false)::int AS failed
+    FROM api_usage_events
+    WHERE api_name = ${apiName}
+      AND created_at >= ${twentyFourHoursAgo}
+    GROUP BY date_trunc('hour', created_at)
+    ORDER BY hour
+  `);
 
-  // Group by hour
+  // Build map from SQL results
   const hourlyMap = new Map<string, { total: number; successful: number; failed: number }>();
+  for (const row of result) {
+    hourlyMap.set(row.hour, {
+      total: Number(row.total),
+      successful: Number(row.successful),
+      failed: Number(row.failed),
+    });
+  }
 
-  // Initialize all 24 hours with zeros
+  // Initialize all 24 hours with zeros, merge SQL results
+  const hours: HourlyUsageStat[] = [];
   for (let i = 23; i >= 0; i--) {
     const hourStart = new Date(now);
     hourStart.setMinutes(0, 0, 0);
     hourStart.setHours(hourStart.getHours() - i);
     const key = hourStart.toISOString();
-    hourlyMap.set(key, { total: 0, successful: 0, failed: 0 });
-  }
-
-  // Count events by hour
-  for (const event of events) {
-    const eventHour = new Date(event.createdAt);
-    eventHour.setMinutes(0, 0, 0);
-    const key = eventHour.toISOString();
 
     const existing = hourlyMap.get(key);
-    if (existing) {
-      existing.total++;
-      if (event.success) {
-        existing.successful++;
-      } else {
-        existing.failed++;
-      }
-    }
+    hours.push({
+      hour: key,
+      total: existing?.total ?? 0,
+      successful: existing?.successful ?? 0,
+      failed: existing?.failed ?? 0,
+    });
   }
 
-  // Convert to array sorted by time
-  return Array.from(hourlyMap.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([hour, stats]) => ({
-      hour,
-      ...stats,
-    }));
+  return hours;
 }
 
 // ============================================================================
