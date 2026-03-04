@@ -92,12 +92,16 @@
       // For API routes, try to peek at the response for error messages
       let errorHint = '';
       let healthData = null;
+      const version = resp.headers.get('x-version') || '';
+      const serverTiming = resp.headers.get('x-timing-ms') || '';
       if (test.type === 'api') {
         try {
           const body = await resp.clone().text();
           const parsed = JSON.parse(body);
           if (!ok) {
-            errorHint = parsed.error || parsed.message || '';
+            errorHint = parsed.error || parsed.detail || parsed.message || '';
+            if (parsed.elapsed) errorHint += ` (server: ${parsed.elapsed}ms)`;
+            if (parsed.version) errorHint += ` [${parsed.version}]`;
           }
           // Capture health check data for detailed output
           if (test.name === 'DB Health Check') {
