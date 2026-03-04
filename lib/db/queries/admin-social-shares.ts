@@ -191,20 +191,19 @@ export async function getShareStats(): Promise<{ today: number; thisWeek: number
   const weekStart = new Date(todayStart);
   weekStart.setDate(weekStart.getDate() - 7);
 
-  const [totalResult] = await db.select({ count: count() }).from(socialShares);
-  const [todayResult] = await db
-    .select({ count: count() })
-    .from(socialShares)
-    .where(gte(socialShares.postedAt, todayStart));
-  const [weekResult] = await db
-    .select({ count: count() })
-    .from(socialShares)
-    .where(gte(socialShares.postedAt, weekStart));
+  const result = await db.execute<{ total: number; today: number; this_week: number }>(sql`
+    SELECT
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE posted_at >= ${todayStart})::int AS today,
+      COUNT(*) FILTER (WHERE posted_at >= ${weekStart})::int AS this_week
+    FROM social_shares
+  `);
 
+  const row = result[0];
   return {
-    today: todayResult?.count || 0,
-    thisWeek: weekResult?.count || 0,
-    total: totalResult?.count || 0,
+    today: Number(row?.today ?? 0),
+    thisWeek: Number(row?.this_week ?? 0),
+    total: Number(row?.total ?? 0),
   };
 }
 
@@ -557,44 +556,58 @@ export async function getUnpostedCardsStats(): Promise<{
   unpostedByPlatform: Record<Platform, number>;
   sharedCards: number;
 }> {
-  // Get total card count
-  const [totalResult] = await db.select({ count: count() }).from(cards);
-  const totalCards = totalResult?.count || 0;
+  // Single query: total cards, unposted overall, and unposted per platform
+  const result = await db.execute<{
+    total_cards: number;
+    unposted_overall: number;
+    unposted_x: number;
+    unposted_bluesky: number;
+    unposted_threads: number;
+    unposted_linkedin: number;
+    unposted_instagram: number;
+    unposted_other: number;
+  }>(sql`
+    SELECT
+      COUNT(*)::int AS total_cards,
+      COUNT(*) FILTER (WHERE NOT EXISTS (
+        SELECT 1 FROM social_shares ss WHERE ss.card_id = c.id
+      ))::int AS unposted_overall,
+      COUNT(*) FILTER (WHERE NOT EXISTS (
+        SELECT 1 FROM social_shares ss WHERE ss.card_id = c.id AND ss.platform = 'x'
+      ))::int AS unposted_x,
+      COUNT(*) FILTER (WHERE NOT EXISTS (
+        SELECT 1 FROM social_shares ss WHERE ss.card_id = c.id AND ss.platform = 'bluesky'
+      ))::int AS unposted_bluesky,
+      COUNT(*) FILTER (WHERE NOT EXISTS (
+        SELECT 1 FROM social_shares ss WHERE ss.card_id = c.id AND ss.platform = 'threads'
+      ))::int AS unposted_threads,
+      COUNT(*) FILTER (WHERE NOT EXISTS (
+        SELECT 1 FROM social_shares ss WHERE ss.card_id = c.id AND ss.platform = 'linkedin'
+      ))::int AS unposted_linkedin,
+      COUNT(*) FILTER (WHERE NOT EXISTS (
+        SELECT 1 FROM social_shares ss WHERE ss.card_id = c.id AND ss.platform = 'instagram'
+      ))::int AS unposted_instagram,
+      COUNT(*) FILTER (WHERE NOT EXISTS (
+        SELECT 1 FROM social_shares ss WHERE ss.card_id = c.id AND ss.platform = 'other'
+      ))::int AS unposted_other
+    FROM cards c
+  `);
 
-  // Get cards with no shares at all
-  const [unpostedResult] = await db
-    .select({ count: count() })
-    .from(cards)
-    .where(
-      sql`NOT EXISTS (
-        SELECT 1 FROM ${socialShares}
-        WHERE ${socialShares.cardId} = ${cards.id}
-      )`
-    );
-  const unpostedOverall = unpostedResult?.count || 0;
-
-  // Get unposted count per platform
-  const platforms: Platform[] = ['x', 'bluesky', 'threads', 'linkedin', 'instagram', 'other'];
-  const unpostedByPlatform: Record<Platform, number> = {} as Record<Platform, number>;
-
-  for (const platform of platforms) {
-    const [result] = await db
-      .select({ count: count() })
-      .from(cards)
-      .where(
-        sql`NOT EXISTS (
-          SELECT 1 FROM ${socialShares}
-          WHERE ${socialShares.cardId} = ${cards.id}
-          AND ${socialShares.platform} = ${platform}
-        )`
-      );
-    unpostedByPlatform[platform] = result?.count || 0;
-  }
+  const row = result[0];
+  const totalCards = Number(row?.total_cards ?? 0);
+  const unpostedOverall = Number(row?.unposted_overall ?? 0);
 
   return {
     totalCards,
     unpostedOverall,
-    unpostedByPlatform,
+    unpostedByPlatform: {
+      x: Number(row?.unposted_x ?? 0),
+      bluesky: Number(row?.unposted_bluesky ?? 0),
+      threads: Number(row?.unposted_threads ?? 0),
+      linkedin: Number(row?.unposted_linkedin ?? 0),
+      instagram: Number(row?.unposted_instagram ?? 0),
+      other: Number(row?.unposted_other ?? 0),
+    },
     sharedCards: totalCards - unpostedOverall,
   };
 }

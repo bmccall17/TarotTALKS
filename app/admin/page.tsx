@@ -1,6 +1,5 @@
 import { db } from '@/lib/db';
-import { cards, talks, cardTalkMappings, themes, cardThemes, talkThemes } from '@/lib/db/schema';
-import { count, eq, and, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { getTalksStats } from '@/lib/db/queries/admin-talks';
 import { getShareStats, getUnpostedCardsStats } from '@/lib/db/queries/admin-social-shares';
 import Link from 'next/link';
@@ -13,52 +12,51 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboard() {
   try {
-    // Fetch comprehensive statistics - run sequentially to avoid connection pool exhaustion
-    // Vercel Postgres has limited connections, parallel queries can timeout
+    // Fetch all dashboard stats in minimal DB round-trips
+    // Previous: ~23 sequential queries. Now: 4 queries via consolidated functions.
 
-    // First batch: simple count queries
-    const cardsCount = await db.select({ count: count() }).from(cards);
-    const mappingsCount = await db.select({ count: count() }).from(cardTalkMappings);
-    const themesCount = await db.select({ count: count() }).from(themes);
-    const cardThemesCount = await db.select({ count: count() }).from(cardThemes);
-    const talkThemesCount = await db.select({ count: count() }).from(talkThemes);
-    const primaryMappingsCount = await db.select({ count: count() }).from(cardTalkMappings).where(eq(cardTalkMappings.isPrimary, true));
+    // Run all consolidated queries (each is now a single DB round-trip)
+    const [dashCounts, talksStats, shareStats, unpostedStats] = await Promise.all([
+      db.execute<{
+        cards_count: number;
+        mappings_count: number;
+        primary_mappings: number;
+        themes_count: number;
+        card_themes_count: number;
+        talk_themes_count: number;
+        cards_without_primary: number;
+        unmapped_talks: number;
+      }>(sql`
+        SELECT
+          (SELECT COUNT(*)::int FROM cards) AS cards_count,
+          (SELECT COUNT(*)::int FROM card_talk_mappings) AS mappings_count,
+          (SELECT COUNT(*)::int FROM card_talk_mappings WHERE is_primary = true) AS primary_mappings,
+          (SELECT COUNT(*)::int FROM themes) AS themes_count,
+          (SELECT COUNT(*)::int FROM card_themes) AS card_themes_count,
+          (SELECT COUNT(*)::int FROM talk_themes) AS talk_themes_count,
+          (SELECT COUNT(*)::int FROM cards WHERE NOT EXISTS (
+            SELECT 1 FROM card_talk_mappings WHERE card_talk_mappings.card_id = cards.id AND is_primary = true
+          )) AS cards_without_primary,
+          (SELECT COUNT(*)::int FROM talks WHERE is_deleted = false AND NOT EXISTS (
+            SELECT 1 FROM card_talk_mappings WHERE card_talk_mappings.talk_id = talks.id
+          )) AS unmapped_talks
+      `),
+      getTalksStats(),
+      getShareStats(),
+      getUnpostedCardsStats(),
+    ]);
 
-    // Second batch: talk stats (runs 4 queries internally but sequentially)
-    const talksStats = await getTalksStats();
-
-    // Third batch: share stats
-    const shareStats = await getShareStats();
-    const unpostedStats = await getUnpostedCardsStats();
-
-    // Fourth batch: complex subqueries
-    const cardsWithoutPrimaryCount = await db.select({ count: count() }).from(cards).where(
-      sql`NOT EXISTS (
-        SELECT 1 FROM card_talk_mappings
-        WHERE card_talk_mappings.card_id = cards.id
-        AND card_talk_mappings.is_primary = true
-      )`
-    );
-
-    const unmappedTalksCount = await db.select({ count: count() }).from(talks).where(
-      and(
-        eq(talks.isDeleted, false),
-        sql`NOT EXISTS (
-          SELECT 1 FROM card_talk_mappings
-          WHERE card_talk_mappings.talk_id = talks.id
-        )`
-      )
-    );
+    const dc = dashCounts[0];
 
   const stats = {
-    cards: cardsCount[0]?.count || 0,
+    cards: Number(dc?.cards_count ?? 0),
     talks: talksStats.total,
     activeTalks: talksStats.total - talksStats.deleted,
-    mappings: mappingsCount[0]?.count || 0,
-    primaryMappings: primaryMappingsCount[0]?.count || 0,
-    themes: themesCount[0]?.count || 0,
-    cardThemeLinks: cardThemesCount[0]?.count || 0,
-    talkThemeLinks: talkThemesCount[0]?.count || 0,
+    mappings: Number(dc?.mappings_count ?? 0),
+    primaryMappings: Number(dc?.primary_mappings ?? 0),
+    themes: Number(dc?.themes_count ?? 0),
+    cardThemeLinks: Number(dc?.card_themes_count ?? 0),
+    talkThemeLinks: Number(dc?.talk_themes_count ?? 0),
     deletedTalks: talksStats.deleted,
     talksWithYoutube: talksStats.withYoutubeId,
     talksWithoutThumbnail: talksStats.withoutThumbnail,
@@ -70,12 +68,11 @@ export default async function AdminDashboard() {
     unpostedCards: unpostedStats.unpostedOverall,
   };
 
-  // Use values from getTalksStats() to avoid duplicate queries
   const validation = {
-    cardsWithoutPrimary: cardsWithoutPrimaryCount[0]?.count || 0,
-    unmappedTalks: unmappedTalksCount[0]?.count || 0,
-    missingThumbnails: talksStats.withoutThumbnail, // Reuse from getTalksStats
-    softDeleted: talksStats.deleted, // Reuse from getTalksStats
+    cardsWithoutPrimary: Number(dc?.cards_without_primary ?? 0),
+    unmappedTalks: Number(dc?.unmapped_talks ?? 0),
+    missingThumbnails: talksStats.withoutThumbnail,
+    softDeleted: talksStats.deleted,
   };
 
   const totalIssues = validation.cardsWithoutPrimary + validation.unmappedTalks + validation.missingThumbnails;

@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { behaviorEvents } from '@/lib/db/schema';
-import { sql, count, countDistinct, and, gte, eq } from 'drizzle-orm';
+import { sql, countDistinct, and, gte, eq } from 'drizzle-orm';
 
 // Default time range: 7 days
 const DEFAULT_DAYS = 7;
@@ -22,123 +22,11 @@ export type SessionStats = {
   engagedSessions: number;
 };
 
-export async function getSessionStats(days: number = DEFAULT_DAYS): Promise<SessionStats> {
-  const cutoff = getDateCutoff(days);
-
-  // Total sessions (distinct session_start events, excluding test events)
-  const totalResult = await db
-    .select({ count: countDistinct(behaviorEvents.sessionId) })
-    .from(behaviorEvents)
-    .where(
-      and(
-        eq(behaviorEvents.eventName, 'session_start'),
-        gte(behaviorEvents.createdAt, cutoff),
-        excludeTestEvents()
-      )
-    );
-
-  const totalSessions = totalResult[0]?.count ?? 0;
-
-  // Sessions with at least one card flip (engaged, excluding test events)
-  const engagedResult = await db
-    .select({ count: countDistinct(behaviorEvents.sessionId) })
-    .from(behaviorEvents)
-    .where(
-      and(
-        eq(behaviorEvents.eventName, 'card_flip'),
-        gte(behaviorEvents.createdAt, cutoff),
-        excludeTestEvents()
-      )
-    );
-
-  const engagedSessions = engagedResult[0]?.count ?? 0;
-
-  // Bounce rate = sessions with 0 flips / total sessions
-  const bounceRate = totalSessions > 0
-    ? ((totalSessions - engagedSessions) / totalSessions) * 100
-    : 0;
-
-  return {
-    totalSessions,
-    bounceRate,
-    engagedSessions,
-  };
-}
-
 export type FlipDistribution = {
   flipCount: number;
   sessions: number;
   percentage: number;
 };
-
-export async function getFlipDistribution(days: number = DEFAULT_DAYS): Promise<FlipDistribution[]> {
-  const cutoff = getDateCutoff(days);
-
-  // Get home page session IDs in SQL (filter landing_page via JSON extraction)
-  const homeSessionsResult = await db
-    .select({ count: countDistinct(behaviorEvents.sessionId) })
-    .from(behaviorEvents)
-    .where(
-      and(
-        eq(behaviorEvents.eventName, 'session_start'),
-        gte(behaviorEvents.createdAt, cutoff),
-        excludeTestEvents(),
-        sql`((${behaviorEvents.properties})::jsonb ->> 'landing_page' = '/' OR (${behaviorEvents.properties})::jsonb ->> 'landing_page' IS NULL)`
-      )
-    );
-
-  const totalSessions = homeSessionsResult[0]?.count ?? 0;
-
-  if (totalSessions === 0) {
-    return [
-      { flipCount: 0, sessions: 0, percentage: 0 },
-      { flipCount: 1, sessions: 0, percentage: 0 },
-      { flipCount: 2, sessions: 0, percentage: 0 },
-      { flipCount: 3, sessions: 0, percentage: 0 },
-    ];
-  }
-
-  // Count flips per home-page session in SQL, capped at 3
-  const flipCountsResult = await db.execute<{ flip_bucket: number; session_count: number }>(sql`
-    WITH home_sessions AS (
-      SELECT DISTINCT session_id
-      FROM behavior_events
-      WHERE event_name = 'session_start'
-        AND created_at >= ${cutoff}
-        AND (properties::jsonb ->> 'is_test' IS DISTINCT FROM 'true')
-        AND (properties::jsonb ->> 'landing_page' = '/' OR properties::jsonb ->> 'landing_page' IS NULL)
-    ),
-    flip_counts AS (
-      SELECT hs.session_id, LEAST(COUNT(be.id), 3) AS flips
-      FROM home_sessions hs
-      LEFT JOIN behavior_events be
-        ON be.session_id = hs.session_id
-        AND be.event_name = 'card_flip'
-        AND be.created_at >= ${cutoff}
-        AND (be.properties::jsonb ->> 'is_test' IS DISTINCT FROM 'true')
-      GROUP BY hs.session_id
-    )
-    SELECT flips AS flip_bucket, COUNT(*)::int AS session_count
-    FROM flip_counts
-    GROUP BY flips
-    ORDER BY flips
-  `);
-
-  // Build distribution array from SQL results
-  const distribution = [0, 0, 0, 0];
-  for (const row of flipCountsResult) {
-    const bucket = Number(row.flip_bucket);
-    if (bucket >= 0 && bucket <= 3) {
-      distribution[bucket] = Number(row.session_count);
-    }
-  }
-
-  return distribution.map((sessions, flipCount) => ({
-    flipCount,
-    sessions,
-    percentage: totalSessions > 0 ? (sessions / totalSessions) * 100 : 0,
-  }));
-}
 
 export type FunnelStep = {
   step: string;
@@ -147,132 +35,127 @@ export type FunnelStep = {
   dropoff: number;
 };
 
-export async function getFunnelData(days: number = DEFAULT_DAYS): Promise<FunnelStep[]> {
-  const cutoff = getDateCutoff(days);
-
-  // Landed (session_start, excluding test events)
-  const landedResult = await db
-    .select({ count: countDistinct(behaviorEvents.sessionId) })
-    .from(behaviorEvents)
-    .where(
-      and(
-        eq(behaviorEvents.eventName, 'session_start'),
-        gte(behaviorEvents.createdAt, cutoff),
-        excludeTestEvents()
-      )
-    );
-  const landed = landedResult[0]?.count ?? 0;
-
-  // Get flip counts per session (excluding test events)
-  const flipCountsResult = await db
-    .select({
-      sessionId: behaviorEvents.sessionId,
-      flipCount: count(behaviorEvents.id),
-    })
-    .from(behaviorEvents)
-    .where(
-      and(
-        eq(behaviorEvents.eventName, 'card_flip'),
-        gte(behaviorEvents.createdAt, cutoff),
-        excludeTestEvents()
-      )
-    )
-    .groupBy(behaviorEvents.sessionId);
-
-  // Count sessions by flip threshold
-  let firstFlip = 0;
-  let secondFlip = 0;
-  let thirdFlip = 0;
-
-  for (const row of flipCountsResult) {
-    if (row.flipCount >= 1) firstFlip++;
-    if (row.flipCount >= 2) secondFlip++;
-    if (row.flipCount >= 3) thirdFlip++;
-  }
-
-  // Conversion (read_spread_click OR talk_click, excluding test events)
-  const conversionResult = await db
-    .select({ count: countDistinct(behaviorEvents.sessionId) })
-    .from(behaviorEvents)
-    .where(
-      and(
-        sql`${behaviorEvents.eventName} IN ('read_spread_click', 'talk_click', 'card_detail_click')`,
-        gte(behaviorEvents.createdAt, cutoff),
-        excludeTestEvents()
-      )
-    );
-  const converted = conversionResult[0]?.count ?? 0;
-
-  const steps = [
-    { step: 'Landed', sessions: landed },
-    { step: '1st Flip', sessions: firstFlip },
-    { step: '2nd Flip', sessions: secondFlip },
-    { step: '3rd Flip', sessions: thirdFlip },
-    { step: 'Conversion', sessions: converted },
-  ];
-
-  return steps.map((s, i) => {
-    const prev = i > 0 ? steps[i - 1].sessions : s.sessions;
-    return {
-      ...s,
-      percentage: landed > 0 ? (s.sessions / landed) * 100 : 0,
-      dropoff: prev > 0 ? ((prev - s.sessions) / prev) * 100 : 0,
-    };
-  });
-}
-
 export type ReadSpreadCTR = {
   eligible: number;
   clicked: number;
   ctr: number;
 };
 
-export async function getReadSpreadCTR(days: number = DEFAULT_DAYS): Promise<ReadSpreadCTR> {
-  const cutoff = getDateCutoff(days);
-
-  // Eligible = sessions with spread_ready event (excluding test events)
-  const eligibleResult = await db
-    .select({ count: countDistinct(behaviorEvents.sessionId) })
-    .from(behaviorEvents)
-    .where(
-      and(
-        eq(behaviorEvents.eventName, 'spread_ready'),
-        gte(behaviorEvents.createdAt, cutoff),
-        excludeTestEvents()
-      )
-    );
-  const eligible = eligibleResult[0]?.count ?? 0;
-
-  // Clicked = sessions with read_spread_click event (excluding test events)
-  const clickedResult = await db
-    .select({ count: countDistinct(behaviorEvents.sessionId) })
-    .from(behaviorEvents)
-    .where(
-      and(
-        eq(behaviorEvents.eventName, 'read_spread_click'),
-        gte(behaviorEvents.createdAt, cutoff),
-        excludeTestEvents()
-      )
-    );
-  const clicked = clickedResult[0]?.count ?? 0;
-
-  return {
-    eligible,
-    clicked,
-    ctr: eligible > 0 ? (clicked / eligible) * 100 : 0,
-  };
-}
-
 export type TimeToFirstFlip = {
   averageMs: number;
   medianMs: number;
 };
 
-export async function getTimeToFirstFlip(days: number = DEFAULT_DAYS): Promise<TimeToFirstFlip> {
+export type DeviceBreakdown = {
+  mobile: number;
+  desktop: number;
+  mobilePercentage: number;
+  desktopPercentage: number;
+};
+
+export type DailySessionCount = {
+  date: string;
+  count: number;
+};
+
+export type BehaviorStats = {
+  sessionStats: SessionStats;
+  flipDistribution: FlipDistribution[];
+  funnelData: FunnelStep[];
+  readSpreadCTR: ReadSpreadCTR;
+  timeToFirstFlip: TimeToFirstFlip;
+  deviceBreakdown: DeviceBreakdown;
+  dailySessions: DailySessionCount[];
+};
+
+/**
+ * Get ALL behavior stats in minimal DB round-trips.
+ *
+ * Previous: 12 sequential queries × ~85ms round-trip = ~1050ms
+ * Now: 4 queries × ~85ms = ~340ms
+ *
+ * Query 1: All single-row aggregate counts (session, device, CTR, funnel conversion)
+ * Query 2: Flip distribution (home sessions) + funnel flip thresholds
+ * Query 3: Time to first flip (DISTINCT ON)
+ * Query 4: Daily session counts (GROUP BY date)
+ */
+export async function getAllBehaviorStats(days: number = DEFAULT_DAYS): Promise<BehaviorStats> {
   const cutoff = getDateCutoff(days);
 
-  // Extract elapsed_ms for first flips directly in SQL using DISTINCT ON
-  const result = await db.execute<{ elapsed_ms: number }>(sql`
+  // ── Query 1: All single-row counts in one table scan ──
+  // Replaces: getSessionStats (2 queries), getReadSpreadCTR (2 queries),
+  //           getDeviceBreakdown (1 query), funnel conversion (1 query), home session count (1 query)
+  const q1 = db.execute<{
+    total_sessions: number;
+    engaged_sessions: number;
+    spread_ready: number;
+    read_spread_click: number;
+    conversion: number;
+    mobile: number;
+    desktop: number;
+    home_sessions: number;
+  }>(sql`
+    SELECT
+      COUNT(DISTINCT session_id) FILTER (WHERE event_name = 'session_start')::int AS total_sessions,
+      COUNT(DISTINCT session_id) FILTER (WHERE event_name = 'card_flip')::int AS engaged_sessions,
+      COUNT(DISTINCT session_id) FILTER (WHERE event_name = 'spread_ready')::int AS spread_ready,
+      COUNT(DISTINCT session_id) FILTER (WHERE event_name = 'read_spread_click')::int AS read_spread_click,
+      COUNT(DISTINCT session_id) FILTER (WHERE event_name IN ('read_spread_click', 'talk_click', 'card_detail_click'))::int AS conversion,
+      COUNT(*) FILTER (WHERE event_name = 'session_start' AND (properties::jsonb ->> 'device_class') = 'mobile')::int AS mobile,
+      COUNT(*) FILTER (WHERE event_name = 'session_start' AND (properties::jsonb ->> 'device_class') IS DISTINCT FROM 'mobile')::int AS desktop,
+      COUNT(DISTINCT session_id) FILTER (WHERE event_name = 'session_start' AND ((properties::jsonb ->> 'landing_page') = '/' OR (properties::jsonb ->> 'landing_page') IS NULL))::int AS home_sessions
+    FROM behavior_events
+    WHERE created_at >= ${cutoff}
+      AND (properties::jsonb ->> 'is_test' IS DISTINCT FROM 'true')
+  `);
+
+  // ── Query 2: Flip distribution + funnel thresholds (CTE-based) ──
+  // Replaces: getFlipDistribution (2 queries), getFunnelData flip counts (2 queries)
+  const q2 = db.execute<{
+    first_flip: number;
+    second_flip: number;
+    third_flip: number;
+    flip_0: number;
+    flip_1: number;
+    flip_2: number;
+    flip_3: number;
+  }>(sql`
+    WITH session_flips AS (
+      SELECT session_id, COUNT(*)::int AS flip_count
+      FROM behavior_events
+      WHERE event_name = 'card_flip'
+        AND created_at >= ${cutoff}
+        AND (properties::jsonb ->> 'is_test' IS DISTINCT FROM 'true')
+      GROUP BY session_id
+    ),
+    home_sessions AS (
+      SELECT DISTINCT session_id
+      FROM behavior_events
+      WHERE event_name = 'session_start'
+        AND created_at >= ${cutoff}
+        AND (properties::jsonb ->> 'is_test' IS DISTINCT FROM 'true')
+        AND ((properties::jsonb ->> 'landing_page') = '/' OR (properties::jsonb ->> 'landing_page') IS NULL)
+    ),
+    home_flip_dist AS (
+      SELECT COALESCE(LEAST(sf.flip_count, 3), 0)::int AS bucket
+      FROM home_sessions hs
+      LEFT JOIN session_flips sf ON sf.session_id = hs.session_id
+    )
+    SELECT
+      -- Funnel thresholds (all sessions with flips)
+      COUNT(*) FILTER (WHERE sf.flip_count >= 1)::int AS first_flip,
+      COUNT(*) FILTER (WHERE sf.flip_count >= 2)::int AS second_flip,
+      COUNT(*) FILTER (WHERE sf.flip_count >= 3)::int AS third_flip,
+      -- Flip distribution buckets (home sessions only)
+      (SELECT COUNT(*)::int FROM home_flip_dist WHERE bucket = 0) AS flip_0,
+      (SELECT COUNT(*)::int FROM home_flip_dist WHERE bucket = 1) AS flip_1,
+      (SELECT COUNT(*)::int FROM home_flip_dist WHERE bucket = 2) AS flip_2,
+      (SELECT COUNT(*)::int FROM home_flip_dist WHERE bucket = 3) AS flip_3
+    FROM session_flips sf
+  `);
+
+  // ── Query 3: Time to first flip ──
+  const q3 = db.execute<{ elapsed_ms: number }>(sql`
     SELECT elapsed_ms FROM (
       SELECT DISTINCT ON (session_id)
         ((properties::jsonb ->> 'elapsed_ms')::int) AS elapsed_ms
@@ -287,68 +170,8 @@ export async function getTimeToFirstFlip(days: number = DEFAULT_DAYS): Promise<T
     WHERE elapsed_ms > 0
   `);
 
-  const times: number[] = result.map(r => Number(r.elapsed_ms));
-
-  if (times.length === 0) {
-    return { averageMs: 0, medianMs: 0 };
-  }
-
-  // Average
-  const averageMs = times.reduce((a, b) => a + b, 0) / times.length;
-
-  // Median
-  times.sort((a, b) => a - b);
-  const mid = Math.floor(times.length / 2);
-  const medianMs = times.length % 2 === 0
-    ? (times[mid - 1] + times[mid]) / 2
-    : times[mid];
-
-  return { averageMs, medianMs };
-}
-
-export type DeviceBreakdown = {
-  mobile: number;
-  desktop: number;
-  mobilePercentage: number;
-  desktopPercentage: number;
-};
-
-export async function getDeviceBreakdown(days: number = DEFAULT_DAYS): Promise<DeviceBreakdown> {
-  const cutoff = getDateCutoff(days);
-
-  // Count device classes directly in SQL using FILTER
-  const result = await db.execute<{ mobile: number; desktop: number }>(sql`
-    SELECT
-      COUNT(*) FILTER (WHERE properties::jsonb ->> 'device_class' = 'mobile')::int AS mobile,
-      COUNT(*) FILTER (WHERE properties::jsonb ->> 'device_class' IS DISTINCT FROM 'mobile')::int AS desktop
-    FROM behavior_events
-    WHERE event_name = 'session_start'
-      AND created_at >= ${cutoff}
-      AND (properties::jsonb ->> 'is_test' IS DISTINCT FROM 'true')
-  `);
-
-  const mobile = Number(result[0]?.mobile ?? 0);
-  const desktop = Number(result[0]?.desktop ?? 0);
-  const total = mobile + desktop;
-
-  return {
-    mobile,
-    desktop,
-    mobilePercentage: total > 0 ? (mobile / total) * 100 : 0,
-    desktopPercentage: total > 0 ? (desktop / total) * 100 : 0,
-  };
-}
-
-// Daily session counts for traffic chart
-export type DailySessionCount = {
-  date: string;
-  count: number;
-};
-
-export async function getDailySessionCounts(days: number = DEFAULT_DAYS): Promise<DailySessionCount[]> {
-  const cutoff = getDateCutoff(days);
-
-  const result = await db
+  // ── Query 4: Daily session counts ──
+  const q4 = db
     .select({
       date: sql<string>`DATE(${behaviorEvents.createdAt})`.as('date'),
       count: countDistinct(behaviorEvents.sessionId),
@@ -364,41 +187,100 @@ export async function getDailySessionCounts(days: number = DEFAULT_DAYS): Promis
     .groupBy(sql`DATE(${behaviorEvents.createdAt})`)
     .orderBy(sql`DATE(${behaviorEvents.createdAt})`);
 
-  return result.map(row => ({
+  // Execute all 4 queries (they queue on max:1 pool, but only 4 round-trips)
+  const [countsResult, flipsResult, firstFlipResult, dailyResult] = await Promise.all([q1, q2, q3, q4]);
+
+  // ── Assemble results ──
+  const counts = countsResult[0];
+  const totalSessions = Number(counts?.total_sessions ?? 0);
+  const engagedSessions = Number(counts?.engaged_sessions ?? 0);
+  const mobile = Number(counts?.mobile ?? 0);
+  const desktop = Number(counts?.desktop ?? 0);
+  const deviceTotal = mobile + desktop;
+  const homeSessions = Number(counts?.home_sessions ?? 0);
+
+  const flips = flipsResult[0];
+  const firstFlip = Number(flips?.first_flip ?? 0);
+  const secondFlip = Number(flips?.second_flip ?? 0);
+  const thirdFlip = Number(flips?.third_flip ?? 0);
+
+  // Session stats
+  const sessionStats: SessionStats = {
+    totalSessions,
+    engagedSessions,
+    bounceRate: totalSessions > 0
+      ? ((totalSessions - engagedSessions) / totalSessions) * 100
+      : 0,
+  };
+
+  // Flip distribution (home sessions)
+  const distribution = [
+    Number(flips?.flip_0 ?? 0),
+    Number(flips?.flip_1 ?? 0),
+    Number(flips?.flip_2 ?? 0),
+    Number(flips?.flip_3 ?? 0),
+  ];
+  const flipDistribution: FlipDistribution[] = distribution.map((sessions, flipCount) => ({
+    flipCount,
+    sessions,
+    percentage: homeSessions > 0 ? (sessions / homeSessions) * 100 : 0,
+  }));
+
+  // Funnel data
+  const landed = totalSessions;
+  const converted = Number(counts?.conversion ?? 0);
+  const funnelSteps = [
+    { step: 'Landed', sessions: landed },
+    { step: '1st Flip', sessions: firstFlip },
+    { step: '2nd Flip', sessions: secondFlip },
+    { step: '3rd Flip', sessions: thirdFlip },
+    { step: 'Conversion', sessions: converted },
+  ];
+  const funnelData: FunnelStep[] = funnelSteps.map((s, i) => {
+    const prev = i > 0 ? funnelSteps[i - 1].sessions : s.sessions;
+    return {
+      ...s,
+      percentage: landed > 0 ? (s.sessions / landed) * 100 : 0,
+      dropoff: prev > 0 ? ((prev - s.sessions) / prev) * 100 : 0,
+    };
+  });
+
+  // Read Spread CTR
+  const eligible = Number(counts?.spread_ready ?? 0);
+  const clicked = Number(counts?.read_spread_click ?? 0);
+  const readSpreadCTR: ReadSpreadCTR = {
+    eligible,
+    clicked,
+    ctr: eligible > 0 ? (clicked / eligible) * 100 : 0,
+  };
+
+  // Device breakdown
+  const deviceBreakdown: DeviceBreakdown = {
+    mobile,
+    desktop,
+    mobilePercentage: deviceTotal > 0 ? (mobile / deviceTotal) * 100 : 0,
+    desktopPercentage: deviceTotal > 0 ? (desktop / deviceTotal) * 100 : 0,
+  };
+
+  // Time to first flip
+  const times: number[] = firstFlipResult.map(r => Number(r.elapsed_ms));
+  let averageMs = 0;
+  let medianMs = 0;
+  if (times.length > 0) {
+    averageMs = times.reduce((a, b) => a + b, 0) / times.length;
+    times.sort((a, b) => a - b);
+    const mid = Math.floor(times.length / 2);
+    medianMs = times.length % 2 === 0
+      ? (times[mid - 1] + times[mid]) / 2
+      : times[mid];
+  }
+  const timeToFirstFlip: TimeToFirstFlip = { averageMs, medianMs };
+
+  // Daily sessions
+  const dailySessions: DailySessionCount[] = dailyResult.map(row => ({
     date: String(row.date),
     count: row.count,
   }));
-}
-
-// Combined function to get all behavior stats in one call
-export type BehaviorStats = {
-  sessionStats: SessionStats;
-  flipDistribution: FlipDistribution[];
-  funnelData: FunnelStep[];
-  readSpreadCTR: ReadSpreadCTR;
-  timeToFirstFlip: TimeToFirstFlip;
-  deviceBreakdown: DeviceBreakdown;
-  dailySessions: DailySessionCount[];
-};
-
-export async function getAllBehaviorStats(days: number = DEFAULT_DAYS): Promise<BehaviorStats> {
-  const [
-    sessionStats,
-    flipDistribution,
-    funnelData,
-    readSpreadCTR,
-    timeToFirstFlip,
-    deviceBreakdown,
-    dailySessions,
-  ] = await Promise.all([
-    getSessionStats(days),
-    getFlipDistribution(days),
-    getFunnelData(days),
-    getReadSpreadCTR(days),
-    getTimeToFirstFlip(days),
-    getDeviceBreakdown(days),
-    getDailySessionCounts(days),
-  ]);
 
   return {
     sessionStats,

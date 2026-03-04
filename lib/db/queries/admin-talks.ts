@@ -313,29 +313,28 @@ export async function getTalkByYouTubeId(youtubeVideoId: string) {
 }
 
 /**
- * Get statistics for the admin dashboard
- * Runs queries sequentially to avoid connection pool exhaustion on Vercel Postgres
+ * Get statistics for the admin dashboard (single query with FILTER clauses)
  */
 export async function getTalksStats() {
-  const totalResult = await db.select({ count: count() }).from(talks).where(activeFilter);
-  const deletedResult = await db.select({ count: count() }).from(talks).where(eq(talks.isDeleted, true));
-  const withYoutubeResult = await db.select({ count: count() }).from(talks).where(
-    and(
-      activeFilter,
-      sql`${talks.youtubeVideoId} IS NOT NULL`
-    )
-  );
-  const withoutThumbnailResult = await db.select({ count: count() }).from(talks).where(
-    and(
-      activeFilter,
-      sql`${talks.thumbnailUrl} IS NULL`
-    )
-  );
+  const result = await db.execute<{
+    total: number;
+    deleted: number;
+    with_youtube: number;
+    without_thumbnail: number;
+  }>(sql`
+    SELECT
+      COUNT(*) FILTER (WHERE is_deleted = false)::int AS total,
+      COUNT(*) FILTER (WHERE is_deleted = true)::int AS deleted,
+      COUNT(*) FILTER (WHERE is_deleted = false AND youtube_video_id IS NOT NULL)::int AS with_youtube,
+      COUNT(*) FILTER (WHERE is_deleted = false AND thumbnail_url IS NULL)::int AS without_thumbnail
+    FROM talks
+  `);
 
+  const row = result[0];
   return {
-    total: totalResult[0]?.count || 0,
-    deleted: deletedResult[0]?.count || 0,
-    withYoutubeId: withYoutubeResult[0]?.count || 0,
-    withoutThumbnail: withoutThumbnailResult[0]?.count || 0,
+    total: Number(row?.total ?? 0),
+    deleted: Number(row?.deleted ?? 0),
+    withYoutubeId: Number(row?.with_youtube ?? 0),
+    withoutThumbnail: Number(row?.without_thumbnail ?? 0),
   };
 }
