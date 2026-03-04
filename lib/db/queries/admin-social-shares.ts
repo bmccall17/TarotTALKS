@@ -186,16 +186,12 @@ export async function deleteShare(id: string): Promise<void> {
  * Get share statistics for dashboard
  */
 export async function getShareStats(): Promise<{ today: number; thisWeek: number; total: number }> {
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const weekStart = new Date(todayStart);
-  weekStart.setDate(weekStart.getDate() - 7);
-
+  // Use SQL date functions — Date objects fail with Drizzle db.execute
   const result = await db.execute<{ total: number; today: number; this_week: number }>(sql`
     SELECT
       COUNT(*)::int AS total,
-      COUNT(*) FILTER (WHERE posted_at >= ${todayStart})::int AS today,
-      COUNT(*) FILTER (WHERE posted_at >= ${weekStart})::int AS this_week
+      COUNT(*) FILTER (WHERE posted_at >= CURRENT_DATE)::int AS today,
+      COUNT(*) FILTER (WHERE posted_at >= CURRENT_DATE - INTERVAL '7 days')::int AS this_week
     FROM social_shares
   `);
 

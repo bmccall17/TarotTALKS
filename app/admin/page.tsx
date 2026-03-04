@@ -11,11 +11,7 @@ export const dynamic = 'force-dynamic';
 export default async function AdminDashboard() {
   try {
     // ONE query for ALL dashboard stats (previous: ~23 queries, then 4, now 1)
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const weekStart = new Date(todayStart);
-    weekStart.setDate(weekStart.getDate() - 7);
-
+    // Date computation done in SQL to avoid Drizzle parameter serialization issues
     const result = await db.execute<{
       cards_count: number;
       mappings_count: number;
@@ -53,8 +49,8 @@ export default async function AdminDashboard() {
         (SELECT COUNT(*)::int FROM talks WHERE is_deleted = false AND youtube_video_id IS NOT NULL) AS talks_with_youtube,
         (SELECT COUNT(*)::int FROM talks WHERE is_deleted = false AND thumbnail_url IS NULL) AS talks_without_thumbnail,
         (SELECT COUNT(*)::int FROM social_shares) AS shares_total,
-        (SELECT COUNT(*)::int FROM social_shares WHERE posted_at >= ${todayStart}) AS shares_today,
-        (SELECT COUNT(*)::int FROM social_shares WHERE posted_at >= ${weekStart}) AS shares_this_week,
+        (SELECT COUNT(*)::int FROM social_shares WHERE posted_at >= CURRENT_DATE) AS shares_today,
+        (SELECT COUNT(*)::int FROM social_shares WHERE posted_at >= CURRENT_DATE - INTERVAL '7 days') AS shares_this_week,
         (SELECT COUNT(DISTINCT card_id)::int FROM social_shares WHERE card_id IS NOT NULL) AS shared_cards,
         (SELECT COUNT(*)::int FROM cards c2 WHERE NOT EXISTS (
           SELECT 1 FROM social_shares ss WHERE ss.card_id = c2.id

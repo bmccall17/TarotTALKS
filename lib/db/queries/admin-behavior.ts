@@ -11,6 +11,11 @@ function getDateCutoff(days: number = DEFAULT_DAYS): Date {
   return cutoff;
 }
 
+// ISO string version for use in db.execute(sql`...`) — Date objects fail with Drizzle raw SQL
+function getDateCutoffIso(days: number = DEFAULT_DAYS): string {
+  return getDateCutoff(days).toISOString();
+}
+
 // Filter condition to exclude test events using JSON extraction (avoids leading-wildcard LIKE scan)
 function excludeTestEvents() {
   return sql`(${behaviorEvents.properties})::jsonb ->> 'is_test' IS DISTINCT FROM 'true'`;
@@ -81,10 +86,10 @@ export type BehaviorStats = {
  */
 export async function getAllBehaviorStats(days: number = DEFAULT_DAYS): Promise<BehaviorStats> {
   const cutoff = getDateCutoff(days);
+  // ISO string for raw SQL queries (Date objects fail with Drizzle db.execute)
+  const cutoffIso = cutoff.toISOString();
 
   // ── Query 1: All single-row counts in one table scan ──
-  // Replaces: getSessionStats (2 queries), getReadSpreadCTR (2 queries),
-  //           getDeviceBreakdown (1 query), funnel conversion (1 query), home session count (1 query)
   const q1 = db.execute<{
     total_sessions: number;
     engaged_sessions: number;
@@ -105,12 +110,11 @@ export async function getAllBehaviorStats(days: number = DEFAULT_DAYS): Promise<
       COUNT(*) FILTER (WHERE event_name = 'session_start' AND (properties::jsonb ->> 'device_class') IS DISTINCT FROM 'mobile')::int AS desktop,
       COUNT(DISTINCT session_id) FILTER (WHERE event_name = 'session_start' AND ((properties::jsonb ->> 'landing_page') = '/' OR (properties::jsonb ->> 'landing_page') IS NULL))::int AS home_sessions
     FROM behavior_events
-    WHERE created_at >= ${cutoff}
+    WHERE created_at >= ${cutoffIso}
       AND (properties::jsonb ->> 'is_test' IS DISTINCT FROM 'true')
   `);
 
   // ── Query 2: Flip distribution + funnel thresholds (CTE-based) ──
-  // Replaces: getFlipDistribution (2 queries), getFunnelData flip counts (2 queries)
   const q2 = db.execute<{
     first_flip: number;
     second_flip: number;
@@ -124,7 +128,7 @@ export async function getAllBehaviorStats(days: number = DEFAULT_DAYS): Promise<
       SELECT session_id, COUNT(*)::int AS flip_count
       FROM behavior_events
       WHERE event_name = 'card_flip'
-        AND created_at >= ${cutoff}
+        AND created_at >= ${cutoffIso}
         AND (properties::jsonb ->> 'is_test' IS DISTINCT FROM 'true')
       GROUP BY session_id
     ),
@@ -132,7 +136,7 @@ export async function getAllBehaviorStats(days: number = DEFAULT_DAYS): Promise<
       SELECT DISTINCT session_id
       FROM behavior_events
       WHERE event_name = 'session_start'
-        AND created_at >= ${cutoff}
+        AND created_at >= ${cutoffIso}
         AND (properties::jsonb ->> 'is_test' IS DISTINCT FROM 'true')
         AND ((properties::jsonb ->> 'landing_page') = '/' OR (properties::jsonb ->> 'landing_page') IS NULL)
     ),
@@ -142,11 +146,9 @@ export async function getAllBehaviorStats(days: number = DEFAULT_DAYS): Promise<
       LEFT JOIN session_flips sf ON sf.session_id = hs.session_id
     )
     SELECT
-      -- Funnel thresholds (all sessions with flips)
       COUNT(*) FILTER (WHERE sf.flip_count >= 1)::int AS first_flip,
       COUNT(*) FILTER (WHERE sf.flip_count >= 2)::int AS second_flip,
       COUNT(*) FILTER (WHERE sf.flip_count >= 3)::int AS third_flip,
-      -- Flip distribution buckets (home sessions only)
       (SELECT COUNT(*)::int FROM home_flip_dist WHERE bucket = 0) AS flip_0,
       (SELECT COUNT(*)::int FROM home_flip_dist WHERE bucket = 1) AS flip_1,
       (SELECT COUNT(*)::int FROM home_flip_dist WHERE bucket = 2) AS flip_2,
@@ -161,7 +163,7 @@ export async function getAllBehaviorStats(days: number = DEFAULT_DAYS): Promise<
         ((properties::jsonb ->> 'elapsed_ms')::int) AS elapsed_ms
       FROM behavior_events
       WHERE event_name = 'card_flip'
-        AND created_at >= ${cutoff}
+        AND created_at >= ${cutoffIso}
         AND (properties::jsonb ->> 'is_test' IS DISTINCT FROM 'true')
         AND (properties::jsonb ->> 'cards_revealed_count') = '1'
         AND (properties::jsonb ->> 'elapsed_ms') IS NOT NULL

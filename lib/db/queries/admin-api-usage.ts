@@ -42,7 +42,9 @@ export async function getApiHealthStatus(
   days: number = DEFAULT_DAYS
 ): Promise<ApiHealthStatus> {
   const cutoff = getDateCutoff(days);
-  const oneHourAgo = getOneHourAgo();
+  // ISO strings for raw SQL (Date objects fail with Drizzle db.execute)
+  const cutoffIso = cutoff.toISOString();
+  const oneHourAgoIso = getOneHourAgo().toISOString();
 
   // Single query with FILTER clauses instead of 6 separate queries
   const [statsResult, lastErrorResult] = await Promise.all([
@@ -58,10 +60,10 @@ export async function getApiHealthStatus(
         COUNT(*) FILTER (WHERE success = true)::int AS successful_calls,
         COUNT(*) FILTER (WHERE error_type = 'rate_limit')::int AS rate_limit_hits,
         COUNT(*) FILTER (WHERE error_type = 'quota_exceeded')::int AS quota_exceeded_hits,
-        COUNT(*) FILTER (WHERE success = false AND created_at >= ${oneHourAgo})::int AS recent_errors
+        COUNT(*) FILTER (WHERE success = false AND created_at >= ${oneHourAgoIso})::int AS recent_errors
       FROM api_usage_events
       WHERE api_name = ${apiName}
-        AND created_at >= ${cutoff}
+        AND created_at >= ${cutoffIso}
     `),
     db
       .select({
@@ -129,7 +131,7 @@ export type ReadSpreadAttribution = {
  * Get attribution - API calls from Read My Spread clicks (single consolidated query)
  */
 export async function getReadSpreadAttribution(days: number = DEFAULT_DAYS): Promise<ReadSpreadAttribution> {
-  const cutoff = getDateCutoff(days);
+  const cutoffIso = getDateCutoff(days).toISOString();
 
   const result = await db.execute<{
     gemini_calls: number;
@@ -144,7 +146,7 @@ export async function getReadSpreadAttribution(days: number = DEFAULT_DAYS): Pro
       COUNT(*) FILTER (WHERE api_name = 'youtube' AND success = true)::int AS youtube_successful
     FROM api_usage_events
     WHERE source = 'spread_reading'
-      AND created_at >= ${cutoff}
+      AND created_at >= ${cutoffIso}
   `);
 
   const row = result[0];
