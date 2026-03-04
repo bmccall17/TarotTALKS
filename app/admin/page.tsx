@@ -48,13 +48,13 @@ export default async function AdminDashboard() {
         (SELECT COUNT(*)::int FROM talks t WHERE t.is_deleted = false AND NOT EXISTS (
           SELECT 1 FROM card_talk_mappings m WHERE m.talk_id = t.id
         )) AS unmapped_talks,
-        (SELECT COUNT(*) FILTER (WHERE is_deleted = false)::int FROM talks) AS talks_total,
-        (SELECT COUNT(*) FILTER (WHERE is_deleted = true)::int FROM talks) AS talks_deleted,
-        (SELECT COUNT(*) FILTER (WHERE is_deleted = false AND youtube_video_id IS NOT NULL)::int FROM talks) AS talks_with_youtube,
-        (SELECT COUNT(*) FILTER (WHERE is_deleted = false AND thumbnail_url IS NULL)::int FROM talks) AS talks_without_thumbnail,
+        (SELECT COUNT(*)::int FROM talks WHERE is_deleted = false) AS talks_total,
+        (SELECT COUNT(*)::int FROM talks WHERE is_deleted = true) AS talks_deleted,
+        (SELECT COUNT(*)::int FROM talks WHERE is_deleted = false AND youtube_video_id IS NOT NULL) AS talks_with_youtube,
+        (SELECT COUNT(*)::int FROM talks WHERE is_deleted = false AND thumbnail_url IS NULL) AS talks_without_thumbnail,
         (SELECT COUNT(*)::int FROM social_shares) AS shares_total,
-        (SELECT COUNT(*) FILTER (WHERE posted_at >= ${todayStart})::int FROM social_shares) AS shares_today,
-        (SELECT COUNT(*) FILTER (WHERE posted_at >= ${weekStart})::int FROM social_shares) AS shares_this_week,
+        (SELECT COUNT(*)::int FROM social_shares WHERE posted_at >= ${todayStart}) AS shares_today,
+        (SELECT COUNT(*)::int FROM social_shares WHERE posted_at >= ${weekStart}) AS shares_this_week,
         (SELECT COUNT(DISTINCT card_id)::int FROM social_shares WHERE card_id IS NOT NULL) AS shared_cards,
         (SELECT COUNT(*)::int FROM cards c2 WHERE NOT EXISTS (
           SELECT 1 FROM social_shares ss WHERE ss.card_id = c2.id
@@ -435,8 +435,10 @@ export default async function AdminDashboard() {
           <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-6">
             <h1 className="text-2xl font-bold text-red-400 mb-4">Dashboard Error</h1>
             <p className="text-gray-300 mb-4">Failed to load dashboard statistics.</p>
-            <pre className="bg-gray-900 p-4 rounded text-sm text-gray-400 overflow-auto">
-              {error instanceof Error ? error.message : 'Unknown error'}
+            <pre className="bg-gray-900 p-4 rounded text-sm text-gray-400 overflow-auto max-h-32">
+              {error instanceof Error
+                ? error.message.split('\n')[0].slice(0, 200)
+                : 'Unknown error'}
             </pre>
             <div className="mt-4">
               <p className="text-gray-400 text-sm">Possible causes:</p>
