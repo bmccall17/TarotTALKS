@@ -27,7 +27,7 @@
     bold:   'font-weight:bold;color:#e2e8f0;',
   };
 
-  console.clear();
+//  console.clear();
   console.log('%c🔮 TarotTALKS Admin Diagnostics', styles.header);
   console.log('%c   ' + new Date().toLocaleString(), styles.info);
   console.log('%c   ' + BASE, styles.info);
