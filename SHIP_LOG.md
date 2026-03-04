@@ -8,7 +8,7 @@ A chronological record of major releases and feature deployments for TarotTALKS.
 
 ## Pending for Next Release
 
-*Nothing staged yet. v1.6.6 shipped.*
+*Nothing staged yet. v1.6.7 shipped.*
 
 ---
 
@@ -16,6 +16,7 @@ A chronological record of major releases and feature deployments for TarotTALKS.
 
 | Version | Title | Date |
 |---------|-------|------|
+| [v1.6.7](devnotes/releases/v1.6.7.md) | Admin Portal Performance Rescue ⚡🏥 | Mar 4, 2026 |
 | [v1.6.6](devnotes/releases/v1.6.6.md) | Auto-Refresh Bluesky Engagement Metrics 🦋📊 | Feb 27, 2026 |
 | [v1.6.5](devnotes/releases/v1.6.5.md) | Platform Quotas Monitor: Dashboard & Traffic Chart 📊🔍 | Feb 8, 2026 |
 | [v1.6.4](devnotes/releases/v1.6.4.md) | Supabase Egress Reduction: Image Proxy & Query Caching 🛡️💰 | Feb 8, 2026 |
@@ -59,6 +60,7 @@ A chronological record of major releases and feature deployments for TarotTALKS.
 
 | Version | Title | Date |
 |---------|-------|------|
+| [v1.6.7](devnotes/releases/v1.6.7.md) | Admin Portal Performance Rescue ⚡🏥 | Mar 4, 2026 |
 | [v1.6.6](devnotes/releases/v1.6.6.md) | Auto-Refresh Bluesky Engagement Metrics 🦋📊 | Feb 27, 2026 |
 | [v1.6.5](devnotes/releases/v1.6.5.md) | Platform Quotas Monitor: Dashboard & Traffic Chart 📊🔍 | Feb 8, 2026 |
 | [v1.6.4](devnotes/releases/v1.6.4.md) | Supabase Egress Reduction: Image Proxy & Query Caching 🛡️💰 | Feb 8, 2026 |
