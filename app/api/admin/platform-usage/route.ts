@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAllPlatformUsage } from '@/lib/db/queries/admin-platform-usage';
 
+export const maxDuration = 30;
+
 export async function GET() {
   try {
     const data = await getAllPlatformUsage();

@@ -269,6 +269,7 @@ export async function getTodayApiCallCount(apiName: 'gemini' | 'youtube'): Promi
   if (midnightPT > now) {
     midnightPT.setDate(midnightPT.getDate() - 1);
   }
+  const midnightPTIso = midnightPT.toISOString();
 
   const result = await db.execute<{
     total: number;
@@ -281,7 +282,7 @@ export async function getTodayApiCallCount(apiName: 'gemini' | 'youtube'): Promi
       COUNT(*) FILTER (WHERE error_type = 'circuit_breaker')::int AS circuit_breaker_blocked
     FROM api_usage_events
     WHERE api_name = ${apiName}
-      AND created_at >= ${midnightPT}
+      AND created_at >= ${midnightPTIso}
   `);
 
   const row = result[0];
@@ -309,7 +310,7 @@ export type HourlyUsageStat = {
  */
 export async function getHourlyApiUsage(apiName: 'gemini' | 'youtube'): Promise<HourlyUsageStat[]> {
   const now = new Date();
-  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const twentyFourHoursAgoIso = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
 
   // Group by hour in SQL instead of fetching all events
   const result = await db.execute<{
@@ -325,7 +326,7 @@ export async function getHourlyApiUsage(apiName: 'gemini' | 'youtube'): Promise<
       COUNT(*) FILTER (WHERE success = false)::int AS failed
     FROM api_usage_events
     WHERE api_name = ${apiName}
-      AND created_at >= ${twentyFourHoursAgo}
+      AND created_at >= ${twentyFourHoursAgoIso}
     GROUP BY date_trunc('hour', created_at)
     ORDER BY hour
   `);

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllBehaviorStats } from '@/lib/db/queries/admin-behavior';
 
+// Allow up to 30s for cold start + DB connection + 4 queries
+export const maxDuration = 30;
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;

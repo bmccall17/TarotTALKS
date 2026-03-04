@@ -9,6 +9,9 @@ import {
 } from '@/lib/db/queries/admin-api-usage';
 import { getCircuitBreakerStatus, GEMINI_MONTHLY_BUDGET, GEMINI_DAILY_BUDGET, GEMINI_MODEL } from '@/lib/services/gemini';
 
+// Allow up to 30s for cold start + DB connection + 7 parallel queries
+export const maxDuration = 30;
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getSpreadStats } from '@/lib/db/queries/admin-spreads';
 
+export const maxDuration = 30;
+
 /**
  * GET /api/admin/spreads/stats
  * Returns spread statistics for the admin dashboard

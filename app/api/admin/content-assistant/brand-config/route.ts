@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBrandConfig, updateBrandConfig } from '@/lib/db/queries/admin-content-assistant';
 
+export const maxDuration = 30;
+
 /**
  * GET /api/admin/content-assistant/brand-config
  * Returns the brand config (creates default if none exists)

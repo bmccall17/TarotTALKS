@@ -14,7 +14,7 @@
  */
 (async function adminDiagnostics() {
   const BASE = window.location.origin;
-  const TIMEOUT_MS = 10000; // 10s — matches Vercel serverless limit
+  const TIMEOUT_MS = 35000; // 35s — allows for 30s maxDuration + network overhead
   const SLOW_MS = 2000;     // anything over 2s is "slow"
 
   // ── Styled console output ──
@@ -36,6 +36,9 @@
   // ── Test definitions ──
   // Each test: { name, url, method, type: 'page'|'api', critical }
   const tests = [
+    // === DB Health Check (FIRST — isolates connection issues) ===
+    { name: 'DB Health Check',    url: '/api/admin/health',  type: 'api', critical: true },
+
     // === SSR Pages (fetch the HTML) ===
     { name: 'Dashboard (SSR)',    url: '/admin',            type: 'page', critical: true },
     { name: 'Cards',              url: '/admin/cards',      type: 'page' },
@@ -88,11 +91,18 @@
 
       // For API routes, try to peek at the response for error messages
       let errorHint = '';
-      if (!ok && test.type === 'api') {
+      let healthData = null;
+      if (test.type === 'api') {
         try {
-          const body = await resp.text();
+          const body = await resp.clone().text();
           const parsed = JSON.parse(body);
-          errorHint = parsed.error || parsed.message || '';
+          if (!ok) {
+            errorHint = parsed.error || parsed.message || '';
+          }
+          // Capture health check data for detailed output
+          if (test.name === 'DB Health Check') {
+            healthData = parsed;
+          }
         } catch { /* ignore */ }
       }
 
@@ -113,6 +123,7 @@
         ok,
         result: !ok ? 'FAIL' : ms > SLOW_MS ? 'SLOW' : 'PASS',
         errorHint,
+        healthData,
       };
     } catch (err) {
       const ms = Math.round(performance.now() - start);
@@ -123,7 +134,7 @@
         status: 0,
         ok: false,
         result: isTimeout ? 'TIMEOUT' : 'NETWORK_ERROR',
-        errorHint: isTimeout ? `No response after ${TIMEOUT_MS}ms` : err.message,
+        errorHint: isTimeout ? `No response after ${TIMEOUT_MS / 1000}s` : err.message,
       };
     }
   }
@@ -148,6 +159,14 @@
                   result.result === 'SLOW' ? styles.slow : styles.fail;
     const suffix = result.errorHint ? ` — ${result.errorHint}` : '';
     console.log(`%c  ${icon} ${result.name}: ${result.ms}ms (${result.status || 'no response'}) ${result.result}${suffix}`, style);
+
+    // Special: print health check details
+    if (result.name === 'DB Health Check' && result.healthData) {
+      const h = result.healthData;
+      console.log(`%c    DB Status: ${h.status} | Timings: SELECT 1=${h.timings?.select1}ms, COUNT cards=${h.timings?.countCards}ms, date query=${h.timings?.dateQuery}ms`, styles.info);
+      console.log(`%c    Env: POSTGRES_URL=${h.env?.hasPostgresUrl}, DATABASE_URL=${h.env?.hasDatabaseUrl}`, styles.info);
+      if (h.error) console.log(`%c    Error: ${h.error}`, styles.fail);
+    }
   }
 
   // ── Summary Table ──

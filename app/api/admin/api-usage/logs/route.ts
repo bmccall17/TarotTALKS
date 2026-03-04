@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApiCallLogs } from '@/lib/db/queries/admin-api-usage';
 
+export const maxDuration = 30;
+
 /**
  * GET /api/admin/api-usage/logs
  *

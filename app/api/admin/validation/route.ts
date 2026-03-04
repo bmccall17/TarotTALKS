@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getValidationIssues, getValidationSummary } from '@/lib/db/queries/admin-validation';
 
+// Allow up to 30s for cold start + DB connection + 12 sequential queries
+export const maxDuration = 30;
+
 /**
  * GET /api/admin/validation
  * Query params:
