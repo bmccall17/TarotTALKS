@@ -1,7 +1,5 @@
 import { db } from '@/lib/db';
 import { sql } from 'drizzle-orm';
-import { getTalksStats } from '@/lib/db/queries/admin-talks';
-import { getShareStats, getUnpostedCardsStats } from '@/lib/db/queries/admin-social-shares';
 import Link from 'next/link';
 import { Video, Link as LinkIcon, AlertTriangle, LayoutGrid, Sparkles, CheckCircle, AlertCircle, XCircle, Radio, Share2 } from 'lucide-react';
 import { ApiHealthSection } from '@/components/admin/dashboard/ApiHealthSection';
@@ -12,67 +10,89 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboard() {
   try {
-    // Fetch all dashboard stats in minimal DB round-trips
-    // Previous: ~23 sequential queries. Now: 4 queries via consolidated functions.
+    // ONE query for ALL dashboard stats (previous: ~23 queries, then 4, now 1)
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - 7);
 
-    // Run all consolidated queries (each is now a single DB round-trip)
-    const [dashCounts, talksStats, shareStats, unpostedStats] = await Promise.all([
-      db.execute<{
-        cards_count: number;
-        mappings_count: number;
-        primary_mappings: number;
-        themes_count: number;
-        card_themes_count: number;
-        talk_themes_count: number;
-        cards_without_primary: number;
-        unmapped_talks: number;
-      }>(sql`
-        SELECT
-          (SELECT COUNT(*)::int FROM cards) AS cards_count,
-          (SELECT COUNT(*)::int FROM card_talk_mappings) AS mappings_count,
-          (SELECT COUNT(*)::int FROM card_talk_mappings WHERE is_primary = true) AS primary_mappings,
-          (SELECT COUNT(*)::int FROM themes) AS themes_count,
-          (SELECT COUNT(*)::int FROM card_themes) AS card_themes_count,
-          (SELECT COUNT(*)::int FROM talk_themes) AS talk_themes_count,
-          (SELECT COUNT(*)::int FROM cards WHERE NOT EXISTS (
-            SELECT 1 FROM card_talk_mappings WHERE card_talk_mappings.card_id = cards.id AND is_primary = true
-          )) AS cards_without_primary,
-          (SELECT COUNT(*)::int FROM talks WHERE is_deleted = false AND NOT EXISTS (
-            SELECT 1 FROM card_talk_mappings WHERE card_talk_mappings.talk_id = talks.id
-          )) AS unmapped_talks
-      `),
-      getTalksStats(),
-      getShareStats(),
-      getUnpostedCardsStats(),
-    ]);
+    const result = await db.execute<{
+      cards_count: number;
+      mappings_count: number;
+      primary_mappings: number;
+      themes_count: number;
+      card_themes_count: number;
+      talk_themes_count: number;
+      cards_without_primary: number;
+      unmapped_talks: number;
+      talks_total: number;
+      talks_deleted: number;
+      talks_with_youtube: number;
+      talks_without_thumbnail: number;
+      shares_total: number;
+      shares_today: number;
+      shares_this_week: number;
+      shared_cards: number;
+      unposted_overall: number;
+    }>(sql`
+      SELECT
+        (SELECT COUNT(*)::int FROM cards) AS cards_count,
+        (SELECT COUNT(*)::int FROM card_talk_mappings) AS mappings_count,
+        (SELECT COUNT(*)::int FROM card_talk_mappings WHERE is_primary = true) AS primary_mappings,
+        (SELECT COUNT(*)::int FROM themes) AS themes_count,
+        (SELECT COUNT(*)::int FROM card_themes) AS card_themes_count,
+        (SELECT COUNT(*)::int FROM talk_themes) AS talk_themes_count,
+        (SELECT COUNT(*)::int FROM cards c WHERE NOT EXISTS (
+          SELECT 1 FROM card_talk_mappings m WHERE m.card_id = c.id AND m.is_primary = true
+        )) AS cards_without_primary,
+        (SELECT COUNT(*)::int FROM talks t WHERE t.is_deleted = false AND NOT EXISTS (
+          SELECT 1 FROM card_talk_mappings m WHERE m.talk_id = t.id
+        )) AS unmapped_talks,
+        (SELECT COUNT(*) FILTER (WHERE is_deleted = false)::int FROM talks) AS talks_total,
+        (SELECT COUNT(*) FILTER (WHERE is_deleted = true)::int FROM talks) AS talks_deleted,
+        (SELECT COUNT(*) FILTER (WHERE is_deleted = false AND youtube_video_id IS NOT NULL)::int FROM talks) AS talks_with_youtube,
+        (SELECT COUNT(*) FILTER (WHERE is_deleted = false AND thumbnail_url IS NULL)::int FROM talks) AS talks_without_thumbnail,
+        (SELECT COUNT(*)::int FROM social_shares) AS shares_total,
+        (SELECT COUNT(*) FILTER (WHERE posted_at >= ${todayStart})::int FROM social_shares) AS shares_today,
+        (SELECT COUNT(*) FILTER (WHERE posted_at >= ${weekStart})::int FROM social_shares) AS shares_this_week,
+        (SELECT COUNT(DISTINCT card_id)::int FROM social_shares WHERE card_id IS NOT NULL) AS shared_cards,
+        (SELECT COUNT(*)::int FROM cards c2 WHERE NOT EXISTS (
+          SELECT 1 FROM social_shares ss WHERE ss.card_id = c2.id
+        )) AS unposted_overall
+    `);
 
-    const dc = dashCounts[0];
+    const dc = result[0];
+
+  const talksTotal = Number(dc?.talks_total ?? 0);
+  const talksDeleted = Number(dc?.talks_deleted ?? 0);
+  const talksWithYoutube = Number(dc?.talks_with_youtube ?? 0);
+  const talksWithoutThumbnail = Number(dc?.talks_without_thumbnail ?? 0);
 
   const stats = {
     cards: Number(dc?.cards_count ?? 0),
-    talks: talksStats.total,
-    activeTalks: talksStats.total - talksStats.deleted,
+    talks: talksTotal,
+    activeTalks: talksTotal - talksDeleted,
     mappings: Number(dc?.mappings_count ?? 0),
     primaryMappings: Number(dc?.primary_mappings ?? 0),
     themes: Number(dc?.themes_count ?? 0),
     cardThemeLinks: Number(dc?.card_themes_count ?? 0),
     talkThemeLinks: Number(dc?.talk_themes_count ?? 0),
-    deletedTalks: talksStats.deleted,
-    talksWithYoutube: talksStats.withYoutubeId,
-    talksWithoutThumbnail: talksStats.withoutThumbnail,
+    deletedTalks: talksDeleted,
+    talksWithYoutube,
+    talksWithoutThumbnail,
     // Share stats
-    totalShares: shareStats.total,
-    sharesToday: shareStats.today,
-    sharesThisWeek: shareStats.thisWeek,
-    sharedCards: unpostedStats.sharedCards,
-    unpostedCards: unpostedStats.unpostedOverall,
+    totalShares: Number(dc?.shares_total ?? 0),
+    sharesToday: Number(dc?.shares_today ?? 0),
+    sharesThisWeek: Number(dc?.shares_this_week ?? 0),
+    sharedCards: Number(dc?.shared_cards ?? 0),
+    unpostedCards: Number(dc?.unposted_overall ?? 0),
   };
 
   const validation = {
     cardsWithoutPrimary: Number(dc?.cards_without_primary ?? 0),
     unmappedTalks: Number(dc?.unmapped_talks ?? 0),
-    missingThumbnails: talksStats.withoutThumbnail,
-    softDeleted: talksStats.deleted,
+    missingThumbnails: talksWithoutThumbnail,
+    softDeleted: talksDeleted,
   };
 
   const totalIssues = validation.cardsWithoutPrimary + validation.unmappedTalks + validation.missingThumbnails;

@@ -539,11 +539,15 @@ async function main() {
   console.log(`\n  📊 BEHAVIOR PAGE (NEW — 4 queries): ${newBehTotal}ms`);
   row('Improvement', `${behaviorTotal}ms → ${newBehTotal}ms (${Math.round((1 - newBehTotal / behaviorTotal) * 100)}% faster)`);
 
-  // Dashboard: 1 mega query + 3 functions
-  console.log('\n  --- Dashboard (NEW — 1 mega query) ---');
+  // Dashboard: everything in 1 query
+  const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(weekStart.getDate() - 7);
+
+  console.log('\n  --- Dashboard (FINAL — 1 single query) ---');
   const newDashStart = performance.now();
 
-  const [, nd1] = await timed('mega counts', () => sql`
+  const [, nd1] = await timed('single mega query', () => sql`
     SELECT
       (SELECT COUNT(*)::int FROM cards) AS cards_count,
       (SELECT COUNT(*)::int FROM card_talk_mappings) AS mappings_count,
@@ -551,27 +555,28 @@ async function main() {
       (SELECT COUNT(*)::int FROM themes) AS themes_count,
       (SELECT COUNT(*)::int FROM card_themes) AS card_themes_count,
       (SELECT COUNT(*)::int FROM talk_themes) AS talk_themes_count,
-      (SELECT COUNT(*)::int FROM cards WHERE NOT EXISTS (
-        SELECT 1 FROM card_talk_mappings WHERE card_talk_mappings.card_id = cards.id AND is_primary = true
+      (SELECT COUNT(*)::int FROM cards c WHERE NOT EXISTS (
+        SELECT 1 FROM card_talk_mappings m WHERE m.card_id = c.id AND m.is_primary = true
       )) AS cards_without_primary,
-      (SELECT COUNT(*)::int FROM talks WHERE is_deleted = false AND NOT EXISTS (
-        SELECT 1 FROM card_talk_mappings WHERE card_talk_mappings.talk_id = talks.id
-      )) AS unmapped_talks
+      (SELECT COUNT(*)::int FROM talks t WHERE t.is_deleted = false AND NOT EXISTS (
+        SELECT 1 FROM card_talk_mappings m WHERE m.talk_id = t.id
+      )) AS unmapped_talks,
+      (SELECT COUNT(*) FILTER (WHERE is_deleted = false)::int FROM talks) AS talks_total,
+      (SELECT COUNT(*) FILTER (WHERE is_deleted = true)::int FROM talks) AS talks_deleted,
+      (SELECT COUNT(*) FILTER (WHERE is_deleted = false AND youtube_video_id IS NOT NULL)::int FROM talks) AS talks_with_youtube,
+      (SELECT COUNT(*) FILTER (WHERE is_deleted = false AND thumbnail_url IS NULL)::int FROM talks) AS talks_without_thumbnail,
+      (SELECT COUNT(*)::int FROM social_shares) AS shares_total,
+      (SELECT COUNT(*) FILTER (WHERE posted_at >= ${todayStart})::int FROM social_shares) AS shares_today,
+      (SELECT COUNT(*) FILTER (WHERE posted_at >= ${weekStart})::int FROM social_shares) AS shares_this_week,
+      (SELECT COUNT(DISTINCT card_id)::int FROM social_shares WHERE card_id IS NOT NULL) AS shared_cards,
+      (SELECT COUNT(*)::int FROM cards c2 WHERE NOT EXISTS (
+        SELECT 1 FROM social_shares ss WHERE ss.card_id = c2.id
+      )) AS unposted_overall
   `);
-  row('Mega query (8 subselects)', `${nd1}ms`);
-
-  const [, nd2] = await timed('talks stats', () => sql`
-    SELECT
-      COUNT(*) FILTER (WHERE is_deleted = false)::int AS total,
-      COUNT(*) FILTER (WHERE is_deleted = true)::int AS deleted,
-      COUNT(*) FILTER (WHERE is_deleted = false AND youtube_video_id IS NOT NULL)::int AS with_youtube,
-      COUNT(*) FILTER (WHERE is_deleted = false AND thumbnail_url IS NULL)::int AS without_thumbnail
-    FROM talks
-  `);
-  row('getTalksStats (1 query)', `${nd2}ms`);
+  row('Single query (17 subselects)', `${nd1}ms`);
 
   const newDashTotal = Math.round(performance.now() - newDashStart);
-  console.log(`\n  📊 DASHBOARD (NEW — 2 queries shown): ${newDashTotal}ms`);
+  console.log(`\n  📊 DASHBOARD (FINAL — 1 query): ${newDashTotal}ms`);
   row('Improvement', `${dashTotal}ms → ${newDashTotal}ms (${Math.round((1 - newDashTotal / dashTotal) * 100)}% faster)`);
 
   // ──────────────────────────────────────────────
@@ -582,7 +587,7 @@ async function main() {
   row('Behavior OLD (12 queries)', `${behaviorTotal}ms`, behaviorTotal > 500);
   row('Behavior NEW (4 queries)', `${newBehTotal}ms`, newBehTotal > 500);
   row('Dashboard OLD (9 queries)', `${dashTotal}ms`, dashTotal > 2000);
-  row('Dashboard NEW (2 queries)', `${newDashTotal}ms`, newDashTotal > 500);
+  row('Dashboard FINAL (1 query)', `${newDashTotal}ms`, newDashTotal > 200);
   row('API usage (all queries)', `${apiTotal}ms`, apiTotal > 300);
 
   console.log('\n  Key: ⚠️ = exceeds target threshold\n');

@@ -21,6 +21,10 @@ const client = postgres(getConnectionString(), {
   max_lifetime: 60 * 30, // Max connection lifetime 30 minutes
   // Limit connections for serverless
   max: 1, // Single connection per serverless instance
+  // Prevent queries from hanging indefinitely (postgres SET options)
+  connection: {
+    statement_timeout: '8000' as unknown as number, // 8s hard limit per statement (Vercel timeout is 10s)
+  },
 });
 
 export const db = drizzle(client, { schema });
