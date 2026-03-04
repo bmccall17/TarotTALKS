@@ -156,6 +156,7 @@ export async function getSessionTrend(): Promise<SessionTrend> {
   // 7 days ago for average
   const sevenDaysAgo = new Date(todayStart);
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const sevenDaysAgoIso = sevenDaysAgo.toISOString();
 
   // Today's sessions
   const todayResult = await db
@@ -164,7 +165,7 @@ export async function getSessionTrend(): Promise<SessionTrend> {
     .where(
       and(
         eq(behaviorEvents.eventName, 'session_start'),
-        gte(behaviorEvents.createdAt, todayStart),
+        sql`${behaviorEvents.createdAt} >= ${todayStartIso}`,
         excludeTestEvents()
       )
     );
@@ -178,7 +179,7 @@ export async function getSessionTrend(): Promise<SessionTrend> {
     .where(
       and(
         eq(behaviorEvents.eventName, 'session_start'),
-        gte(behaviorEvents.createdAt, sevenDaysAgo),
+        sql`${behaviorEvents.createdAt} >= ${sevenDaysAgoIso}`,
         sql`${behaviorEvents.createdAt} < ${todayStartIso}`,
         excludeTestEvents()
       )

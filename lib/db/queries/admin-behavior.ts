@@ -182,7 +182,7 @@ export async function getAllBehaviorStats(days: number = DEFAULT_DAYS): Promise<
     .where(
       and(
         eq(behaviorEvents.eventName, 'session_start'),
-        gte(behaviorEvents.createdAt, cutoff),
+        sql`${behaviorEvents.createdAt} >= ${cutoffIso}`,
         excludeTestEvents()
       )
     )
