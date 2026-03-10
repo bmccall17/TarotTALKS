@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { revalidateTag, revalidatePath } from 'next/cache';
 import {
   getThemeByIdForAdmin,
   updateTheme,
@@ -55,7 +55,11 @@ export async function PATCH(
       );
     }
 
-    revalidateTag('themes', 'max');
+    revalidateTag('themes');
+    if (theme.slug) {
+      revalidatePath(`/themes/${theme.slug}`);
+    }
+    revalidatePath('/themes');
     return NextResponse.json({ theme });
   } catch (error) {
     console.error('Error updating theme:', error);
@@ -78,7 +82,8 @@ export async function DELETE(
     const { id } = await params;
     await deleteTheme(id);
 
-    revalidateTag('themes', 'max');
+    revalidateTag('themes');
+    revalidatePath('/themes');
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting theme:', error);

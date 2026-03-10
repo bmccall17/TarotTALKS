@@ -124,8 +124,8 @@ export async function POST(request: NextRequest) {
     if (cardData.length > 0) {
       revalidatePath(`/cards/${cardData[0].slug}`);
     }
-    revalidateTag('cards', 'max');
-    revalidateTag('talks', 'max');
+    revalidateTag('cards');
+    revalidateTag('talks');
 
     return NextResponse.json({ mapping });
   } catch (error) {

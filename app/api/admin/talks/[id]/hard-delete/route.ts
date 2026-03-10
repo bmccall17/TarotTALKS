@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { revalidateTag, revalidatePath } from 'next/cache';
 import { hardDeleteTalk } from '@/lib/db/queries/admin-talks';
 
 /**
@@ -15,7 +15,8 @@ export async function DELETE(
     const { id } = await params;
     await hardDeleteTalk(id);
 
-    revalidateTag('talks', 'max');
+    revalidateTag('talks');
+    revalidatePath('/talks');
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error hard deleting talk:', error);

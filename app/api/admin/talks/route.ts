@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { revalidateTag, revalidatePath } from 'next/cache';
 import {
   getAllTalksForAdmin,
   searchTalksForAdmin,
@@ -114,7 +114,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    revalidateTag('talks', 'max');
+    revalidateTag('talks');
+    revalidatePath('/talks');
     return NextResponse.json({ talk }, { status: 201 });
   } catch (error) {
     console.error('Error creating talk:', error);

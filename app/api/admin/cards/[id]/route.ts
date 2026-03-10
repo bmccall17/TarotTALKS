@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { revalidateTag, revalidatePath } from 'next/cache';
 import { getCardForAdmin, updateCard } from '@/lib/db/queries/admin-cards';
 
 export async function GET(
@@ -44,7 +44,11 @@ export async function PUT(
       );
     }
 
-    revalidateTag('cards', 'max');
+    revalidateTag('cards');
+    if (updated.slug) {
+      revalidatePath(`/cards/${updated.slug}`);
+    }
+    revalidatePath('/cards');
     return NextResponse.json({ card: updated });
   } catch (error) {
     console.error('Error updating card:', error);

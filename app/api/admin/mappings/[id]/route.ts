@@ -39,8 +39,8 @@ export async function DELETE(
     if (cardData.length > 0) {
       revalidatePath(`/cards/${cardData[0].slug}`);
     }
-    revalidateTag('cards', 'max');
-    revalidateTag('talks', 'max');
+    revalidateTag('cards');
+    revalidateTag('talks');
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -86,8 +86,8 @@ export async function PATCH(
       if (cardData.length > 0) {
         revalidatePath(`/cards/${cardData[0].slug}`);
       }
-      revalidateTag('cards', 'max');
-      revalidateTag('talks', 'max');
+      revalidateTag('cards');
+      revalidateTag('talks');
 
       return NextResponse.json({ mapping });
     }

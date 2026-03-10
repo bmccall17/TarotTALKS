@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { revalidateTag, revalidatePath } from 'next/cache';
 import { restoreTalk } from '@/lib/db/queries/admin-talks';
 
 /**
@@ -21,7 +21,11 @@ export async function POST(
       );
     }
 
-    revalidateTag('talks', 'max');
+    revalidateTag('talks');
+    if (talk.slug) {
+      revalidatePath(`/talks/${talk.slug}`);
+    }
+    revalidatePath('/talks');
     return NextResponse.json({ talk });
   } catch (error) {
     console.error('Error restoring talk:', error);
