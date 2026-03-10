@@ -76,7 +76,7 @@ export async function PUT(
       );
     }
 
-    revalidateTag('talks');
+    revalidateTag('talks', 'max');
     if (talk.slug) {
       revalidatePath(`/talks/${talk.slug}`);
     }
@@ -110,7 +110,7 @@ export async function DELETE(
       );
     }
 
-    revalidateTag('talks');
+    revalidateTag('talks', 'max');
     if (talk.slug) {
       revalidatePath(`/talks/${talk.slug}`);
     }

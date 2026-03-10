@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     const theme = await createTheme(body);
 
-    revalidateTag('themes');
+    revalidateTag('themes', 'max');
     revalidatePath('/themes');
     return NextResponse.json({ theme }, { status: 201 });
   } catch (error) {

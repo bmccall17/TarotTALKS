@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    revalidateTag('talks');
+    revalidateTag('talks', 'max');
     revalidatePath('/talks');
     return NextResponse.json({ talk }, { status: 201 });
   } catch (error) {

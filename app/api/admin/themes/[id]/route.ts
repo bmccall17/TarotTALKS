@@ -55,7 +55,7 @@ export async function PATCH(
       );
     }
 
-    revalidateTag('themes');
+    revalidateTag('themes', 'max');
     if (theme.slug) {
       revalidatePath(`/themes/${theme.slug}`);
     }
@@ -82,7 +82,7 @@ export async function DELETE(
     const { id } = await params;
     await deleteTheme(id);
 
-    revalidateTag('themes');
+    revalidateTag('themes', 'max');
     revalidatePath('/themes');
     return NextResponse.json({ success: true });
   } catch (error) {

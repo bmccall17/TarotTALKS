@@ -44,7 +44,7 @@ export async function PUT(
       );
     }
 
-    revalidateTag('cards');
+    revalidateTag('cards', 'max');
     if (updated.slug) {
       revalidatePath(`/cards/${updated.slug}`);
     }

@@ -15,7 +15,7 @@ export async function DELETE(
     const { id } = await params;
     await hardDeleteTalk(id);
 
-    revalidateTag('talks');
+    revalidateTag('talks', 'max');
     revalidatePath('/talks');
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -21,7 +21,7 @@ export async function POST(
       );
     }
 
-    revalidateTag('talks');
+    revalidateTag('talks', 'max');
     if (talk.slug) {
       revalidatePath(`/talks/${talk.slug}`);
     }
