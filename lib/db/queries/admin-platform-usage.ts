@@ -266,12 +266,13 @@ async function safeQuery<T>(fn: () => Promise<T>, fallback: T, label: string): P
 export async function getAllPlatformUsage(): Promise<PlatformUsageData> {
   const billingCycle = getBillingCycleInfo();
 
-  const [dbSize, imageSources, sessionTrend, rowCounts] = await Promise.all([
-    safeQuery(getDatabaseSize, { bytes: 0, mb: 0, limitMb: 500, percent: 0 }, 'dbSize'),
-    safeQuery(getImageSourceCount, { cards: 0, talks: 0, total: 0, limit: 1000, percent: 0 }, 'imageSources'),
-    safeQuery(getSessionTrend, { today: 0, avgDaily: 0, trend: 'stable' as const }, 'sessionTrend'),
-    safeQuery(getRowCounts, { tables: [], total: 0, limit: 500_000, percent: 0 }, 'rowCounts'),
-  ]);
+  // Run sequentially — connection pool is max:1, so Promise.all just queues them anyway.
+  // Sequential execution gives each query its own fresh timeout window instead of
+  // sharing a single timer that starves later queries in the queue.
+  const dbSize = await safeQuery(getDatabaseSize, { bytes: 0, mb: 0, limitMb: 500, percent: 0 }, 'dbSize');
+  const imageSources = await safeQuery(getImageSourceCount, { cards: 0, talks: 0, total: 0, limit: 1000, percent: 0 }, 'imageSources');
+  const sessionTrend = await safeQuery(getSessionTrend, { today: 0, avgDaily: 0, trend: 'stable' as const }, 'sessionTrend');
+  const rowCounts = await safeQuery(getRowCounts, { tables: [], total: 0, limit: 500_000, percent: 0 }, 'rowCounts');
 
   return { billingCycle, dbSize, imageSources, sessionTrend, rowCounts };
 }

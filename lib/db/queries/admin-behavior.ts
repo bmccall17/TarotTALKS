@@ -199,13 +199,12 @@ export async function getAllBehaviorStats(days: number = DEFAULT_DAYS): Promise<
     .groupBy(sql`DATE(${behaviorEvents.createdAt})`)
     .orderBy(sql`DATE(${behaviorEvents.createdAt})`);
 
-  // Execute all 4 queries with per-query timeouts (prevents silent hangs from taking down the route)
-  const [countsResult, flipsResult, firstFlipResult, dailyResult] = await Promise.all([
-    withTimeout(q1, 10000, 'q1_aggregates'),
-    withTimeout(q2, 10000, 'q2_flips'),
-    withTimeout(q3, 10000, 'q3_firstFlip'),
-    withTimeout(q4, 10000, 'q4_daily'),
-  ]);
+  // Execute sequentially — connection pool is max:1, so Promise.all just queues anyway.
+  // Sequential gives each query its own fresh timeout window.
+  const countsResult = await withTimeout(q1, 10000, 'q1_aggregates');
+  const flipsResult = await withTimeout(q2, 10000, 'q2_flips');
+  const firstFlipResult = await withTimeout(q3, 10000, 'q3_firstFlip');
+  const dailyResult = await withTimeout(q4, 10000, 'q4_daily');
 
   // ── Assemble results ──
   const counts = countsResult[0];
