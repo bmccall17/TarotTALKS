@@ -10,6 +10,7 @@ export const maxDuration = 60;
  * Runs each behavior query individually to find which one hangs.
  */
 export async function GET() {
+  const routeStart = Date.now();
   const cutoffIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const timings: Record<string, number> = {};
   const results: Record<string, unknown> = {};
@@ -116,7 +117,7 @@ export async function GET() {
 
     return NextResponse.json({
       status: 'ok',
-      totalMs: Date.now() - timings.q1_aggregates,
+      totalMs: Date.now() - routeStart,
       timings,
       results,
     });

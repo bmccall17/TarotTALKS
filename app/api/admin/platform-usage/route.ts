@@ -18,7 +18,7 @@ export async function GET() {
       headers: {
         'Cache-Control': 's-maxage=300, stale-while-revalidate=60',
         'X-Timing-Ms': String(elapsed),
-        'X-Version': '2026-03-04-v3',
+        'X-Version': '2026-03-10-v4',
       },
     });
   } catch (error) {
@@ -29,7 +29,7 @@ export async function GET() {
         error: 'Failed to fetch platform usage',
         detail: error instanceof Error ? error.message : 'Unknown error',
         elapsed,
-        version: '2026-03-04-v3',
+        version: '2026-03-10-v4',
       },
       { status: 500 }
     );

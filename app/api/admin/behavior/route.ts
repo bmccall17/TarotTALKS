@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       headers: {
         'Cache-Control': 's-maxage=300, stale-while-revalidate=60',
         'X-Timing-Ms': String(elapsed),
-        'X-Version': '2026-03-04-v3',
+        'X-Version': '2026-03-10-v4',
       },
     });
   } catch (error) {
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       {
         error: 'Failed to fetch behavior stats',
         elapsed,
-        version: '2026-03-04-v3',
+        version: '2026-03-10-v4',
         detail: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
