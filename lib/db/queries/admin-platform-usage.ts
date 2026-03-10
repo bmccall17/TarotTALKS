@@ -244,9 +244,19 @@ export type PlatformUsageData = {
   rowCounts: RowCountInfo;
 };
 
+// Timeout wrapper: rejects if a query hangs longer than `ms` (catches silent hangs like pg_database_size on pgbouncer)
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Query timeout: ${label} exceeded ${ms}ms`)), ms)
+    ),
+  ]);
+}
+
 async function safeQuery<T>(fn: () => Promise<T>, fallback: T, label: string): Promise<T> {
   try {
-    return await fn();
+    return await withTimeout(fn(), 8000, label);
   } catch (e) {
     console.error(`Platform usage query failed [${label}]:`, e);
     return fallback;

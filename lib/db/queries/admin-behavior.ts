@@ -5,6 +5,16 @@ import { sql, countDistinct, and, gte, eq } from 'drizzle-orm';
 // Default time range: 7 days
 const DEFAULT_DAYS = 7;
 
+// Timeout wrapper: rejects if a query hangs longer than `ms` (prevents silent Drizzle/pgbouncer hangs)
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Query timeout: ${label} exceeded ${ms}ms`)), ms)
+    ),
+  ]);
+}
+
 function getDateCutoff(days: number = DEFAULT_DAYS): Date {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
@@ -189,8 +199,13 @@ export async function getAllBehaviorStats(days: number = DEFAULT_DAYS): Promise<
     .groupBy(sql`DATE(${behaviorEvents.createdAt})`)
     .orderBy(sql`DATE(${behaviorEvents.createdAt})`);
 
-  // Execute all 4 queries (they queue on max:1 pool, but only 4 round-trips)
-  const [countsResult, flipsResult, firstFlipResult, dailyResult] = await Promise.all([q1, q2, q3, q4]);
+  // Execute all 4 queries with per-query timeouts (prevents silent hangs from taking down the route)
+  const [countsResult, flipsResult, firstFlipResult, dailyResult] = await Promise.all([
+    withTimeout(q1, 10000, 'q1_aggregates'),
+    withTimeout(q2, 10000, 'q2_flips'),
+    withTimeout(q3, 10000, 'q3_firstFlip'),
+    withTimeout(q4, 10000, 'q4_daily'),
+  ]);
 
   // ── Assemble results ──
   const counts = countsResult[0];
