@@ -118,6 +118,19 @@ Check these in DevTools Network tab. If `X-Version` is missing or old, Vercel is
 1. Hit the specific endpoint URL directly in a new tab (forces Vercel to rebuild that function)
 2. Or trigger a fresh deployment (Vercel dashboard → Deployments → Redeploy)
 
+### Trap 4: Promise.all Timeout Starvation on max:1 Pool (v1.7.0)
+
+**The bug:** The connection pool is `max: 1`. When `Promise.all` submits 4 queries, they serialize through the single connection. But all 4 timeout clocks start simultaneously at `t=0`. If query 1 takes 5s, query 2 only has 3s left on its 8s timer before it even starts running — queries 3-4 have even less. They timeout waiting in the queue, not because they're slow.
+
+**Symptoms:** Route returns partial data (first query succeeds, rest return fallback zeros) or 504 timeout. behavior-debug passes because it runs queries sequentially.
+
+**The fix (applied in v1.7.0):**
+- Changed `Promise.all` to sequential `await` in `admin-behavior.ts` and `admin-platform-usage.ts`
+- On `max: 1`, `Promise.all` was never truly parallel — sequential gives each query its own fresh timeout window
+- Added `withTimeout()` wrappers (10s for behavior, 8s for platform-usage) so no single query can hang the route
+
+**Rule:** On a `max: 1` pool, never use `Promise.all` with per-query timeouts — use sequential execution instead.
+
 ---
 
 ## Database Health Checklist
