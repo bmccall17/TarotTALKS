@@ -85,3 +85,5 @@ Screenshot*.png
 
 # manually added snyk security reports
 *snyk*
+# Sentry Config File
+.env.sentry-build-plugin
