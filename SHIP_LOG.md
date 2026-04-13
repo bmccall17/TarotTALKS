@@ -8,7 +8,7 @@ A chronological record of major releases and feature deployments for TarotTALKS.
 
 ## Pending for Next Release
 
-*Nothing staged yet. v1.7.1 shipped.*
+*Nothing staged yet. v1.7.2 shipped.*
 
 ---
 
@@ -16,6 +16,7 @@ A chronological record of major releases and feature deployments for TarotTALKS.
 
 | Version | Title | Date |
 |---------|-------|------|
+| [v1.7.2](devnotes/releases/v1.7.2.md) | Sentry Observability Wiring 🔭 | Apr 13, 2026 |
 | [v1.7.1](devnotes/releases/v1.7.1.md) | ISR Cache Invalidation Fix 🐛🔄 | Mar 11, 2026 |
 | [v1.7.0](devnotes/releases/v1.7.0.md) | Admin Query Timeout Protection & Next.js 16 Compatibility 🛡️⚡ | Mar 11, 2026 |
 | [v1.6.9](devnotes/releases/v1.6.9.md) | GCP Project Consolidation & API Key Migration ☁️🔑 | Mar 10, 2026 |
@@ -64,6 +65,7 @@ A chronological record of major releases and feature deployments for TarotTALKS.
 
 | Version | Title | Date |
 |---------|-------|------|
+| [v1.7.2](devnotes/releases/v1.7.2.md) | Sentry Observability Wiring 🔭 | Apr 13, 2026 |
 | [v1.7.1](devnotes/releases/v1.7.1.md) | ISR Cache Invalidation Fix 🐛🔄 | Mar 11, 2026 |
 | [v1.7.0](devnotes/releases/v1.7.0.md) | Admin Query Timeout Protection & Next.js 16 Compatibility 🛡️⚡ | Mar 11, 2026 |
 | [v1.6.9](devnotes/releases/v1.6.9.md) | GCP Project Consolidation & API Key Migration ☁️🔑 | Mar 10, 2026 |
