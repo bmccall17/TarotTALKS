@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { Download, RefreshCw, Check, AlertCircle, ImagePlus, FolderOpen } from 'lucide-react';
 
 type Card = {
@@ -64,9 +65,11 @@ export default function ShareImagesPage() {
 
   const fetchCards = async () => {
     try {
-      const response = await fetch('/api/admin/cards');
-      const data = await response.json();
-      setCards(data.cards || []);
+      await Sentry.startSpan({ name: 'admin.shareImages.fetchCards', op: 'http.client' }, async () => {
+        const response = await fetch('/api/admin/cards');
+        const data = await response.json();
+        setCards(data.cards || []);
+      });
     } catch (error) {
       console.error('Error fetching cards:', error);
     }
@@ -74,9 +77,11 @@ export default function ShareImagesPage() {
 
   const fetchTalks = async () => {
     try {
-      const response = await fetch('/api/admin/talks');
-      const data = await response.json();
-      setTalks(data.talks || []);
+      await Sentry.startSpan({ name: 'admin.shareImages.fetchTalks', op: 'http.client' }, async () => {
+        const response = await fetch('/api/admin/talks');
+        const data = await response.json();
+        setTalks(data.talks || []);
+      });
     } catch (error) {
       console.error('Error fetching talks:', error);
     }
@@ -84,9 +89,14 @@ export default function ShareImagesPage() {
 
   const fetchStoredImages = async (category: TabType) => {
     try {
-      const response = await fetch(`/api/admin/share-images/list?category=${category}`);
-      const data = await response.json();
-      setStoredImages(data);
+      await Sentry.startSpan(
+        { name: 'admin.shareImages.fetchStoredImages', op: 'http.client', attributes: { category } },
+        async () => {
+          const response = await fetch(`/api/admin/share-images/list?category=${category}`);
+          const data = await response.json();
+          setStoredImages(data);
+        },
+      );
     } catch (error) {
       console.error('Error fetching stored images:', error);
     }

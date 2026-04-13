@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { Filter, Trash2, ExternalLink, RefreshCw, Layers, Share2, Eye, Ghost } from 'lucide-react';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Toast } from '../ui/Toast';
@@ -52,10 +53,12 @@ export function SpreadsManagement() {
   const fetchStats = async () => {
     try {
       setStatsLoading(true);
-      const response = await fetch('/api/admin/spreads/stats');
-      if (!response.ok) throw new Error('Failed to fetch stats');
-      const data = await response.json();
-      setStats(data.stats);
+      await Sentry.startSpan({ name: 'admin.spreads.fetchStats', op: 'http.client' }, async () => {
+        const response = await fetch('/api/admin/spreads/stats');
+        if (!response.ok) throw new Error('Failed to fetch stats');
+        const data = await response.json();
+        setStats(data.stats);
+      });
     } catch (error) {
       console.error('Error fetching stats:', error);
       showToast('Failed to load statistics', 'error');
@@ -72,11 +75,16 @@ export function SpreadsManagement() {
         limit: limit.toString(),
         offset: offset.toString(),
       });
-      const response = await fetch(`/api/admin/spreads?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch spreads');
-      const data = await response.json();
-      setSpreads(data.spreads);
-      setTotal(data.total);
+      await Sentry.startSpan(
+        { name: 'admin.spreads.fetchSpreads', op: 'http.client', attributes: { filter, offset } },
+        async () => {
+          const response = await fetch(`/api/admin/spreads?${params}`);
+          if (!response.ok) throw new Error('Failed to fetch spreads');
+          const data = await response.json();
+          setSpreads(data.spreads);
+          setTotal(data.total);
+        },
+      );
     } catch (error) {
       console.error('Error fetching spreads:', error);
       showToast('Failed to load spreads', 'error');
