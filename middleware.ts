@@ -1,8 +1,16 @@
+import * as Sentry from '@sentry/nextjs';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  // Tag every request so Sentry alerts/filters can be scoped by area
+  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
+    Sentry.setTag('area', 'admin');
+  } else {
+    Sentry.setTag('area', 'public');
+  }
 
   // Exclude login page from protection (fix for RED FLAG #2)
   if (pathname === '/admin/login') {
@@ -31,5 +39,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*'],
+  matcher: ['/admin/:path*', '/api/:path*'],
 };
