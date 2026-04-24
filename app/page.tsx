@@ -62,7 +62,7 @@ export default function HomePage() {
       </div>
 
       {/* Scroll Indicator */}
-{/*      <div className="relative z-10 flex justify-center mt-16 mb-8">
+      {/*      <div className="relative z-10 flex justify-center mt-16 mb-8">
         <button
           onClick={() => {
             const belowFold = document.getElementById('below-fold');
@@ -81,7 +81,7 @@ export default function HomePage() {
         className="relative z-10 px-4 py-12 max-w-2xl mx-auto"
       >
         {/* Search - Hidden by default, revealed on intent */}
-{/*        <div className="mb-12">
+        {/*        <div className="mb-12">
           {!showSearch ? (
             <button
               onClick={() => setShowSearch(true)}
@@ -131,7 +131,7 @@ export default function HomePage() {
             rel="noopener noreferrer"
             className="inline-block px-6 py-2.5 border border-gray-600/70 rounded-xl text-gray-300 hover:text-gray-200 hover:border-gray-500 hover:bg-gray-800/30 transition-all text-sm"
           >
-            send me to TED2026!
+            buy me a coffee!
           </a>
         </div>
 
