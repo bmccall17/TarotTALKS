@@ -2,6 +2,7 @@ import { db } from '../index';
 import { talks, cardTalkMappings, cards } from '../schema';
 import { eq, desc, or, isNull } from 'drizzle-orm';
 import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
 
 async function _getAllTalks() {
   // Single query: fetch all talks with their mapped cards via LEFT JOIN
@@ -76,7 +77,9 @@ export async function getTalkBySlug(slug: string) {
   return talk;
 }
 
-export async function getTalkWithMappedCards(slug: string) {
+// React cache(): dedupes within a single request — generateMetadata, the page,
+// and og-image routes each call this with the same slug
+export const getTalkWithMappedCards = cache(async (slug: string) => {
   const talk = await getTalkBySlug(slug);
   if (!talk) return null;
 
@@ -94,4 +97,4 @@ export async function getTalkWithMappedCards(slug: string) {
     ...talk,
     mappedCards,
   };
-}
+});

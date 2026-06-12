@@ -2,6 +2,7 @@ import { db } from '../index';
 import { cards, cardTalkMappings, talks } from '../schema';
 import { eq, desc, sql, and, or, isNull } from 'drizzle-orm';
 import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
 
 async function _getAllCards() {
   return db
@@ -36,7 +37,9 @@ export async function getCardBySlug(slug: string) {
   return card;
 }
 
-export async function getCardWithMappings(slug: string) {
+// React cache(): dedupes within a single request — generateMetadata, the page,
+// and og-image routes each call this with the same slug
+export const getCardWithMappings = cache(async (slug: string) => {
   const card = await getCardBySlug(slug);
   if (!card) return null;
 
@@ -78,7 +81,7 @@ export async function getCardWithMappings(slug: string) {
     ...card,
     mappings,
   };
-}
+});
 
 export async function getCardsByArcana(arcanaType: 'major' | 'minor') {
   return db
