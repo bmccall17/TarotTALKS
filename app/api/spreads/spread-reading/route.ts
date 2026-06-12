@@ -30,6 +30,9 @@ import {
 import { searchYouTube, type YouTubeResult, type SearchYouTubeOptions } from '@/lib/services/youtube';
 import { logApiCall } from '@/lib/db/queries/api-usage';
 
+// 4 sequential external calls (Gemini x3 + YouTube) — needs more than Vercel's 10s default
+export const maxDuration = 60;
+
 interface RequestBody {
   cardIds: string[];
   focusType?: FocusType;

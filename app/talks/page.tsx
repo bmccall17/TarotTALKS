@@ -8,8 +8,7 @@ export const metadata = {
   description: 'Explore curated TED talks mapped to Tarot archetypes',
 };
 
-// Dynamic rendering — skip build-time static generation to avoid DB timeout
-export const dynamic = 'force-dynamic';
+// ISR: revalidate every hour (matches the getAllTalks unstable_cache window)
 export const revalidate = 3600;
 
 export default async function TalksPage() {
